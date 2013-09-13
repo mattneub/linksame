@@ -1,0 +1,10 @@
+Version 1.1
+
+Hint now lasts as long as the user wishes. Hint button is Show/Hide Hint.
+
+Added Practice mode. A new game is always in Timed mode but user can switch to Practice mode, in which case the score is not displayed.
+
+State is now saved when you quit if we are in practice mode. I might extend this to always saving it but don't count on it.
+
+Added some new clarifying animations.
+
