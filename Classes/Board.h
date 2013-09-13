@@ -1,20 +1,10 @@
 
 #import <Foundation/Foundation.h>
 
-@interface Board : NSObject <NSCoding> {
-    NSArray* grid;
-    UIView* view;
-    int xct;
-    int yct;
-    CGSize pieceSize;
-    NSMutableArray* hilitedPieces;
-    NSMutableArray* movenda;
-    NSNumber* stage;
-    BOOL showingHint;
-}
+@interface Board : NSObject <NSCoding>
 
-@property (nonatomic, assign) UIView* view;
-@property (nonatomic, retain) NSNumber* stage;
+@property (nonatomic, weak) UIView* view;
+@property (nonatomic, strong) NSNumber* stage;
 @property (nonatomic, assign) BOOL showingHint;
 
 - (void) setGridSizeX: (int) x Y: (int) y;

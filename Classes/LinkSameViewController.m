@@ -8,17 +8,41 @@
 //#import "NameablePopoverController.h"
 #import <QuartzCore/QuartzCore.h>
 
-@interface LinkSameViewController ()
+@interface LinkSameViewController ()<UIPopoverControllerDelegate, UIToolbarDelegate> {
+    int score;
+    NSTimeInterval lastTime;
+    UIView* transp;
+}
+
+@property (nonatomic, strong) Board* board;
+@property (nonatomic, weak) IBOutlet UIView* boardView;
+@property (nonatomic, weak) IBOutlet UILabel* stageLabel;
+@property (nonatomic, weak) IBOutlet UILabel* scoreLabel;
+@property (nonatomic, weak) IBOutlet UILabel* prevLabel;
+@property (nonatomic, weak) IBOutlet UIBarButtonItem* hintButton;
+@property (nonatomic, weak) IBOutlet UISegmentedControl* timedPractice;
+@property (nonatomic, weak) IBOutlet UIToolbar* toolbar;
+@property (nonatomic, strong) UIPopoverController* popover;
+@property (nonatomic, strong) NSDictionary* oldDefs;
+@property (nonatomic, strong) NSTimer* timer;
+
+
+- (IBAction) doHint: (id) sender;
+- (IBAction) doNew: (id) sender;
+- (IBAction) doHelp: (id) sender;
+- (IBAction) doShuffle: (id) sender;
+- (IBAction) doTimedPractice: (id) sender;
+
 - (void) incrementScore: (int) n;
 - (void) initializeScores;
 @end
 
 
 @implementation LinkSameViewController
-@synthesize board, boardView, stageLabel, scoreLabel, prevLabel, hintButton, timedPractice;
-@synthesize popover;
-@synthesize oldDefs;
-@synthesize timer;
+
+-(UIBarPosition)positionForBar:(id<UIBarPositioning>)bar {
+    return UIBarPositionTopAttached;
+}
 
 - (void) setInterfaceMode: (BOOL) timed {
     self.scoreLabel.hidden = !timed;
@@ -36,7 +60,7 @@
     NSUserDefaults* ud = [NSUserDefaults standardUserDefaults];
     NSString* size = [ud stringForKey:@"Size"];
     NSString* stages = [[ud objectForKey:@"Stages"] stringValue];
-    NSNumber* prev = [[ud dictionaryForKey:@"Scores"] objectForKey:[NSString stringWithFormat: @"%@%@", size, stages]];
+    NSNumber* prev = [ud dictionaryForKey:@"Scores"][[NSString stringWithFormat: @"%@%@", size, stages]];
     if (prev)
         self.prevLabel.text = [NSString stringWithFormat:@"(High score: %@)", prev];
     // every new game should be a real game initially
@@ -48,6 +72,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    self.toolbar.delegate = self;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(setUpInterface:) name:@"gameOver" object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(userMoved:) name:@"userMoved" object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenOff:) name:UIApplicationWillResignActiveNotification object:nil];
@@ -133,7 +158,6 @@
     v.userInteractionEnabled = NO; // clicks just fall right thru
     self->transp = v;
     [self.boardView addSubview:v];
-    [v release];
     CALayer* lay = [CALayer layer];
     [[self->transp layer] addSublayer:lay];
     lay.frame = [self->transp layer].bounds;       
@@ -234,18 +258,17 @@
     // create new board object and configure it
     Board* b = [[Board alloc] initWithBoardView:self.boardView];
     self.board = b;
-    [b release];
     
     [self.board setGridSizeX:w Y:h];
     
     // stage (current stage arrived in notification, or nil if we are just starting)
-    [self.board setStage:[NSNumber numberWithInt:0]]; // default
+    [self.board setStage:@0]; // default
     // notice use of [NSNotification class] here; using class name didn't work, it's a cluster or something!
     if (n && ([n isKindOfClass: [NSNotification class]]) && [n userInfo]) {
         int stage = [[[n userInfo] valueForKey:@"stage"] intValue];
         // if we received a stage in notification, just increment stage
         if (stage < [[NSUserDefaults standardUserDefaults] integerForKey:@"Stages"]) {
-            [self.board setStage:[NSNumber numberWithInt: stage+1]];
+            [self.board setStage:@(stage+1)];
             [self animateBoardReplacement: YES];
         }
         // but if we received a stage in notification and it's the last stage, game is over!
@@ -258,11 +281,11 @@
                 NSString* stages = [[ud objectForKey:@"Stages"] stringValue];
                 NSString* key = [NSString stringWithFormat: @"%@%@", size, stages];
                 NSMutableDictionary* d = [NSMutableDictionary dictionaryWithDictionary:[ud dictionaryForKey:@"Scores"]];
-                NSNumber* prev = [d objectForKey: key];
+                NSNumber* prev = d[key];
                 BOOL newHigh = NO;
                 if (!prev || [prev intValue] < self->score) {
                     newHigh = YES;
-                    [d setObject:[NSNumber numberWithInt: self->score] forKey:key];
+                    d[key] = @(self->score);
                     [ud setObject: d forKey: @"Scores"];
                 }
                 // notify user
@@ -316,45 +339,34 @@
     [self displayStage];
 }
 
-// Override to allow orientations other than the default portrait orientation.
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-    return (interfaceOrientation == UIInterfaceOrientationLandscapeLeft ||
-            interfaceOrientation == UIInterfaceOrientationLandscapeRight);
-}
 
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
-    [board release];
-    [oldDefs release];
-    [popover release];
-    [timer invalidate];
-    [timer release];
-    [super dealloc];
+    [self.timer invalidate];
 }
 
 #pragma mark toolbar buttons
 
 - (IBAction) doHint: (id) sender { // sender should be hintButton
-    if (!board.showingHint) {
+    if (!self.board.showingHint) {
         self.hintButton.title = @"Hide Hint";
         [self incrementScore:-10];
-        [board hint];
+        [self.board hint];
         // if user taps board now, this should have just the same effect as tapping button
         // so, attach gesture rec
         UITapGestureRecognizer* t = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(doHint:)];
-        [[boardView viewWithTag:999] addGestureRecognizer:t];
-        [t release];
+        [[self.boardView viewWithTag:999] addGestureRecognizer:t];
     } else {
         self.hintButton.title = @"Show Hint";
-        [board unilluminate];
-        [[boardView viewWithTag:999] setGestureRecognizers:nil];
+        [self.board unilluminate];
+        [[self.boardView viewWithTag:999] setGestureRecognizers:nil];
     }
 }
 
 - (IBAction) doShuffle: (id) sender {
-    if (board.showingHint)
+    if (self.board.showingHint)
         [self doHint: nil];
-    [board redeal];
+    [self.board redeal];
     [self incrementScore:-20];
 }
 
@@ -374,7 +386,7 @@
 // and only one can show at a time, so this works
    
 - (IBAction) doNew: (id) sender {
-    if (board.showingHint)
+    if (self.board.showingHint)
         [self doHint:nil];
     if (self.popover)
         return; // amazingly, it is up to us to prevent button being pressed while we are up
@@ -388,12 +400,10 @@
                                                                        target:self
                                                                        action:@selector(cancelNewGame:)];
     dlg.navigationItem.rightBarButtonItem = b;
-    [b release];
     b = [[UIBarButtonItem alloc] initWithBarButtonSystemItem: UIBarButtonSystemItemDone
                                                       target: self
                                                       action: @selector(saveNewGame:)];
     dlg.navigationItem.leftBarButtonItem = b;
-    [b release];
     UINavigationController* nav = [[UINavigationController alloc] initWithRootViewController:dlg];
     UIPopoverController* pop = [[UIPopoverController alloc] initWithContentViewController:nav];
     pop.delegate = self;
@@ -402,13 +412,10 @@
     [pop presentPopoverFromBarButtonItem:sender permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
     pop.passthroughViews = nil;
     //NSLog(@"%@ %@", NSStringFromCGSize(nav.contentSizeForViewInPopover), NSStringFromCGSize(nav.topViewController.contentSizeForViewInPopover));
-    [dlg release];
-    [nav release];
     self.popover = pop;
-    [pop release];
     // save defaults so we can restore them later if user cancels
     self.oldDefs = [[NSUserDefaults standardUserDefaults] dictionaryWithValuesForKeys:
-                    [NSArray arrayWithObjects:@"Style", @"Size", @"Stages", nil]];
+                    @[@"Style", @"Size", @"Stages"]];
 }
 
 - (void) cancelNewGame: (id) sender { // cancel button in New Game popover
@@ -437,7 +444,7 @@
 }
 
 - (IBAction) doTimedPractice: (id) sender {
-    if (board.showingHint)
+    if (self.board.showingHint)
         [self doHint:nil];
     NSInteger ix = self.timedPractice.selectedSegmentIndex;
     // 0 = timed; 1 = practice
@@ -456,16 +463,13 @@
     NSString* s = [NSString stringWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"linkhelp" ofType:@"html"] encoding:NSUTF8StringEncoding error:nil];
     [wv loadHTMLString:s baseURL:nil];
     vc.view = wv;
-    [wv release];
     UIPopoverController* pop = [[UIPopoverController alloc] initWithContentViewController:vc];
-    [vc release];
     //pop.name = @"help";
     pop.delegate = self; // must have delegate so we can manage popover pointer when dismissed
     pop.popoverContentSize = CGSizeMake(600, 800);
     [pop presentPopoverFromBarButtonItem:sender permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
     pop.passthroughViews = nil;
     self.popover = pop;
-    [pop release];
 }
 
 #pragma mark notif from board

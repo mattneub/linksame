@@ -15,72 +15,70 @@
 #import "MutableArrayCategories.h"
 #import <QuartzCore/QuartzCore.h>
 
-@interface Board ()
-- (void) removePieceAtX: (int) x Y: (int) y;
-- (id) pieceAtX: (int) i Y: (int) j;
-- (NSArray*) legalPath;
+@interface Board (){
+    
+    int _xct;
+    int _yct;
+    CGSize _pieceSize;
+    
+    
+}
+
+@property (nonatomic, strong) NSArray* grid;
+@property (nonatomic, strong) NSMutableArray* hilitedPieces;
+@property (nonatomic, strong) NSMutableArray* movenda;
+
+
 @end
 
 @implementation Board
-@synthesize view, stage, showingHint;
 
 - (id) initWithBoardView: (UIView*) bv {
     self = [super init];
     if (self) {
-        hilitedPieces = [[NSMutableArray alloc] init];
-        movenda = [[NSMutableArray alloc] init];
-        view = bv;
+        _hilitedPieces = [[NSMutableArray alloc] init];
+        _movenda = [[NSMutableArray alloc] init];
+        _view = bv;
     }
     return self;
 }
 
 - (id)initWithCoder:(NSCoder *)coder {
     self = [super init];
-    hilitedPieces = [[NSMutableArray alloc] init];
-    movenda = [[NSMutableArray alloc] init];
-    grid = [coder decodeObjectForKey: @"grid"];
-    [grid retain];
-    xct = [coder decodeIntForKey:@"xct"];
-    yct = [coder decodeIntForKey:@"yct"];
-    stage = [coder decodeObjectForKey:@"stage"];
-    [stage retain];
+    _hilitedPieces = [[NSMutableArray alloc] init];
+    _movenda = [[NSMutableArray alloc] init];
+    _grid = [coder decodeObjectForKey: @"grid"];
+    _xct = [coder decodeIntForKey:@"xct"];
+    _yct = [coder decodeIntForKey:@"yct"];
+    _stage = [coder decodeObjectForKey:@"stage"];
     // board is not actually ready rock and roll...
     // ...but we must wait until we are told to rebuild
     return self;
 }
 
 - (void) rebuild {
-    NSAssert(hilitedPieces && movenda && grid && xct && yct && stage,
+    NSAssert(_hilitedPieces && _movenda && _grid && _xct && _yct && _stage,
              @"Meaningless to ask to rebuild when we are not initialized from coder");
-    NSAssert(view, @"Meaningless to ask to rebuild when we have no view");
-    for (int i=0; i<xct; i++) {
-        for (int j=0; j<yct; j++) {
+    NSAssert(_view, @"Meaningless to ask to rebuild when we have no view");
+    for (int i=0; i<_xct; i++) {
+        for (int j=0; j<_yct; j++) {
             id piece = [self pieceAtX:i Y:j];
             if (piece == [NSNull null])
                 continue;
             // simply remove piece and restore it, causing it to appear in view
             // removePiece will attempt to remove from superview and fail, but no penalty
-            [piece retain];
             [self removePieceAtX:i Y:j];
             [self addPieceAtX:i Y:j withPicture:[piece picName]];
-            [piece release];
         }
     }
 }
 
-- (void) dealloc {
-    [stage release];
-    [grid release];
-    [hilitedPieces release];
-    [movenda release];
-    [super dealloc];
-}
 
 - (void)encodeWithCoder:(NSCoder *)coder {
-    [coder encodeObject:grid forKey: @"grid"];
-    [coder encodeInt:xct forKey:@"xct"];
-    [coder encodeInt:yct forKey:@"yct"];
-    [coder encodeObject:stage forKey:@"stage"];
+    [coder encodeObject:self.grid forKey: @"grid"];
+    [coder encodeInt:_xct forKey:@"xct"];
+    [coder encodeInt:_yct forKey:@"yct"];
+    [coder encodeObject:self.stage forKey:@"stage"];
 }    
 
 
@@ -90,8 +88,8 @@
     do {
         // gather up all pieces (as names), shuffle them, deal them into their current slots
         NSMutableArray* deck = [NSMutableArray array];
-        for (int i=0; i<xct; i++) {
-            for (int j=0; j<yct; j++) {
+        for (int i=0; i<_xct; i++) {
+            for (int j=0; j<_yct; j++) {
                 id piece = [self pieceAtX:i Y:j];
                 if (piece == [NSNull null])
                     continue;
@@ -102,8 +100,8 @@
         [deck shuffle];
         [deck shuffle];
         [deck shuffle];
-        for (int i=0; i<xct; i++) {
-            for (int j=0; j<yct; j++) {
+        for (int i=0; i<_xct; i++) {
+            for (int j=0; j<_yct; j++) {
                 id piece = [self pieceAtX:i Y:j];
                 if (piece == [NSNull null])
                     continue;
@@ -127,7 +125,7 @@
 // it is LinkSameView's responsibility to initialize us with a grid size the instant we are created
 
 - (void) setGridSizeX: (int) x Y: (int) y {
-    [self->grid release]; // otiose, since in fact there was never a previous grid
+     // otiose, since in fact there was never a previous grid
     // the grid is just an array of arrays
     // think of every entry in the grid as a "slot"
     // then every slot is filled either by a piece or by NSNull
@@ -137,13 +135,11 @@
         for (int j=0; j<y; j++)
             [inner addObject: [NSNull null]];
         [outer addObject: inner];
-        [inner release];
     }
-    self->grid = [outer copy];
-    [outer release];
+    self.grid = [outer copy];
     // remember dimensions
-    self->xct = x;
-    self->yct = y;
+    self->_xct = x;
+    self->_yct = y;
 }
 
 // utilities about where to draw a piece
@@ -158,18 +154,18 @@
 
 - (CGSize) pieceSize {
     NSAssert(self.view, @"Meaningless to ask for piece size with no view.");
-    NSAssert((xct > 0 && yct > 0), @"Meaningless to ask for piece size with no grid dimensions.");
+    NSAssert((_xct > 0 && _yct > 0), @"Meaningless to ask for piece size with no grid dimensions.");
     // memoize piece size as an ivar
     // you may ask why I didn't just set the piece size when I set the grid
     // this actually feels neater, though
-    if (!self->pieceSize.width) {
+    if (!self->_pieceSize.width) {
         // divide view bounds, allow 1 extra plus margins
         CGFloat pieceWidth, pieceHeight;
-        pieceWidth = self.view.bounds.size.width / (xct + 2.0 + LEFTMARGIN + RIGHTMARGIN);
-        pieceHeight = self.view.bounds.size.height / (yct + 2.0 + TOPMARGIN + BOTTOMMARGIN);
-        self->pieceSize = CGSizeMake(pieceWidth, pieceHeight);
+        pieceWidth = self.view.bounds.size.width / (_xct + 2.0 + LEFTMARGIN + RIGHTMARGIN);
+        pieceHeight = self.view.bounds.size.height / (_yct + 2.0 + TOPMARGIN + BOTTOMMARGIN);
+        self->_pieceSize = CGSizeMake(pieceWidth, pieceHeight);
     }
-    return self->pieceSize;
+    return self->_pieceSize;
 }
 
 // given a piece's place in the grid, where should it be physically drawn on the view?
@@ -177,8 +173,8 @@
 - (CGPoint) originOfX: (int) i Y: (int) j {
     NSAssert(self.view, @"Meaningless to ask for piece position with no view.");
     // it is legal to ask for position one slot outside the boundaries
-    NSAssert(i >= -1 && i <= xct, @"Position requested out of bounds (x)");
-    NSAssert(j >= -1 && j <= yct, @"Position requested out of bounds (y)");
+    NSAssert(i >= -1 && i <= _xct, @"Position requested out of bounds (x)");
+    NSAssert(j >= -1 && j <= _yct, @"Position requested out of bounds (y)");
     // divide view bounds, allow 2 extra on all sides
     CGFloat pieceWidth = [self pieceSize].width;
     CGFloat pieceHeight = [self pieceSize].height;
@@ -200,25 +196,23 @@
     // we are conscious of the fact that we must not accidentally draw on top of the transparency view
     [self.view insertSubview:piece belowSubview:[self.view viewWithTag:999]];
     // also place the Piece in the grid, and tell it where it is
-    [(NSMutableArray*)[grid objectAtIndex: i] replaceObjectAtIndex: j withObject:piece];
+    ((NSMutableArray*)(self.grid)[i])[j] = piece;
     piece.x = i; piece.y = j;
     // set up tap detections so we are notified when a Piece is tapped
     UITapGestureRecognizer* t = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
     [piece addGestureRecognizer:t];
-    [t release];
     // wow, that was easy
-    [piece release];
 }
 
 - (id) pieceAtX: (int) i Y: (int) j {
     // it is legal to ask for piece one slot outside the boundaries (but not further outside)
-    NSAssert(i >= -1 && i <= xct, @"Piece requested out of bounds (x)");
-    NSAssert(j >= -1 && j <= yct, @"Piece requested out of bounds (y)");
+    NSAssert(i >= -1 && i <= _xct, @"Piece requested out of bounds (x)");
+    NSAssert(j >= -1 && j <= _yct, @"Piece requested out of bounds (y)");
     // report slot outside boundaries as empty
-    if (i == -1 || i == xct) return [NSNull null];
-    if (j == -1 || j == yct) return [NSNull null];
+    if (i == -1 || i == _xct) return [NSNull null];
+    if (j == -1 || j == _yct) return [NSNull null];
     // report actual value within boundaries
-    return [(NSMutableArray*)[grid objectAtIndex: i] objectAtIndex:j];
+    return ((NSMutableArray*)(self.grid)[i])[j];
 }
 
 // this code is no longer used, because instead of drawing into a bitmap we now draw directly into a layer context
@@ -269,8 +263,8 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     CGContextSetLineWidth(con, 3.0);
     CGContextBeginPath(con);
     for (int i = 0; i < [arr count] - 1; i++) {
-        CGPoint p1 = [(NSValue*)[arr objectAtIndex: i] CGPointValue];
-        CGPoint p2 = [(NSValue*)[arr objectAtIndex: i+1] CGPointValue];
+        CGPoint p1 = [(NSValue*)arr[i] CGPointValue];
+        CGPoint p2 = [(NSValue*)arr[i+1] CGPointValue];
         CGPoint orig1 = [self originOfX: p1.x Y: p1.y];
         CGPoint orig2 = [self originOfX: p2.x Y: p2.y];
         CGContextMoveToPoint(con, orig1.x + offx, orig1.y + offy);
@@ -406,17 +400,17 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
 // thus, to unhighlight all highlighted piece, we just run thru that list
 
 - (void) cancelPair {
-    [(Piece*)[self->hilitedPieces lastObject] toggleHilite];
-    [self->hilitedPieces removeLastObject];
-    [(Piece*)[self->hilitedPieces lastObject] toggleHilite];
-    [self->hilitedPieces removeLastObject];
+    [(Piece*)[self->_hilitedPieces lastObject] toggleHilite];
+    [self->_hilitedPieces removeLastObject];
+    [(Piece*)[self->_hilitedPieces lastObject] toggleHilite];
+    [self->_hilitedPieces removeLastObject];
 }
 
 // utility to learn whether the grid is empty, indicating that the game is over
 
 - (BOOL) gameOver {
-    for (int x = 0; x < xct; x++)
-        for (int y = 0; y < yct; y++)
+    for (int x = 0; x < _xct; x++)
+        for (int y = 0; y < _yct; y++)
             if ([self pieceAtX:x Y:y] != [NSNull null])
                 return NO;
     return YES;
@@ -428,7 +422,7 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     //NSLog(@"%i %i", x, y);
     Piece* piece = [self pieceAtX:x Y:y];
     [piece removeFromSuperview];
-    [(NSMutableArray*)[grid objectAtIndex: x] replaceObjectAtIndex:y withObject:[NSNull null]];
+    ((NSMutableArray*)(self.grid)[x])[y] = [NSNull null];
 }
 
 // bottleneck utility for when user correctly selects a pair
@@ -452,13 +446,10 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
 
 - (void) movePiece: (Piece*) p toX: (int) x Y: (int) y {
     NSAssert([self pieceAtX:x Y:y] == [NSNull null], @"Slot to move piece to must be empty");
-    [p retain];
     // move the piece within the *grid*
     NSString* s = [p picName];
-    [s retain];
     [self removePieceAtX:p.x Y:p.y];
     [self addPieceAtX:x Y:y withPicture:s];
-    [s release];
     // however, we are not yet redrawn, so now...
     // return piece to its previous position! but add to movenda
     // later call to moveMovenda will thus animate it into correct position
@@ -466,8 +457,7 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     CGRect f = pnew.frame;
     f.origin = [self originOfX:p.x Y:p.y];
     pnew.frame = f;
-    [self->movenda addObject:pnew];
-    [p release];
+    [self.movenda addObject:pnew];
 }
 
 // utility to animate slide of pieces into their correct place
@@ -490,9 +480,9 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     [[UIApplication sharedApplication] beginIgnoringInteractionEvents];
     [UIView setAnimationDelegate:self];
     [UIView setAnimationDidStopSelector:@selector(animationDidStop:finished:context:)];
-    while ([self->movenda count]) {
-        Piece* p = [self->movenda lastObject];
-        [self->movenda removeLastObject];
+    while ([self.movenda count]) {
+        Piece* p = [self.movenda lastObject];
+        [self.movenda removeLastObject];
         CGRect f = p.frame;
         f.origin = [self originOfX:p.x Y:p.y];
         p.frame = f; // this is the move that will be animated
@@ -519,15 +509,15 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     // notify (so score can be incremented)
     [[NSNotificationCenter defaultCenter] postNotificationName:@"userMoved" object:self];
     // actually remove the pieces (we happen to know there must be exactly two)
-    Piece* piece = [self->hilitedPieces lastObject];
+    Piece* piece = [self.hilitedPieces lastObject];
     [self removePieceAtX: piece.x Y: piece.y];
-    [self->hilitedPieces removeLastObject];
-    piece = [self->hilitedPieces lastObject];
+    [self.hilitedPieces removeLastObject];
+    piece = [self.hilitedPieces lastObject];
     [self removePieceAtX: piece.x Y: piece.y];
-    [self->hilitedPieces removeLastObject];
+    [self.hilitedPieces removeLastObject];
     // game over? if so, notify along with current stage and we're out of here!
     if ([self gameOver]) {
-        NSDictionary* d = [NSDictionary dictionaryWithObject:self.stage forKey:@"stage"];
+        NSDictionary* d = @{@"stage": self.stage};
         [[NSNotificationCenter defaultCenter] postNotificationName:@"gameOver" object:self userInfo:d];
         return;
     }
@@ -540,8 +530,8 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     }
     if (s == 1) {
         // gravity down
-        for (int x = 0; x < xct; x++) {
-            for (int y = yct - 1; y > 0; y--) {
+        for (int x = 0; x < _xct; x++) {
+            for (int y = _yct - 1; y > 0; y--) {
                 id piece = [self pieceAtX:x Y:y];
                 if (piece == [NSNull null]) {
                     for (int yt = y-1; yt >= 0; yt--) {   
@@ -557,8 +547,8 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     }
     if (s == 2) {
         // gravity left
-        for (int y = 0; y < yct; y++) {
-            for (int x = xct - 1; x > 0; x--) {
+        for (int y = 0; y < _yct; y++) {
+            for (int x = _xct - 1; x > 0; x--) {
                 id piece = [self pieceAtX:x Y:y];
                 if (piece == [NSNull null]) {
                     for (int xt = x-1; xt >= 0; xt--) {
@@ -574,9 +564,9 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     }
     if (s == 3) {
         // gravity toward central horiz line
-        int center = yct/2; // integer div, deliberate
+        int center = _yct/2; // integer div, deliberate
         // exactly like 1 except we have to do it twice in two directions
-        for (int x = 0; x < xct; x++) {
+        for (int x = 0; x < _xct; x++) {
             for (int y = center-1; y > 0; y--) {
                 id piece = [self pieceAtX:x Y:y];
                 if (piece == [NSNull null]) {
@@ -589,10 +579,10 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
                     }
                 }
             }
-            for (int y = center; y <= yct - 1; y++) {
+            for (int y = center; y <= _yct - 1; y++) {
                 id piece = [self pieceAtX:x Y:y];
                 if (piece == [NSNull null]) {
-                    for (int yt = y+1; yt < yct; yt++) {
+                    for (int yt = y+1; yt < _yct; yt++) {
                         id piece2 = [self pieceAtX:x Y:yt];
                         if (piece2 == [NSNull null])
                             continue;
@@ -605,9 +595,9 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     }
     if (s == 4) {
         // gravity toward central vertical line
-        int center = xct/2; // integer div, deliberate
+        int center = _xct/2; // integer div, deliberate
         // exactly like 3 except the other orientation
-        for (int y = 0; y < yct; y++) {
+        for (int y = 0; y < _yct; y++) {
             for (int x = center-1; x > 0; x--) {
                 id piece = [self pieceAtX:x Y:y];
                 if (piece == [NSNull null]) {
@@ -620,10 +610,10 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
                     }
                 }
             }
-            for (int x = center; x <= xct - 1; x++) {
+            for (int x = center; x <= _xct - 1; x++) {
                 id piece = [self pieceAtX:x Y:y];
                 if (piece == [NSNull null]) {
-                    for (int xt = x+1; xt < xct; xt++) {
+                    for (int xt = x+1; xt < _xct; xt++) {
                         id piece2 = [self pieceAtX:xt Y:y];
                         if (piece2 == [NSNull null])
                             continue;
@@ -636,10 +626,10 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     }
     if (s == 5) {
         // gravity away from central horiz line
-        int center = yct/2; // integer div, deliberate
+        int center = _yct/2; // integer div, deliberate
         // exactly like 3 except we walk from the outside to the center
-        for (int x = 0; x < xct; x++) {
-            for (int y = yct-1; y > center; y--) {
+        for (int x = 0; x < _xct; x++) {
+            for (int y = _yct-1; y > center; y--) {
                 id piece = [self pieceAtX:x Y:y];
                 if (piece == [NSNull null]) {
                     for (int yt = y-1; yt >= center; yt--) {
@@ -667,10 +657,10 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     }
     if (s == 6) {
         // gravity toward central vertical line
-        int center = xct/2; // integer div, deliberate
+        int center = _xct/2; // integer div, deliberate
         // exactly like 4 except we start at the outside
-        for (int y = 0; y < yct; y++) {
-            for (int x = xct-1; x > center; x--) {
+        for (int y = 0; y < _yct; y++) {
+            for (int x = _xct-1; x > center; x--) {
                 id piece = [self pieceAtX:x Y:y];
                 if (piece == [NSNull null]) {
                     for (int xt = x-1; xt >= center; xt--) {
@@ -699,9 +689,9 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     if (s == 7) {
         // gravity down in one half, gravity up in the other half
         // like doing 1 in two pieces with the second piece in reverse direction
-        int center = xct/2;
+        int center = _xct/2;
         for (int x = 0; x < center; x++) {
-            for (int y = yct - 1; y > 0; y--) {
+            for (int y = _yct - 1; y > 0; y--) {
                 id piece = [self pieceAtX:x Y:y];
                 if (piece == [NSNull null]) {
                     for (int yt = y-1; yt >= 0; yt--) {
@@ -714,11 +704,11 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
                 }
             }
         }
-        for (int x = center; x < xct; x++) {
-            for (int y = 0; y < yct-1; y++) {
+        for (int x = center; x < _xct; x++) {
+            for (int y = 0; y < _yct-1; y++) {
                 id piece = [self pieceAtX:x Y:y];
                 if (piece == [NSNull null]) {
-                    for (int yt = y+1; yt < yct; yt++) {
+                    for (int yt = y+1; yt < _yct; yt++) {
                         id piece2 = [self pieceAtX:x Y:yt];
                         if (piece2 == [NSNull null])
                             continue;
@@ -732,9 +722,9 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
     if (s == 8) {
         // gravity left in one half, gravity right in other half
         // like doing 2 in two pieces with second in reverse direction
-        int center = yct/2;
+        int center = _yct/2;
         for (int y = 0; y < center; y++) {
-            for (int x = xct - 1; x > 0; x--) {
+            for (int x = _xct - 1; x > 0; x--) {
                 id piece = [self pieceAtX:x Y:y];
                 if (piece == [NSNull null]) {
                     for (int xt = x-1; xt >= 0; xt--) {
@@ -747,11 +737,11 @@ CGContextRef MyCreateBitmapContext (int pixelsWide, int pixelsHigh) {
                 }
             }
         }
-        for (int y = center; y < yct; y++) {
-            for (int x = 0; x < xct-1; x++) {
+        for (int y = center; y < _yct; y++) {
+            for (int x = 0; x < _xct-1; x++) {
                 id piece = [self pieceAtX:x Y:y];
                 if (piece == [NSNull null]) {
-                    for (int xt = x+1; xt < xct; xt++) {
+                    for (int xt = x+1; xt < _xct; xt++) {
                         id piece2 = [self pieceAtX:xt Y:y];
                         if (piece2 == [NSNull null])
                             continue;
@@ -785,27 +775,24 @@ CGFloat distance(CGPoint pt1, CGPoint pt2) {
     CGPoint pt2 = CGPointMake(p2.x, p2.y);
     // 1. first check: are they on the same line with nothing between them?
     if ([self lineIsClearFrom: pt1 to: pt2]) {
-        return [NSArray arrayWithObjects:
-                [NSValue valueWithCGPoint:pt1],
-                [NSValue valueWithCGPoint:pt2], nil];
+        return @[[NSValue valueWithCGPoint:pt1],
+                [NSValue valueWithCGPoint:pt2]];
     }
     // 2. second check: are they at the corners of a rectangle with nothing on one pair of sides between them?
     CGPoint midpt1 = CGPointMake(p1.x, p2.y);
     CGPoint midpt2 = CGPointMake(p2.x, p1.y);
     if ([self pieceAtX:midpt1.x Y:midpt1.y] == [NSNull null]) {
         if ([self lineIsClearFrom: pt1 to: midpt1] && [self lineIsClearFrom: midpt1 to: pt2]) {
-            return [NSArray arrayWithObjects:
-                    [NSValue valueWithCGPoint:pt1],
+            return @[[NSValue valueWithCGPoint:pt1],
                     [NSValue valueWithCGPoint:midpt1],
-                    [NSValue valueWithCGPoint:pt2], nil];
+                    [NSValue valueWithCGPoint:pt2]];
         }
     }
     if ([self pieceAtX:midpt2.x Y:midpt2.y] == [NSNull null]) {
         if ([self lineIsClearFrom: pt1 to: midpt2] && [self lineIsClearFrom: midpt2 to: pt2]) {
-            return [NSArray arrayWithObjects:
-                    [NSValue valueWithCGPoint:pt1],
+            return @[[NSValue valueWithCGPoint:pt1],
                     [NSValue valueWithCGPoint:midpt2],
-                    [NSValue valueWithCGPoint:pt2], nil];            
+                    [NSValue valueWithCGPoint:pt2]];            
         }
     }
     // 3. third check: The Way of the Moving Line
@@ -817,7 +804,7 @@ CGFloat distance(CGPoint pt1, CGPoint pt2) {
     // we may find a longer one before we find a shorter one, which is counter-intuitive
     // so, accumulate all found paths and submit only the shortest
     NSMutableArray* marr = [NSMutableArray array];
-    for (int y = -1; y <= yct; y++) {
+    for (int y = -1; y <= _yct; y++) {
         CGPoint midpt1 = CGPointMake(pt1.x,y);
         CGPoint midpt2 = CGPointMake(pt2.x,y);
         if ([self pieceAtX:midpt1.x Y:midpt1.y] == [NSNull null] && 
@@ -826,15 +813,14 @@ CGFloat distance(CGPoint pt1, CGPoint pt2) {
                 [self lineIsClearFrom: midpt1 to: midpt2] && 
                 [self lineIsClearFrom: midpt2 to: pt2]) {
                 [marr addObject:
-                 [NSArray arrayWithObjects:
-                  [NSValue valueWithCGPoint:pt1],
+                 @[[NSValue valueWithCGPoint:pt1],
                   [NSValue valueWithCGPoint:midpt1],
                   [NSValue valueWithCGPoint:midpt2],
-                  [NSValue valueWithCGPoint:pt2], nil]];            
+                  [NSValue valueWithCGPoint:pt2]]];            
             }
         }
     }
-    for (int x = -1; x <= xct; x++) {
+    for (int x = -1; x <= _xct; x++) {
         CGPoint midpt1 = CGPointMake(x,pt1.y);
         CGPoint midpt2 = CGPointMake(x,pt2.y);
         if ([self pieceAtX:midpt1.x Y:midpt1.y] == [NSNull null] && 
@@ -843,11 +829,10 @@ CGFloat distance(CGPoint pt1, CGPoint pt2) {
                 [self lineIsClearFrom: midpt1 to: midpt2] && 
                 [self lineIsClearFrom: midpt2 to: pt2]) {
                 [marr addObject:
-                 [NSArray arrayWithObjects:
-                  [NSValue valueWithCGPoint:pt1],
+                 @[[NSValue valueWithCGPoint:pt1],
                   [NSValue valueWithCGPoint:midpt1],
                   [NSValue valueWithCGPoint:midpt2],
-                  [NSValue valueWithCGPoint:pt2], nil]];            
+                  [NSValue valueWithCGPoint:pt2]]];            
             }
         }
     }
@@ -858,7 +843,7 @@ CGFloat distance(CGPoint pt1, CGPoint pt2) {
         for (NSArray* thisPath in marr) {
             CGFloat thisLength = 0;
             for (int ix=0; ix < [thisPath count] - 1; ix++) {
-                thisLength += distance([[thisPath objectAtIndex: ix] CGPointValue], [[thisPath objectAtIndex: ix+1] CGPointValue]);
+                thisLength += distance([thisPath[ix] CGPointValue], [thisPath[ix+1] CGPointValue]);
             }
             if ((shortestLength < 0) || (thisLength < shortestLength)) {
                 shortestLength = thisLength;
@@ -877,11 +862,11 @@ CGFloat distance(CGPoint pt1, CGPoint pt2) {
 // otherwise quietly unhilite it
 
 - (void) checkHilitedPair {
-    NSAssert([self->hilitedPieces count] == 2, @"Must have a pair to check");
-    for (Piece* piece in self->hilitedPieces)
+    NSAssert([self.hilitedPieces count] == 2, @"Must have a pair to check");
+    for (Piece* piece in self.hilitedPieces)
         NSAssert(piece.superview == self.view, @"Pieces to check must be on displayed on board");
-    Piece* p1 = [self->hilitedPieces objectAtIndex:0];
-    Piece* p2 = [self->hilitedPieces objectAtIndex:1];
+    Piece* p1 = (self.hilitedPieces)[0];
+    Piece* p2 = (self.hilitedPieces)[1];
     if (![p1.picName isEqualToString: p2.picName]) {
         [self cancelPair];
         return;
@@ -904,15 +889,15 @@ CGFloat distance(CGPoint pt1, CGPoint pt2) {
     Piece* p = (Piece*)[g view];
     BOOL hilited = p.isHilited;
     if (!hilited) {
-        if ([self->hilitedPieces count] > 1) {
+        if ([self.hilitedPieces count] > 1) {
             return;
         }
-        [self->hilitedPieces addObject:p];
+        [self.hilitedPieces addObject:p];
     } else {
-        [self->hilitedPieces removeObject:p];
+        [self.hilitedPieces removeObject:p];
     }
     [p toggleHilite];
-    if ([self->hilitedPieces count] == 2)
+    if ([self.hilitedPieces count] == 2)
         [self checkHilitedPair];
 }
 
@@ -923,14 +908,14 @@ CGFloat distance(CGPoint pt1, CGPoint pt2) {
 // the path is simply the path returned from checkPair
 
 - (NSArray*) legalPath {
-    for (int x = 0; x < xct; x++) {
-        for (int y = 0; y < yct; y++) {
+    for (int x = 0; x < _xct; x++) {
+        for (int y = 0; y < _yct; y++) {
             id piece = [self pieceAtX:x Y:y];
             if (piece == [NSNull null])
                 continue;
             NSString* picName = [(Piece*)piece picName];
-            for (int xx = 0; xx < xct; xx++) {
-                for (int yy = 0; yy < yct; yy++) {
+            for (int xx = 0; xx < _xct; xx++) {
+                for (int yy = 0; yy < _yct; yy++) {
                     id piece2 = [self pieceAtX:xx Y:yy];
                     if (piece2 == [NSNull null])
                         continue;

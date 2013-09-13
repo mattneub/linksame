@@ -4,9 +4,14 @@
 
 #import "NewGameController.h"
 
+@interface NewGameController () <UITableViewDataSource, UITableViewDelegate, UIPickerViewDelegate, UIPickerViewDataSource> {
+    
+}
+@property (nonatomic, weak) UITableView* tableView;
+@end
+
 
 @implementation NewGameController
-@synthesize tableView;
 
 #pragma mark -
 #pragma mark View lifecycle
@@ -14,7 +19,7 @@
 - (void) loadView {
     //UIView* v = [[UIView alloc] initWithFrame:CGRectMake(0,0,320,310+216+100)];
     UIView* v = [[UIView alloc] init];
-    UITableView* tv = [[UITableView alloc] initWithFrame:CGRectMake(0,0,320,310) style:UITableViewStyleGrouped];
+    UITableView* tv = [[UITableView alloc] initWithFrame:CGRectMake(0,0,320,330) style:UITableViewStyleGrouped];
     [v addSubview:tv];
     tv.dataSource = self;
     tv.delegate = self;
@@ -40,9 +45,7 @@
     self.view = v;
     self.contentSizeForViewInPopover = self.view.bounds.size;
     self.modalInPopover = YES;
-    [tv release];
-    [pv release];
-    [v release]; // ooooh, this was a leak! fixed
+     // ooooh, this was a leak! fixed
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
@@ -86,7 +89,7 @@
     
     UITableViewCell *cell = [tableVieww dequeueReusableCellWithIdentifier:CellIdentifier];
     if (cell == nil) {
-        cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
     }
     
     NSUInteger section = [indexPath section];
@@ -167,7 +170,7 @@
 }
 
 - (void)pickerView:(UIPickerView *)pickerView didSelectRow:(NSInteger)row inComponent:(NSInteger)component {
-    [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithInteger:row] forKey:@"Stages"];
+    [[NSUserDefaults standardUserDefaults] setObject:@(row) forKey:@"Stages"];
 }
 
 - (CGFloat)pickerView:(UIPickerView *)pickerView rowHeightForComponent:(NSInteger)component {

@@ -3,25 +3,26 @@
 
 #import "Piece.h"
 
-@interface Piece ()
-@property (nonatomic, retain) UIImage* pic;
+@interface Piece () {
+}
+@property (nonatomic, strong) UIImage* pic;
+
+
 @end
 
 @implementation Piece
-@synthesize pic, x, y, picName, hilite;
 
 - (void) encodeWithCoder: (NSCoder*) coder {
-    [coder encodeInt:x forKey:@"x"];
-    [coder encodeInt:y forKey:@"y"];
-    [coder encodeObject:picName forKey:@"picName"];
+    [coder encodeInt:self.x forKey:@"x"];
+    [coder encodeInt:self.y forKey:@"y"];
+    [coder encodeObject:self.picName forKey:@"picName"];
 }
 
 - (id) initWithCoder: (NSCoder*) coder {
     self = [super init];
-    x = [coder decodeIntForKey:@"x"];
-    y = [coder decodeIntForKey:@"y"];
-    picName = [coder decodeObjectForKey:@"picName"];
-    [picName retain];
+    self->_x = [coder decodeIntForKey:@"x"];
+    self->_y = [coder decodeIntForKey:@"y"];
+    self->_picName = [coder decodeObjectForKey:@"picName"];
     return self;
 }
 
@@ -32,13 +33,11 @@
 
 - (void) setPicName: (NSString*) newPicName {
     NSString* newPicNameCopy = [newPicName copy];
-    [self->picName release];
-    self->picName = newPicNameCopy;
+    self->_picName = newPicNameCopy;
     // also set actual picture at this time; outside world deals only with the name
-    NSString* path = [[NSBundle mainBundle] pathForResource:self->picName ofType:@"png" inDirectory:@"foods"];
+    NSString* path = [[NSBundle mainBundle] pathForResource:self->_picName ofType:@"png" inDirectory:@"foods"];
     UIImage* im = [[UIImage alloc] initWithContentsOfFile:path];
     self.pic = im;
-    [im release];
 }
 
 - (void)drawRect:(CGRect)rect {
@@ -50,7 +49,7 @@
     // fill, according to highlight state
     UIColor *beige = [UIColor colorWithRed:0.900 green:0.798 blue:0.499 alpha:1.000];
     UIColor *purple = [UIColor colorWithRed:0.898 green:0.502 blue:0.901 alpha:1.000];
-    CGContextSetFillColorWithColor(context, (self->hilite ? [purple CGColor] : [beige CGColor]));
+    CGContextSetFillColorWithColor(context, (self->_hilite ? [purple CGColor] : [beige CGColor]));
     CGContextFillRect(context, CGRectInset(peri, -1.0, -1.0)); // "outset" to ensure full coverage
     
     // frame: draw shade all the way round, then light round two sides
@@ -80,17 +79,12 @@
                        CGRectInset(peri, 
                                    (CGRectGetWidth(peri) - picw)/2.0, 
                                    (CGRectGetHeight(peri) - pich)/2.0), 
-                       [pic CGImage]);
+                       [self.pic CGImage]);
 }
 
-- (void)dealloc {
-    [pic release];
-    [picName release];
-    [super dealloc];
-}
 
 - (void) toggleHilite {
-    self->hilite = !(self->hilite);
+    self->_hilite = !(self->_hilite);
     [self setNeedsDisplay];
 }
 
