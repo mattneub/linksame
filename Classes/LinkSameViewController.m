@@ -48,6 +48,10 @@
     self.prevLabel.hidden = !timed;
     self.timedPractice.selectedSegmentIndex = timed ? 0 : 1;
     self.timedPractice.enabled = timed;
+    // uncomment for launch image screen shot
+//    self.scoreLabel.hidden = YES;
+//    self.prevLabel.hidden = YES;
+//    self.stageLabel.hidden = YES;
 }
 
 - (void) initializeScores {
@@ -85,6 +89,7 @@
     self.hintButton.title = @"Show Hint";
     // must wait until rotation has settled down before finishing interface, otherwise dimensions are wrong
     // have we a state saved from prior practice?
+    // return; // uncomment for launch image screen shot
     NSData* boardData = [[NSUserDefaults standardUserDefaults] valueForKey:@"boardData"];
     if (boardData)
         [self performSelector:@selector(reconstructInterface:) withObject:nil afterDelay:0.1];

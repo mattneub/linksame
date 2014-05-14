@@ -37,6 +37,8 @@
 		28D7ACF60DDB3853001CB0EB /* LinkSameViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LinkSameViewController.h; sourceTree = "<group>"; };
 		28D7ACF70DDB3853001CB0EB /* LinkSameViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LinkSameViewController.m; sourceTree = "<group>"; };
 		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		3229495A1924233D00BBF4FD /* launchImage.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = launchImage.png; sourceTree = "<group>"; };
+		3229495B1924233D00BBF4FD /* launchImageSingle.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = launchImageSingle.png; sourceTree = "<group>"; };
 		322F131C1923DF9500F2BE47 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = LinkSame/Images.xcassets; sourceTree = "<group>"; };
 		322F131E1923E71800F2BE47 /* bigIcon2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = bigIcon2.png; sourceTree = "<group>"; };
 		322F131F1923E72900F2BE47 /* bigIcon2.psd */ = {isa = PBXFileReference; lastKnownFileType = file; path = bigIcon2.psd; sourceTree = "<group>"; };
@@ -143,6 +145,8 @@
 				322F13221923E8A600F2BE47 /* icon2singleresolution.png */,
 				A4C07EB61219EB6A005D1E53 /* icon.psd */,
 				A4C07EB71219EB6A005D1E53 /* sushi.psd */,
+				3229495A1924233D00BBF4FD /* launchImage.png */,
+				3229495B1924233D00BBF4FD /* launchImageSingle.png */,
 				A41D6EC81216F85E00638030 /* linkhelp.html */,
 				A4439A8712158819003831A0 /* About these icons.rtf */,
 				A4B7B5EB121307AB008BEA15 /* background.jpg */,
