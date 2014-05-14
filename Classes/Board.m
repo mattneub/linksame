@@ -13,7 +13,6 @@
 #import "Board.h"
 #import "Piece.h"
 #import "MutableArrayCategories.h"
-#import <QuartzCore/QuartzCore.h>
 
 @interface Board (){
     

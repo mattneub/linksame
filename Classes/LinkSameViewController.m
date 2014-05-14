@@ -6,7 +6,6 @@
 #import "MutableArrayCategories.h"
 #import "NewGameController.h"
 //#import "NameablePopoverController.h"
-#import <QuartzCore/QuartzCore.h>
 
 @interface LinkSameViewController ()<UIPopoverControllerDelegate, UIToolbarDelegate> {
     int score;
