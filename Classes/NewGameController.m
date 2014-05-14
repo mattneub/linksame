@@ -43,7 +43,7 @@
     [pv selectRow:[[NSUserDefaults standardUserDefaults] integerForKey:@"Stages"] 
       inComponent:0 animated:NO];
     self.view = v;
-    self.contentSizeForViewInPopover = self.view.bounds.size;
+    self.preferredContentSize = self.view.bounds.size;
     self.modalInPopover = YES;
      // ooooh, this was a leak! fixed
 }
