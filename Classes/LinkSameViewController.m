@@ -172,9 +172,9 @@
     [UIView beginAnimations:nil context:NULL];
     [UIView setAnimationDuration:0.4];
     [UIView setAnimationTransition:UIViewAnimationTransitionFlipFromLeft forView:self.stageLabel cache:YES];
-    self.stageLabel.text = [NSString stringWithFormat:@"Stage %i of %i", 
+    self.stageLabel.text = [NSString stringWithFormat:@"Stage %i of %ld", 
                             [self.board.stage intValue] + 1, 
-                            [ud integerForKey:@"Stages"] + 1];
+                            (long)[ud integerForKey:@"Stages"] + 1];
     [UIView commitAnimations];    
 }
 

@@ -158,7 +158,7 @@
 
 
 - (NSString *)pickerView:(UIPickerView *)pickerView titleForRow:(NSInteger)row forComponent:(NSInteger)component {
-    return [NSString stringWithFormat: @"%i Stage%@", row+1, (row > 0 ? @"s" : @"")];
+    return [NSString stringWithFormat: @"%ld Stage%@", (long)row+1, (row > 0 ? @"s" : @"")];
 }
 
 - (NSInteger)numberOfComponentsInPickerView:(UIPickerView *)pickerView {

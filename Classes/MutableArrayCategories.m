@@ -5,9 +5,9 @@
 @implementation NSMutableArray (mycats)
 
 - (void) shuffle {
-	for (int i = [self count] - 1; i != 0; i--)
+	for (NSUInteger i = [self count] - 1; i != 0; i--)
 		[self exchangeObjectAtIndex:i
-				  withObjectAtIndex:arc4random_uniform(i+1)]; // revised
+				  withObjectAtIndex:arc4random_uniform((u_int32_t)i+1)]; // revised
 }
 
 @end
