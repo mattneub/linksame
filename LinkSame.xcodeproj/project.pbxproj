@@ -15,6 +15,7 @@
 		2899E5220DE3E06400AC0155 /* LinkSameViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 2899E5210DE3E06400AC0155 /* LinkSameViewController.xib */; };
 		28D7ACF80DDB3853001CB0EB /* LinkSameViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 28D7ACF70DDB3853001CB0EB /* LinkSameViewController.m */; };
 		32294957192417C800BBF4FD /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A4C0B1121214AA4600D70DAF /* QuartzCore.framework */; };
+		3229495E19244A0600BBF4FD /* MyRightLabel.m in Sources */ = {isa = PBXBuildFile; fileRef = 3229495D19244A0600BBF4FD /* MyRightLabel.m */; };
 		322F131D1923DF9500F2BE47 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 322F131C1923DF9500F2BE47 /* Images.xcassets */; };
 		A41D6EC91216F85E00638030 /* linkhelp.html in Resources */ = {isa = PBXBuildFile; fileRef = A41D6EC81216F85E00638030 /* linkhelp.html */; };
 		A4439A8812158819003831A0 /* About these icons.rtf in Resources */ = {isa = PBXBuildFile; fileRef = A4439A8712158819003831A0 /* About these icons.rtf */; };
@@ -39,6 +40,8 @@
 		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		3229495A1924233D00BBF4FD /* launchImage.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = launchImage.png; sourceTree = "<group>"; };
 		3229495B1924233D00BBF4FD /* launchImageSingle.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = launchImageSingle.png; sourceTree = "<group>"; };
+		3229495C19244A0600BBF4FD /* MyRightLabel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MyRightLabel.h; sourceTree = "<group>"; };
+		3229495D19244A0600BBF4FD /* MyRightLabel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MyRightLabel.m; sourceTree = "<group>"; };
 		322F131C1923DF9500F2BE47 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = LinkSame/Images.xcassets; sourceTree = "<group>"; };
 		322F131E1923E71800F2BE47 /* bigIcon2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = bigIcon2.png; sourceTree = "<group>"; };
 		322F131F1923E72900F2BE47 /* bigIcon2.psd */ = {isa = PBXFileReference; lastKnownFileType = file; path = bigIcon2.psd; sourceTree = "<group>"; };
@@ -99,6 +102,8 @@
 				A4A69815121369AA00D955E4 /* MutableArrayCategories.m */,
 				A4439AD412158B06003831A0 /* NewGameController.h */,
 				A4439AD512158B06003831A0 /* NewGameController.m */,
+				3229495C19244A0600BBF4FD /* MyRightLabel.h */,
+				3229495D19244A0600BBF4FD /* MyRightLabel.m */,
 			);
 			path = Classes;
 			sourceTree = "<group>";
@@ -241,6 +246,7 @@
 				28D7ACF80DDB3853001CB0EB /* LinkSameViewController.m in Sources */,
 				A4B7B64412130DC5008BEA15 /* Piece.m in Sources */,
 				A4A697E912135B2F00D955E4 /* Board.m in Sources */,
+				3229495E19244A0600BBF4FD /* MyRightLabel.m in Sources */,
 				A4A69816121369AA00D955E4 /* MutableArrayCategories.m in Sources */,
 				A4439AD712158B06003831A0 /* NewGameController.m in Sources */,
 			);
