@@ -862,8 +862,10 @@ CGFloat distance(CGPoint pt1, CGPoint pt2) {
 
 - (void) checkHilitedPair {
     NSAssert([self.hilitedPieces count] == 2, @"Must have a pair to check");
-    for (Piece* piece in self.hilitedPieces)
+    for (Piece* piece in self.hilitedPieces) {
+        Piece* piece2 = piece; // to prevent warning when next line is removed for distribution
         NSAssert(piece.superview == self.view, @"Pieces to check must be on displayed on board");
+    }
     Piece* p1 = (self.hilitedPieces)[0];
     Piece* p2 = (self.hilitedPieces)[1];
     if (![p1.picName isEqualToString: p2.picName]) {
