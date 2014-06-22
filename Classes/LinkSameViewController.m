@@ -4,8 +4,9 @@
 #import "Piece.h"
 #import "Board.h"
 #import "MutableArrayCategories.h"
-#import "NewGameController.h"
+//#import "NewGameController.h"
 //#import "NameablePopoverController.h"
+#import "LinkSame-Swift.h"
 
 @interface LinkSameViewController ()<UIPopoverControllerDelegate, UIToolbarDelegate> {
     int score;

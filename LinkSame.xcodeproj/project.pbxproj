@@ -15,11 +15,11 @@
 		2899E5220DE3E06400AC0155 /* LinkSameViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 2899E5210DE3E06400AC0155 /* LinkSameViewController.xib */; };
 		28D7ACF80DDB3853001CB0EB /* LinkSameViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 28D7ACF70DDB3853001CB0EB /* LinkSameViewController.m */; };
 		32294957192417C800BBF4FD /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A4C0B1121214AA4600D70DAF /* QuartzCore.framework */; };
-		3229495E19244A0600BBF4FD /* MyRightLabel.m in Sources */ = {isa = PBXBuildFile; fileRef = 3229495D19244A0600BBF4FD /* MyRightLabel.m */; };
 		322F131D1923DF9500F2BE47 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 322F131C1923DF9500F2BE47 /* Images.xcassets */; };
+		32D59DA8195758A100E4A41C /* MyRightLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D59DA7195758A100E4A41C /* MyRightLabel.swift */; };
+		32FE1D80195790270068B6B0 /* NewGameController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32FE1D7F195790270068B6B0 /* NewGameController.swift */; };
 		A41D6EC91216F85E00638030 /* linkhelp.html in Resources */ = {isa = PBXBuildFile; fileRef = A41D6EC81216F85E00638030 /* linkhelp.html */; };
 		A4439A8812158819003831A0 /* About these icons.rtf in Resources */ = {isa = PBXBuildFile; fileRef = A4439A8712158819003831A0 /* About these icons.rtf */; };
-		A4439AD712158B06003831A0 /* NewGameController.m in Sources */ = {isa = PBXBuildFile; fileRef = A4439AD512158B06003831A0 /* NewGameController.m */; };
 		A4A697E912135B2F00D955E4 /* Board.m in Sources */ = {isa = PBXBuildFile; fileRef = A4A697E812135B2F00D955E4 /* Board.m */; };
 		A4A69816121369AA00D955E4 /* MutableArrayCategories.m in Sources */ = {isa = PBXBuildFile; fileRef = A4A69815121369AA00D955E4 /* MutableArrayCategories.m */; };
 		A4B7B5E9121306DF008BEA15 /* foods in Resources */ = {isa = PBXBuildFile; fileRef = A4B7B5C3121306DF008BEA15 /* foods */; };
@@ -48,6 +48,9 @@
 		322F13201923E73200F2BE47 /* icon2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon2.png; sourceTree = "<group>"; };
 		322F13221923E8A600F2BE47 /* icon2singleresolution.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon2singleresolution.png; sourceTree = "<group>"; };
 		32CA4F630368D1EE00C91783 /* LinkSame_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LinkSame_Prefix.pch; sourceTree = "<group>"; };
+		32D59DA6195758A000E4A41C /* LinkSame-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "LinkSame-Bridging-Header.h"; sourceTree = "<group>"; };
+		32D59DA7195758A100E4A41C /* MyRightLabel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MyRightLabel.swift; sourceTree = "<group>"; };
+		32FE1D7F195790270068B6B0 /* NewGameController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NewGameController.swift; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* LinkSame-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "LinkSame-Info.plist"; plistStructureDefinitionIdentifier = "com.apple.xcode.plist.structure-definition.iphone.info-plist"; sourceTree = "<group>"; };
 		A41D6EC81216F85E00638030 /* linkhelp.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = linkhelp.html; sourceTree = "<group>"; };
 		A4439A8712158819003831A0 /* About these icons.rtf */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; path = "About these icons.rtf"; sourceTree = "<group>"; };
@@ -102,8 +105,11 @@
 				A4A69815121369AA00D955E4 /* MutableArrayCategories.m */,
 				A4439AD412158B06003831A0 /* NewGameController.h */,
 				A4439AD512158B06003831A0 /* NewGameController.m */,
+				32FE1D7F195790270068B6B0 /* NewGameController.swift */,
 				3229495C19244A0600BBF4FD /* MyRightLabel.h */,
 				3229495D19244A0600BBF4FD /* MyRightLabel.m */,
+				32D59DA7195758A100E4A41C /* MyRightLabel.swift */,
+				32D59DA6195758A000E4A41C /* LinkSame-Bridging-Header.h */,
 			);
 			path = Classes;
 			sourceTree = "<group>";
@@ -248,12 +254,12 @@
 			files = (
 				1D60589B0D05DD56006BFB54 /* main.m in Sources */,
 				1D3623260D0F684500981E51 /* AppDelegate.m in Sources */,
+				32D59DA8195758A100E4A41C /* MyRightLabel.swift in Sources */,
+				32FE1D80195790270068B6B0 /* NewGameController.swift in Sources */,
 				28D7ACF80DDB3853001CB0EB /* LinkSameViewController.m in Sources */,
 				A4B7B64412130DC5008BEA15 /* Piece.m in Sources */,
 				A4A697E912135B2F00D955E4 /* Board.m in Sources */,
-				3229495E19244A0600BBF4FD /* MyRightLabel.m in Sources */,
 				A4A69816121369AA00D955E4 /* MutableArrayCategories.m in Sources */,
-				A4439AD712158B06003831A0 /* NewGameController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -266,6 +272,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
@@ -277,8 +284,11 @@
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INFOPLIST_FILE = "LinkSame-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = LinkSame;
 				PROVISIONING_PROFILE = "";
+				SWIFT_OBJC_BRIDGING_HEADER = "Classes/LinkSame-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
@@ -288,6 +298,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
@@ -297,8 +308,10 @@
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INFOPLIST_FILE = "LinkSame-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = LinkSame;
 				PROVISIONING_PROFILE = "";
+				SWIFT_OBJC_BRIDGING_HEADER = "Classes/LinkSame-Bridging-Header.h";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -325,6 +338,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: Matt Neuburg (W3LHX5RGV2)";
@@ -334,9 +348,11 @@
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INFOPLIST_FILE = "LinkSame-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = LinkSame;
 				PROVISIONING_PROFILE = "";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "4FD990A9-F867-47F2-B59E-D77A2DB45CAB";
+				SWIFT_OBJC_BRIDGING_HEADER = "Classes/LinkSame-Bridging-Header.h";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Distribution;
