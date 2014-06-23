@@ -11,8 +11,9 @@
  */
 
 #import "Board.h"
-#import "Piece.h"
+// #import "Piece.h"
 #import "MutableArrayCategories.h"
+# import "LinkSame-Swift.h"
 
 @interface Board (){
     

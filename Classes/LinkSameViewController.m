@@ -1,7 +1,7 @@
 
 
 #import "LinkSameViewController.h"
-#import "Piece.h"
+//#import "Piece.h"
 #import "Board.h"
 #import "MutableArrayCategories.h"
 //#import "NewGameController.h"
