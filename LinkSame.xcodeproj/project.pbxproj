@@ -13,9 +13,9 @@
 		1DF5F4E00D08C38300B7A737 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DF5F4DF0D08C38300B7A737 /* UIKit.framework */; };
 		288765A50DF7441C002DB57D /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 288765A40DF7441C002DB57D /* CoreGraphics.framework */; };
 		2899E5220DE3E06400AC0155 /* LinkSameViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 2899E5210DE3E06400AC0155 /* LinkSameViewController.xib */; };
-		28D7ACF80DDB3853001CB0EB /* LinkSameViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 28D7ACF70DDB3853001CB0EB /* LinkSameViewController.m */; };
 		32294957192417C800BBF4FD /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A4C0B1121214AA4600D70DAF /* QuartzCore.framework */; };
 		322F131D1923DF9500F2BE47 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 322F131C1923DF9500F2BE47 /* Images.xcassets */; };
+		323E36D919586C3300114D56 /* LinkSameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 323E36D819586C3300114D56 /* LinkSameViewController.swift */; };
 		32A7D4561957CE700002210A /* Piece.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A7D4551957CE700002210A /* Piece.swift */; };
 		32D59DA8195758A100E4A41C /* MyRightLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D59DA7195758A100E4A41C /* MyRightLabel.swift */; };
 		32FE1D80195790270068B6B0 /* NewGameController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32FE1D7F195790270068B6B0 /* NewGameController.swift */; };
@@ -47,6 +47,7 @@
 		322F131F1923E72900F2BE47 /* bigIcon2.psd */ = {isa = PBXFileReference; lastKnownFileType = file; path = bigIcon2.psd; sourceTree = "<group>"; };
 		322F13201923E73200F2BE47 /* icon2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon2.png; sourceTree = "<group>"; };
 		322F13221923E8A600F2BE47 /* icon2singleresolution.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon2singleresolution.png; sourceTree = "<group>"; };
+		323E36D819586C3300114D56 /* LinkSameViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LinkSameViewController.swift; sourceTree = "<group>"; };
 		32A7D4551957CE700002210A /* Piece.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Piece.swift; sourceTree = "<group>"; };
 		32CA4F630368D1EE00C91783 /* LinkSame_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LinkSame_Prefix.pch; sourceTree = "<group>"; };
 		32D59DA6195758A000E4A41C /* LinkSame-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "LinkSame-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -97,6 +98,7 @@
 				1D3623250D0F684500981E51 /* AppDelegate.m */,
 				28D7ACF60DDB3853001CB0EB /* LinkSameViewController.h */,
 				28D7ACF70DDB3853001CB0EB /* LinkSameViewController.m */,
+				323E36D819586C3300114D56 /* LinkSameViewController.swift */,
 				2899E5210DE3E06400AC0155 /* LinkSameViewController.xib */,
 				A4B7B64212130DC5008BEA15 /* Piece.h */,
 				A4B7B64312130DC5008BEA15 /* Piece.m */,
@@ -256,9 +258,9 @@
 			files = (
 				1D60589B0D05DD56006BFB54 /* main.m in Sources */,
 				1D3623260D0F684500981E51 /* AppDelegate.m in Sources */,
+				323E36D919586C3300114D56 /* LinkSameViewController.swift in Sources */,
 				32D59DA8195758A100E4A41C /* MyRightLabel.swift in Sources */,
 				32FE1D80195790270068B6B0 /* NewGameController.swift in Sources */,
-				28D7ACF80DDB3853001CB0EB /* LinkSameViewController.m in Sources */,
 				32A7D4561957CE700002210A /* Piece.swift in Sources */,
 				A4A697E912135B2F00D955E4 /* Board.m in Sources */,
 				A4A69816121369AA00D955E4 /* MutableArrayCategories.m in Sources */,
@@ -285,7 +287,7 @@
 				GCC_PREFIX_HEADER = LinkSame_Prefix.pch;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INFOPLIST_FILE = "LinkSame-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = LinkSame;
 				PROVISIONING_PROFILE = "";
@@ -309,7 +311,7 @@
 				GCC_PREFIX_HEADER = LinkSame_Prefix.pch;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INFOPLIST_FILE = "LinkSame-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = LinkSame;
 				PROVISIONING_PROFILE = "";
@@ -349,7 +351,7 @@
 				GCC_PREFIX_HEADER = LinkSame_Prefix.pch;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INFOPLIST_FILE = "LinkSame-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = LinkSame;
 				PROVISIONING_PROFILE = "";

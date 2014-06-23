@@ -124,7 +124,7 @@
 // but in fact this now never happens, because a new Board object is created any time a new stage is created
 // it is LinkSameView's responsibility to initialize us with a grid size the instant we are created
 
-- (void) setGridSizeX: (int) x Y: (int) y {
+- (void) setGridSizeX: (NSInteger) x Y: (NSInteger) y {
      // otiose, since in fact there was never a previous grid
     // the grid is just an array of arrays
     // think of every entry in the grid as a "slot"
