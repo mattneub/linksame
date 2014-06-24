@@ -39,7 +39,7 @@ extension Array {
 struct Default {
     static let kSize = "Size"
     static let kStyle = "Style"
-    static let kStages = "Stages"
+    static let kLastStage = "Stages"
     static let kScores = "Scores"
     static let kBoardData = "boardData"
 }
@@ -150,7 +150,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     
     func scoresKey() -> String {
         let size = ud.stringForKey(Default.kSize)
-        let stages = ud.integerForKey(Default.kStages)
+        let stages = ud.integerForKey(Default.kLastStage)
         return "\(size)\(stages)"
     }
     
@@ -216,6 +216,9 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     
     func resetTimer() {
         self.timer?.invalidate()
+        if self.interfaceMode == InterfaceMode.Practice {
+            return // don't bother making a new timer, we were doing that (harmlessly) but why bother?
+        }
         self.timer = NSTimer.scheduledTimerWithTimeInterval(10, target: self, selector: "decrementScore", userInfo: nil, repeats: true)
     }
     
@@ -239,12 +242,22 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // but we exist in suspension so this does not affect us unless we are also terminated
         // let's leave it
         self.timer?.invalidate()
+        self.timer = nil
         switch InterfaceMode.fromRaw(self.timedPractice.selectedSegmentIndex)! {
         case .Timed:
             ud.removeObjectForKey(Default.kBoardData)
         case .Practice: // practice, save out board state
             let boardData = NSKeyedArchiver.archivedDataWithRootObject(self.board)
             ud.setObject(boardData, forKey:Default.kBoardData)
+        }
+        // this stuff does no harm if no popovers...
+        // and if there is one, it is dismissed
+        // plus we restore prefs if needed
+        self.dismissViewControllerAnimated(false, completion: nil)
+        if self.oldDefs {
+            println("counts as cancelled, restoring old prefs")
+            ud.setValuesForKeysWithDictionary(self.oldDefs)
+            self.oldDefs = nil
         }
     }
     
@@ -279,7 +292,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
                 animations: {
                 self.stageLabel.text =
                     "Stage \(self.board.stage.integerValue + 1) " +
-                    "of \(ud.integerForKey(Default.kStages) + 1)"
+                    "of \(ud.integerForKey(Default.kLastStage) + 1)"
                 }, completion: nil)
         }
     }
@@ -346,7 +359,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.board.stage = 0 // default
         if let userInfo = (n as? NSNotification)?.userInfo {
             let stage = userInfo["stage"].integerValue
-            if stage < ud.integerForKey(Default.kStages) {
+            if stage < ud.integerForKey(Default.kLastStage) {
                 self.board.stage = stage + 1
                 self.animateBoardReplacement(.Slide)
             }
@@ -445,22 +458,18 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         let pop = nav.popoverPresentationController
         pop.permittedArrowDirections = .Any
         pop.barButtonItem = sender as UIBarButtonItem
-        pop.passthroughViews = nil // still needed; otherwise the bar buttons are available
+        delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
         pop.delegate = self // this is a whole new delegate protocol, of course
         // save defaults so we can restore them later if user cancels
-        self.oldDefs = ud.dictionaryWithValuesForKeys([Default.kStyle, Default.kSize, Default.kStages])
-    }
-    
-    func prepareForPopoverPresentation(ppc: UIPopoverPresentationController!) {
-        ppc.popoverContentSize = self.presentedViewController.preferredContentSize
-        ppc.popoverContentSize.height -= 44 // ok, this looks right
-        // but I shouldn't have to do that; something is going wrong with containment resizing which is a new feature
-        println(ppc.popoverContentSize)
+        self.oldDefs = ud.dictionaryWithValuesForKeys([Default.kStyle, Default.kSize, Default.kLastStage])
     }
     
     func cancelNewGame(_:AnyObject?) { // cancel button in new game popover
         self.dismissViewControllerAnimated(true, completion: nil)
-        ud.setValuesForKeysWithDictionary(self.oldDefs)
+        if self.oldDefs {
+            ud.setValuesForKeysWithDictionary(self.oldDefs)
+            self.oldDefs = nil
+        }
     }
     
     func saveNewGame(_:AnyObject?) { // save button in new game popover; can also be called manually at launch
@@ -471,10 +480,14 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.animateBoardReplacement(.Fade)
     }
     
-    func popoverPresentationControllerShouldDismissPopover(ppc: UIPopoverPresentationController!) -> Bool {
+    func popoverPresentationControllerShouldDismissPopover(pop: UIPopoverPresentationController!) -> Bool {
         // we can identify which popover it is because it is our presentedViewController
         if let vc = self.presentedViewController as? UINavigationController {
-            ud.setValuesForKeysWithDictionary(self.oldDefs)
+            if self.oldDefs {
+                println("counts as cancelled, restoring old prefs")
+                ud.setValuesForKeysWithDictionary(self.oldDefs)
+                self.oldDefs = nil
+            }
         }
         return true
     }
@@ -505,11 +518,11 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         vc.modalPresentationStyle = .Popover
         vc.preferredContentSize = CGSizeMake(600,800) // NB! setting ppc's popoverContentSize didn't work
         self.presentViewController(vc, animated: true, completion: nil)
-        let ppc = vc.popoverPresentationController
-        ppc.permittedArrowDirections = .Any
-        ppc.barButtonItem = sender as UIBarButtonItem
-        ppc.passthroughViews = nil
-
+        let pop = vc.popoverPresentationController
+        pop.permittedArrowDirections = .Any
+        pop.barButtonItem = sender as UIBarButtonItem
+        delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
+        // no delegate needed, as it turns out
     }
     
     // ================= notif from board =================

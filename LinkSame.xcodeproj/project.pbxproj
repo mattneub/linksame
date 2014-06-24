@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1D3623260D0F684500981E51 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1D3623250D0F684500981E51 /* AppDelegate.m */; };
-		1D60589B0D05DD56006BFB54 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; };
 		1D60589F0D05DD5A006BFB54 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D30AB110D05D00D00671497 /* Foundation.framework */; };
 		1DF5F4E00D08C38300B7A737 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DF5F4DF0D08C38300B7A737 /* UIKit.framework */; };
 		288765A50DF7441C002DB57D /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 288765A40DF7441C002DB57D /* CoreGraphics.framework */; };
@@ -18,6 +16,7 @@
 		323E36D919586C3300114D56 /* LinkSameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 323E36D819586C3300114D56 /* LinkSameViewController.swift */; };
 		32A7D4561957CE700002210A /* Piece.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A7D4551957CE700002210A /* Piece.swift */; };
 		32D59DA8195758A100E4A41C /* MyRightLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D59DA7195758A100E4A41C /* MyRightLabel.swift */; };
+		32DAD06E1959FF8C005095C6 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32DAD06D1959FF8C005095C6 /* AppDelegate.swift */; };
 		32FE1D80195790270068B6B0 /* NewGameController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32FE1D7F195790270068B6B0 /* NewGameController.swift */; };
 		A41D6EC91216F85E00638030 /* linkhelp.html in Resources */ = {isa = PBXBuildFile; fileRef = A41D6EC81216F85E00638030 /* linkhelp.html */; };
 		A4439A8812158819003831A0 /* About these icons.rtf in Resources */ = {isa = PBXBuildFile; fileRef = A4439A8712158819003831A0 /* About these icons.rtf */; };
@@ -52,6 +51,7 @@
 		32CA4F630368D1EE00C91783 /* LinkSame_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LinkSame_Prefix.pch; sourceTree = "<group>"; };
 		32D59DA6195758A000E4A41C /* LinkSame-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "LinkSame-Bridging-Header.h"; sourceTree = "<group>"; };
 		32D59DA7195758A100E4A41C /* MyRightLabel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MyRightLabel.swift; sourceTree = "<group>"; };
+		32DAD06D1959FF8C005095C6 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		32FE1D7F195790270068B6B0 /* NewGameController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NewGameController.swift; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* LinkSame-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "LinkSame-Info.plist"; plistStructureDefinitionIdentifier = "com.apple.xcode.plist.structure-definition.iphone.info-plist"; sourceTree = "<group>"; };
 		A41D6EC81216F85E00638030 /* linkhelp.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = linkhelp.html; sourceTree = "<group>"; };
@@ -96,6 +96,7 @@
 			children = (
 				1D3623240D0F684500981E51 /* AppDelegate.h */,
 				1D3623250D0F684500981E51 /* AppDelegate.m */,
+				32DAD06D1959FF8C005095C6 /* AppDelegate.swift */,
 				28D7ACF60DDB3853001CB0EB /* LinkSameViewController.h */,
 				28D7ACF70DDB3853001CB0EB /* LinkSameViewController.m */,
 				323E36D819586C3300114D56 /* LinkSameViewController.swift */,
@@ -256,9 +257,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1D60589B0D05DD56006BFB54 /* main.m in Sources */,
-				1D3623260D0F684500981E51 /* AppDelegate.m in Sources */,
 				323E36D919586C3300114D56 /* LinkSameViewController.swift in Sources */,
+				32DAD06E1959FF8C005095C6 /* AppDelegate.swift in Sources */,
 				32D59DA8195758A100E4A41C /* MyRightLabel.swift in Sources */,
 				32FE1D80195790270068B6B0 /* NewGameController.swift in Sources */,
 				32A7D4561957CE700002210A /* Piece.swift in Sources */,

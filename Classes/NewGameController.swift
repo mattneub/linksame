@@ -13,39 +13,36 @@ class NewGameController : UIViewController {
     
     init () {
         super.init(nibName: nil, bundle: nil)
+        self.edgesForExtendedLayout = UIRectEdge.None
     }
     
-    override func loadView() {
-        let v = UIView()
-        let tv = UITableView(frame:CGRectMake(0,0,320,400), style:.Grouped)
+    override func viewDidLoad() {
+        
+        super.viewDidLoad()
+        let v = self.view
+        
+        let tv = UITableView(frame:CGRectMake(0,0,320,350), style:.Grouped)
+        // unfortunately I have not found any way except to size manually like this by experimentation
         v.addSubview(tv)
         tv.dataSource = self
         tv.delegate = self
         tv.bounces = false
         tv.scrollEnabled = false
-        tv.reloadData()
-        tv.sizeToFit()
         self.tableView = tv
         
-        let pv = UIPickerView(frame:CGRectMake(0,0,320,160))
+        let pv = UIPickerView(frame:CGRectMake(0,0,320,160)) // not really
         pv.dataSource = self
         pv.delegate = self
-        pv.reloadAllComponents()
-        pv.sizeToFit()
+        pv.sizeToFit() // a picker view has its own natural size
         pv.frame.origin.y = tv.frame.size.height
-        v.bounds = CGRectMake(0,0,320, tv.frame.size.height + pv.frame.size.height)
         v.addSubview(pv)
         pv.showsSelectionIndicator = true
-        pv.selectRow(ud.integerForKey(Default.kStages), inComponent: 0, animated: false)
-        self.view = v
-        self.preferredContentSize = self.view.bounds.size
-        println(self.preferredContentSize)
-        //self.modalInPopover = true
+        pv.selectRow(ud.integerForKey(Default.kLastStage), inComponent: 0, animated: false)
+
+        self.preferredContentSize = CGSizeMake(320, tv.frame.size.height + pv.frame.size.height)
+
     }
     
-    override func shouldAutorotateToInterfaceOrientation(toInterfaceOrientation: UIInterfaceOrientation) -> Bool {
-        return true
-    }
 }
 
 extension NewGameController : UITableViewDataSource, UITableViewDelegate {
@@ -128,7 +125,7 @@ extension NewGameController : UIPickerViewDelegate, UIPickerViewDataSource {
     }
     
     func pickerView(pickerView: UIPickerView!, didSelectRow row: Int, inComponent component: Int) {
-        ud.setObject(row, forKey:Default.kStages)
+        ud.setObject(row, forKey:Default.kLastStage)
     }
     
     func pickerView(pickerView: UIPickerView!, rowHeightForComponent component: Int) -> CGFloat {
