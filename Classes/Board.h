@@ -4,7 +4,7 @@
 
 @interface Board : NSObject <NSCoding>
 
-@property (nonatomic, weak) UIView* view;
+@property (nonatomic, weak) UIView* view; // good use case for unowned!
 @property (nonatomic, strong) NSNumber* stage;
 @property (nonatomic, assign) BOOL showingHint;
 
@@ -14,7 +14,7 @@
 - (void) redeal;
 - (void) unilluminate;
 
-- (id) initWithBoardView: (UIView*) bv;
+- (id) initWithBoardView: (UIView*) bv; // should probably set grid size too, since we cannot live without one
 - (void) rebuild;
 
 @end
