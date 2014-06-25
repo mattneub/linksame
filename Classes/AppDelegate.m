@@ -2,7 +2,7 @@
 
 #import "AppDelegate.h"
 //#import "LinkSameViewController.h"
-#import "Board.h"
+//#import "Board.h"
 
 #import "LinkSame-Swift.h"
 

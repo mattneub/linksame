@@ -13,7 +13,7 @@
 #import "Board.h"
 // #import "Piece.h"
 #import "MutableArrayCategories.h"
-# import "LinkSame-Swift.h"
+#import "LinkSame-Swift.h"
 
 @interface Board (){
     
@@ -939,7 +939,6 @@ CGFloat distance(CGPoint pt1, CGPoint pt2) {
 }
 
 // public, called by LinkSameViewController to get us to display a legal path
-
 - (void) hint {
     NSArray* path = [self legalPath];
     if (path)

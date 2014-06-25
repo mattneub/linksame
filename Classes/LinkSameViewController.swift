@@ -291,7 +291,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
                 options: UIViewAnimationOptions.TransitionFlipFromLeft,
                 animations: {
                 self.stageLabel.text =
-                    "Stage \(self.board.stage.integerValue + 1) " +
+                    "Stage \(self.board.stage + 1) " +
                     "of \(ud.integerForKey(Default.kLastStage) + 1)"
                 }, completion: nil)
         }
