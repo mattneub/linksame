@@ -1,22 +1,32 @@
 
 import UIKit
 
+func removeObject<T:Equatable>(inout arr:Array<T>, object:T) -> T? {
+    if let found = find(arr,object) {
+        return arr.removeAtIndex(found)
+    }
+    return nil
+}
+
 class Board : NSObject {
     
     unowned var view: UIView
     var stage = 0
     var showingHint = false
+    var hilitedPieces = Piece[]()
+    var _xct = 0
+    var _yct = 0
     
     init (boardView:UIView) {
         self.view = boardView
         super.init()
     }
     
-    func hint() {
+    func redeal () {
         
     }
     
-    func redeal () {
+    func illuminate (arr: NSValue[]) {
         
     }
     
@@ -28,6 +38,10 @@ class Board : NSObject {
         
     }
     
+    func pieceAtX(i:Int, y j:Int) -> AnyObject { // fix me later
+        return Piece()
+    }
+    
     func addPieceAtX(i:Int, y j:Int, withPicture picTitle:String) {
         
     }
@@ -36,7 +50,14 @@ class Board : NSObject {
         
     }
     
-    /*
+    func checkHilitedPair () {
+        
+    }
+    
+    func checkPair(p1:Piece, and p2:Piece) -> NSValue[]? {
+        return nil
+    }
+    
     
     // maintain an ivar pointing to hilited pieces
     // when that list has two items, check them for validity
@@ -50,11 +71,15 @@ class Board : NSObject {
             }
             self.hilitedPieces += p
         } else {
-            self.hilitedPieces.removeObject(p)
+            // okay, this is simply horrible
+            var hp = (self.hilitedPieces as NSArray).mutableCopy()
+            hp.removeObject(p) // but maybe the answer is to implement Equatable for Piece as object identity?
+            // yes, I've worked out how to do it, should fix later; see util function at top
+            self.hilitedPieces = hp as Piece[]
         }
         p.toggleHilite()
         if self.hilitedPieces.count == 2 {
-            self.checkHilitedPair
+            self.checkHilitedPair()
         }
     }
     
@@ -67,20 +92,22 @@ class Board : NSObject {
     func legalPath () -> NSValue[]? {
         for x in 0.._xct {
             for y in 0.._yct {
-                let piece = self.pieceAtX(x, Y:y)
-                if piece is NSNull {
+                let pieceMaybe = self.pieceAtX(x, y:y)
+                if pieceMaybe is NSNull {
                     continue
                 }
+                let piece = pieceMaybe as Piece
                 let picName = piece.picName
                 for xx in 0.._xct {
                     for yy in 0.._yct {
-                        let piece2 = self.pieceAtX(xx, Y:yy)
-                        if piece2 is NSNull {
+                        let piece2Maybe = self.pieceAtX(xx, y:yy)
+                        if piece2Maybe is NSNull {
                             continue
                         }
                         if (x == xx && y == yy) {
                             continue
                         }
+                        let piece2 = piece2Maybe as Piece
                         let picName2 = piece2.picName
                         if picName2 != picName {
                             continue
@@ -98,16 +125,14 @@ class Board : NSObject {
         return nil
     }
     
-    // public, called by LinkSameViewController to get us to display a legal path
     func hint () {
         let path = self.legalPath()
         if path {
-            self.illuminate(path)
+            self.illuminate(path!)
         }
         else {
             self.redeal() // should never happen at this point
         }
     }
-*/
-    
+
 }
