@@ -10,12 +10,17 @@ func removeObject<T:Equatable>(inout arr:Array<T>, object:T) -> T? {
 
 class Board : NSObject {
     
+    typealias Point = (Int,Int)
+    typealias Path = Point[]
+    
     unowned var view: UIView
     var stage = 0
     var showingHint = false
     var hilitedPieces = Piece[]()
     var _xct = 0
     var _yct = 0
+    var movenda = Piece[]()
+    var grid = Optional<Piece>[][]()
     
     init (boardView:UIView) {
         self.view = boardView
@@ -26,7 +31,7 @@ class Board : NSObject {
         
     }
     
-    func illuminate (arr: NSValue[]) {
+    func illuminate (arr: Path) {
         
     }
     
@@ -38,7 +43,7 @@ class Board : NSObject {
         
     }
     
-    func pieceAtX(i:Int, y j:Int) -> AnyObject { // fix me later
+    func pieceAt(Point) -> Piece? { // fix me later
         return Piece()
     }
     
@@ -50,12 +55,459 @@ class Board : NSObject {
         
     }
     
-    func checkHilitedPair () {
+    func cancelPair() {
         
     }
     
-    func checkPair(p1:Piece, and p2:Piece) -> NSValue[]? {
+    // bottleneck utility for when user correctly selects a pair
+    // flash the path and remove the two pieces
+    
+    func removePairAndIlluminatePath(path:Path) {
+        self.illuminate(path)
+        delay(0.2) {
+            self.unilluminate()
+            delay(0.1) {
+                self.reallyRemovePair()
+            }
+        }
+    }
+    
+    func lineIsClearFrom(pt1:Point, to:Point) -> Bool {
+        return false
+    }
+    
+    // utility to remove a piece from the interface and from the grid (i.e. replace it by NSNull)
+    // TODO can we make this simpler? we now have ability to store nil in an array in the form of optional...
+    
+    func removePieceAt(pt:Point) {
+        if let piece = self.pieceAt(pt) {
+            piece.removeFromSuperview()
+            self.grid[pt.0][pt.1] = nil
+        }
+    }
+    
+    func gameOver () -> Bool {
+        return false
+    }
+    
+    
+    func originOfX(x:Int, y:Int) -> CGPoint {
+        return CGPointZero
+    }
+    
+    func removePieceAtX(x:Int, y:Int) {
+        
+    }
+    
+    // my finest hour!
+    // utility to slide piece to a new position
+    // the problem is that we must do this for many pieces at once
+    // the solution is that caller calls this utility repeatedly
+    // this utility *prepares* the pieces to be moved but does not physically move them
+    // it also puts the pieces in movenda
+    // the caller then calls moveMovenda and the slide actually happens
+ 
+    // yeah, very clever, but you gotta wonder whether I could do better now that I understand how animation works
+    // TODO: look into it
+    
+    func movePiece(p:Piece, toX x:Int, y:Int) {
+        assert(self.pieceAt((x,y)) == nil, "Slot to move piece to must be empty")
+        // move the piece within the *grid*
+        let s = p.picName
+        self.removePieceAtX(p.x, y:p.y)
+        self.addPieceAtX(p.x, y:p.y, withPicture:s)
+        // however, we are not yet redrawn, so now...
+        // return piece to its previous position! but add to movenda
+        // later call to moveMovenda will thus animate it into correct position
+        let pnew = self.pieceAt((x,y)) as Piece
+        var f = pnew.frame
+        f.origin = self.originOfX(x, y:y)
+        pnew.frame = f
+        self.movenda += pnew
+    }
+
+    
+    // utility to animate slide of pieces into their correct place
+    // okay, so all the pieces in movenda have the following odd feature:
+    // they are internally consistent (they are in the right place in the grid, and they know that place)
+    // but they are *physically* in the wrong place
+    // thus all we have to do is move them into the right place
+    // the big lesson here is that animations run in another thread...
+    // so as an animation begins, the interface is refreshed first
+    // thus it doesn't matter that we moved the piece into its right place;
+    // we also moved the piece back into its wrong place, and that is what the user will see when the animation starts
+    // looking at it another way, it is up to us to configure the interface to be right before the start of the animation
+    
+    func moveMovenda() {
+        UIApplication.sharedApplication().beginIgnoringInteractionEvents()
+        UIView.animateWithDuration(0.15, delay: 0, options: UIViewAnimationOptions.CurveLinear, animations: {
+            while self.movenda.count > 0 {
+                let p = self.movenda.removeLast()
+                var f = p.frame
+                f.origin = self.originOfX(p.x, y:p.y)
+                p.frame = f // this is the move that will be animated
+            }
+            }, completion: {
+                _ in
+                UIApplication.sharedApplication().endIgnoringInteractionEvents()
+                self.checkStuck()
+                // we do this after the slide animation is over, so we can get two animations in row, cool
+            })
+    }
+    
+    func checkStuck() {
+        let path = self.legalPath()
+        if !path {
+            self.redeal()
+        }
+    }
+    
+    func reallyRemovePair () {
+        // notify (so score can be incremented)
+        nc.postNotificationName("userMoved", object: self)
+        // actually remove the pieces (we happen to know there must be exactly two)
+        for piece in self.hilitedPieces {
+            self.removePieceAt((piece.x, piece.y))
+        }
+        self.hilitedPieces.removeAll()
+        // game over? if so, notify along with current stage and we're out of here!
+        if self.gameOver() {
+            delay(0.1) { // added this delay in swift, since I've never like what happens at game end
+                nc.postNotificationName("gameOver", object: self, userInfo: ["stage":self.stage])
+            }
+            return
+        }
+        // close up! depends on what stage we are in
+        // the following code is really ugly and repetitive, every case being modelled on the same template
+        // but C doesn't seem to give me a good way around that; will swift help? find out...
+        switch self.stage {
+        case 0:
+            // no gravity, do nothing
+            break
+        case 1: // gravity down
+            for (var x = 0; x < _xct; x++) {
+                for (var y = _yct - 1; y > 0; y--) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var yt = y-1; yt >= 0; yt--) {
+                            let piece2 = self.pieceAt((x,yt))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+            }
+        case 2: // gravity left
+            for (var y = 0; y < _yct; y++) {
+                for (var x = _xct - 1; x > 0; x--) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var xt = x-1; xt >= 0; xt--) {
+                            let piece2 = self.pieceAt((xt,y))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+            }
+        case 3: // gravity toward central horiz line
+            let center = _yct/2 // integer div, deliberate
+            // exactly like 1 except we have to do it twice in two directions
+            for (var x = 0; x < _xct; x++) {
+                for (var y = center - 1; y > 0; y--) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var yt = y-1; yt >= 0; yt--) {
+                            let piece2 = self.pieceAt((x,yt))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+                for (var y = center; y <= _yct - 1; y++) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var yt = y+1; yt < _yct; yt++) {
+                            let piece2 = self.pieceAt((x,yt))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+            }
+        case 4: // gravity toward central vertical line
+            // exactly like 3 except the other orientation
+            let center = _xct/2 // integer div, deliberate
+            for (var y = 0; y < _yct; y++) {
+                for (var x = center-1; x > 0; x--) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var xt = x-1; xt >= 0; xt--) {
+                            let piece2 = self.pieceAt((xt,y))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2! as Piece, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+                for (var x = center; x <= _xct - 1; x++) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var xt = x+1; xt < _xct; xt++) {
+                            let piece2 = self.pieceAt((xt,y))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+            }
+        case 5: // gravity away from central horiz line
+            // exactly like 3 except we walk from the outside to the center
+            let center = _yct/2 // integer div, deliberate
+            for (var x = 0; x < _xct; x++) {
+                for (var y = _yct-1; y > center; y--) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var yt = y-1; yt >= center; yt--) {
+                            let piece2 = self.pieceAt((x,yt))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+                for (var y = 0; y < center-1; y++) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var yt = y+1; yt < center; yt++) {
+                            let piece2 = self.pieceAt((x,yt))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+            }
+        case 6: // gravity toward central vertical line
+            // exactly like 4 except we start at the outside
+            let center = _xct/2 // integer div, deliberate
+            for (var y = 0; y < _yct; y++) {
+                for (var x = _xct-1; x > center; x--) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var xt = x-1; xt >= center; xt--) {
+                            let piece2 = self.pieceAt((xt,y))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+                for (var x = 0; x < center-1; x++) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var xt = x+1; xt < center; xt++) {
+                            let piece2 = self.pieceAt((xt,y))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+            }
+        case 7: // gravity down in one half, gravity up in the other half
+            // like doing 1 in two pieces with the second piece in reverse direction
+            let center = _xct/2;
+            for (var x = 0; x < center; x++) {
+                for (var y = _yct - 1; y > 0; y--) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var yt = y-1; yt >= 0; yt--) {
+                            let piece2 = self.pieceAt((x,yt))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+            }
+            for (var x = center; x < _xct; x++) {
+                for (var y = 0; y < _yct-1; y++) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var yt = y+1; yt < _yct; yt++) {
+                            let piece2 = self.pieceAt((x,yt))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+            }
+        case 8: // gravity left in one half, gravity right in other half
+            // like doing 2 in two pieces with second in reverse direction
+            let center = _yct/2
+            for (var y = 0; y < center; y++) {
+                for (var x = _xct - 1; x > 0; x--) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var xt = x-1; xt >= 0; xt--) {
+                            let piece2 = self.pieceAt((xt,y))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+            }
+            for (var y = center; y < _yct; y++) {
+                for (var x = 0; x < _xct-1; x++) {
+                    let piece = self.pieceAt((x,y))
+                    if !piece {
+                        for (var xt = x+1; xt < _xct; xt++) {
+                            let piece2 = self.pieceAt((xt,y))
+                            if !piece2 {
+                                continue
+                            }
+                            self.movePiece(piece2!, toX:x, y:y)
+                            break
+                        }
+                    }
+                }
+            }
+
+        default:
+            break
+        }
+        // animate!
+        self.moveMovenda() // and then check for stuck, in the delegate handler for moveMovenda
+    }
+    
+    // main game logic utility! this is how we know whether two pieces form a legal pair
+    // the day I figured out how to do this is the day I realized I could write this game
+    // we hand back the legal path joining the pieces, rather than a bool, so that the caller can draw the path
+    
+    func checkPair(p1:Piece, and p2:Piece) -> Path? {
+        // if not a pair, return nil
+        // if a pair, return an array of successive xy positions showing the legal path
+        let pt1 = (x:p1.x, y:p1.y)
+        let pt2 = (x:p2.x, y:p2.y)
+        // 1. first check: are they on the same line with nothing between them?
+        if self.lineIsClearFrom(pt1, to:pt2) {
+            return [pt1,pt2]
+        }
+        // 2. second check: are they at the corners of a rectangle with nothing on one pair of sides between them?
+        let midpt1 = (p1.x, p2.y)
+        let midpt2 = (p2.x, p1.y)
+        if !self.pieceAt(midpt1) {
+            if self.lineIsClearFrom(pt1, to:midpt1) && self.lineIsClearFrom(midpt1, to:pt2) {
+                return [pt1, midpt1, pt2]
+            }
+        }
+        if !self.pieceAt(midpt2) {
+            if self.lineIsClearFrom(pt1, to:midpt2) && self.lineIsClearFrom(midpt2, to:pt2) {
+                return [pt1, midpt2, pt2]
+            }
+        }
+        // 3. third check: The Way of the Moving Line
+        // (this was the algorithmic insight that makes the whole thing possible)
+        // connect the x or y coordinates of the pieces by a vertical or horizontal line;
+        // move that line through the whole grid including outside the boundaries,
+        // and see if all three resulting segments are clear
+        // the only drawback with this approach is that if there are multiple paths...
+        // we may find a longer one before we find a shorter one, which is counter-intuitive
+        // so, accumulate all found paths and submit only the shortest
+        var marr = Path[]()
+        func addPathIfValid(midpt1:Point,midpt2:Point) {
+            if !self.pieceAt(midpt1) && !self.pieceAt(midpt2) {
+                if self.lineIsClearFrom(pt1, to:midpt1) &&
+                    self.lineIsClearFrom(midpt1, to:midpt2) &&
+                    self.lineIsClearFrom(midpt2, to:pt2) {
+                        marr += [pt1,midpt1,midpt2,pt2]
+                }
+            }
+        }
+        for y in -1.._yct {
+            addPathIfValid((pt1.x,y),(pt2.x,y))
+        }
+        for x in -1.._xct {
+            addPathIfValid((x,pt1.y),(x,pt2.y))
+        }
+        if marr.count > 0 { // got at least one! find the shortest and submit it
+            func distance(pt1:Point, pt2:Point) -> Double {
+                // utility to learn physical distance between two points (thank you, M. Descartes)
+                let deltax = pt1.0 - pt2.0
+                let deltay = pt1.1 - pt2.1
+                return sqrt(Double(deltax * deltax + deltay * deltay))
+            }
+            var shortestLength = -1.0
+            var shortestPath = Path()
+            for thisPath in marr {
+                var thisLength = 0.0
+                for ix in 0..(thisPath.count-1) {
+                    thisLength += distance(thisPath[ix],thisPath[ix+1])
+                }
+                if shortestLength < 0 || thisLength < shortestLength {
+                    shortestLength = thisLength
+                    shortestPath = thisPath
+                }
+            }
+            assert(shortestPath.count > 0, "We must have a path to illuminate by now")
+            return shortestPath
+        }
+        // no dice
         return nil
+    }
+    
+
+    
+    func checkHilitedPair () {
+        assert(self.hilitedPieces.count == 2, "Must have a pair to check")
+        for piece in self.hilitedPieces {
+            assert(piece.superview == self.view, "Pieces to check must be displayed on board")
+        }
+        let p1 = self.hilitedPieces[0]
+        let p2 = self.hilitedPieces[1]
+        if p1.picName != p2.picName {
+            self.cancelPair()
+            return
+        }
+        if let path = self.checkPair(p1, and:p2) {
+            self.removePairAndIlluminatePath(path)
+        } else {
+            self.cancelPair()
+        }
     }
     
     
@@ -89,30 +541,28 @@ class Board : NSObject {
     // but caller can treat result as condition as well
     // the path is simply the path returned from checkPair
     
-    func legalPath () -> NSValue[]? {
+    func legalPath () -> (Int,Int)[]? {
         for x in 0.._xct {
             for y in 0.._yct {
-                let pieceMaybe = self.pieceAtX(x, y:y)
-                if pieceMaybe is NSNull {
+                let piece = self.pieceAt((x,y))
+                if !piece {
                     continue
                 }
-                let piece = pieceMaybe as Piece
-                let picName = piece.picName
+                let picName = piece!.picName
                 for xx in 0.._xct {
                     for yy in 0.._yct {
-                        let piece2Maybe = self.pieceAtX(xx, y:yy)
-                        if piece2Maybe is NSNull {
+                        let piece2 = self.pieceAt((xx,yy))
+                        if !piece2 {
                             continue
                         }
                         if (x == xx && y == yy) {
                             continue
                         }
-                        let piece2 = piece2Maybe as Piece
-                        let picName2 = piece2.picName
+                        let picName2 = piece2!.picName
                         if picName2 != picName {
                             continue
                         }
-                        let path = self.checkPair(piece, and:piece2)
+                        let path = self.checkPair(piece!, and:piece2!)
                         if !path {
                             continue
                         }
