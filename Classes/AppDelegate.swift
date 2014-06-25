@@ -17,8 +17,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: NSDictionary?) -> Bool {
         
         ud.registerDefaults([
-            Default.kSize:Sizes.Easy.toRaw(),
-            Default.kStyle:Styles.Snacks.toRaw(),
+            Default.kSize:Sizes.Easy,
+            Default.kStyle:Styles.Snacks,
             Default.kLastStage:8, // meaning 0-thru-8, so there will be nine
             Default.kScores:Dictionary<String,Int>()
             ])

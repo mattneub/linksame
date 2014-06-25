@@ -44,34 +44,34 @@ struct Default {
     static let kBoardData = "boardData"
 }
 
-enum Sizes : String {
-    case Easy = "Easy"
-    case Normal = "Normal"
-    case Hard = "Hard"
+struct Sizes {
+    static let Easy = "Easy"
+    static let Normal = "Normal"
+    static let Hard = "Hard"
     static func sizes () -> String[] {
-        return [Easy.toRaw(), Normal.toRaw(), Hard.toRaw()]
+        return [Easy, Normal, Hard]
     }
     static func boardSize (s:String) -> (Int,Int) {
         let d = [
-            Easy.toRaw():(12,7),
-            Normal.toRaw():(14,8),
-            Hard.toRaw():(16,9)
+            Easy:(12,7),
+            Normal:(14,8),
+            Hard:(16,9)
         ]
         return d[s]!
     }
 }
 
 
-enum Styles : String {
-    case Animals = "Animals"
-    case Snacks = "Snacks"
+struct Styles {
+    static let Animals = "Animals"
+    static let Snacks = "Snacks"
     static func styles () -> String[] {
-        return [Animals.toRaw(), Snacks.toRaw()]
+        return [Animals, Snacks]
     }
     static func pieces (s:String) -> (Int,Int) {
         let d = [
-            Animals.toRaw():(11,110),
-            Snacks.toRaw():(21,210)
+            Animals:(11,110),
+            Snacks:(21,210)
         ]
         return d[s]!
     }
