@@ -256,7 +256,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // plus we restore prefs if needed
         self.dismissViewControllerAnimated(false, completion: nil)
         if self.oldDefs {
-            println("counts as cancelled, restoring old prefs")
+            printlnNOT("counts as cancelled, restoring old prefs")
             ud.setValuesForKeysWithDictionary(self.oldDefs)
             self.oldDefs = nil
         }
@@ -402,7 +402,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
                 self.board.addPieceAt((i,j), withPicture: deck.removeLast()) // heh heh, pops and returns
             }
         }
-        println(self.board.grid)
+        printlnNOT(self.board.grid)
     }
     
     
@@ -485,7 +485,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // we can identify which popover it is because it is our presentedViewController
         if let vc = self.presentedViewController as? UINavigationController {
             if self.oldDefs {
-                println("counts as cancelled, restoring old prefs")
+                printlnNOT("counts as cancelled, restoring old prefs")
                 ud.setValuesForKeysWithDictionary(self.oldDefs)
                 self.oldDefs = nil
             }

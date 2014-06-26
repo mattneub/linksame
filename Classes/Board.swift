@@ -2,6 +2,10 @@
 import UIKit
 import QuartzCore
 
+func printlnNOT<T>(object: T) {
+    // do nothing, turn off println
+}
+
 func removeObject<T:Equatable>(inout arr:Array<T>, object:T) -> T? {
     if let found = find(arr,object) {
         return arr.removeAtIndex(found)
@@ -95,20 +99,17 @@ class Board : NSCoding {
             deck.shuffle()
             deck.shuffle()
             deck.shuffle()
+            UIApplication.sharedApplication().endIgnoringInteractionEvents()
             for i in 0 .. _xct {
                 for j in 0 .. _yct {
                     let piece = self.pieceAt((i,j))
-                    if !piece {
-                        continue
+                    if let piece = piece {
+                        // very lightweight; we just assign the name, let the piece worry about the picture
+                        UIView.transitionWithView(piece, duration: 0.7, options: UIViewAnimationOptions.TransitionFlipFromLeft, animations: {
+                            piece.picName = deck.removeLast()
+                            piece.setNeedsDisplay()
+                            }, completion: nil)
                     }
-                    // very lightweight; we just assign the name, let the piece worry about the picture
-                    piece!.picName = deck.removeLast()
-                    UIView.animateWithDuration(0.7, delay: 0, options: UIViewAnimationOptions.TransitionFlipFromRight, animations: {
-                        piece!.setNeedsDisplay()
-                        }, completion: {
-                            _ in
-                            UIApplication.sharedApplication().endIgnoringInteractionEvents()
-                        })
                 }
             }
         } while !self.legalPath()
@@ -234,7 +235,7 @@ class Board : NSCoding {
         let (i,j) = p
         self.grid[i][j] = piece
         (piece.x, piece.y) = (i,j)
-        println("Point was \(p), pic was \(picTitle)\nCreated \(piece)")
+        printlnNOT("Point was \(p), pic was \(picTitle)\nCreated \(piece)")
         // set up tap detection
         let t = UITapGestureRecognizer(target: self, action: "handleTap:")
         piece.addGestureRecognizer(t)
@@ -663,7 +664,7 @@ class Board : NSCoding {
         if self.lineIsClearFrom(pt1, to:pt2) {
             return [pt1,pt2]
         }
-        println("failed straight line test")
+        printlnNOT("failed straight line test")
         // 2. second check: are they at the corners of a rectangle with nothing on one pair of sides between them?
         let midpt1 = (p1.x, p2.y)
         let midpt2 = (p2.x, p1.y)
@@ -677,7 +678,7 @@ class Board : NSCoding {
                 return [pt1, midpt2, pt2]
             }
         }
-        println("failed two-segment test")
+        printlnNOT("failed two-segment test")
         // 3. third check: The Way of the Moving Line
         // (this was the algorithmic insight that makes the whole thing possible)
         // connect the x or y coordinates of the pieces by a vertical or horizontal line;
@@ -687,9 +688,9 @@ class Board : NSCoding {
         // we may find a longer one before we find a shorter one, which is counter-intuitive
         // so, accumulate all found paths and submit only the shortest
         var marr = Path[]()
-        println("=======")
+        printlnNOT("=======")
         func addPathIfValid(midpt1:Point,midpt2:Point) {
-            println("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
+            printlnNOT("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
             // new in swift, reject if same midpoint
             if midpt1.0 == midpt2.0 && midpt1.1 == midpt2.1 {return}
             if !self.pieceAt(midpt1) && !self.pieceAt(midpt2) {
@@ -769,8 +770,8 @@ class Board : NSCoding {
         }
         p.toggleHilite()
         if self.hilitedPieces.count == 2 {
-            println("========")
-            println("about to check hilited pair \(self.hilitedPieces)")
+            printlnNOT("========")
+            printlnNOT("about to check hilited pair \(self.hilitedPieces)")
             self.checkHilitedPair()
         }
     }
@@ -802,8 +803,8 @@ class Board : NSCoding {
                         if picName2 != picName {
                             continue
                         }
-                        println("========")
-                        println("About to check \(piece!) vs. \(piece2!)")
+                        printlnNOT("========")
+                        printlnNOT("About to check \(piece!) vs. \(piece2!)")
                         let path = self.checkPair(piece!, and:piece2!)
                         if !path {
                             continue
