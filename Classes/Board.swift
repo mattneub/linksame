@@ -14,25 +14,67 @@ let BOTTOMMARGIN : CGFloat = (1.0/8.0)
 let LEFTMARGIN : CGFloat = (1.0/8.0)
 let RIGHTMARGIN : CGFloat = (1.0/8.0)
 
-class Board : NSObject {
+// I was hoping there would be no good reason to be an NSObject derivative
+// but it turned out that messaging via tap gesture recognizer etc. requires this
+// however, then it didn't like my multidimensional grid, I guess because it can coerce this so easily
+// so I found it easiest to devise a helper object to handle the taps
+// that way I can keep Board a pure Swift object
+class Board : NSCoding {
     
     typealias Point = (Int,Int)
     typealias Path = Point[]
     
-    unowned var view: UIView
+    // unowned var view: UIView // can't live without a view (but see initwithcoder)
+    // however, I found that referring to an unowned causes a crash, so I had to give up and make it weak
+    weak var view: UIView!
     var stage = 0
     var showingHint = false
     var hilitedPieces = Piece[]()
-    var _xct = 0
-    var _yct = 0
+    var _xct : Int
+    var _yct : Int
     var movenda = Piece[]()
-    var grid = Optional<Piece>[][]()
+    var grid : Optional<Piece>[][] // can't live without a grid
     
     var _pieceSize = CGSizeMake(0.0,0.0)
     
-    init (boardView:UIView) {
+    init (boardView:UIView, gridSize:(Int,Int)) {
         self.view = boardView
-        super.init()
+        (self._xct, self._yct) = gridSize
+        // and now set up the empty grid with nils
+        // hold my beer and watch this!
+        // self.grid = Array(count:_xct, repeatedValue: Array(count:_yct, repeatedValue:nil))
+        // facepalm! that inserted multiple references _to the same array_, thus screwing up everything later
+        self.grid = Optional<Piece>[][]()
+        for x in 0.._xct {
+            self.grid += Array(count:_yct, repeatedValue:nil)
+        }
+    }
+    
+    @objc func encodeWithCoder(coder: NSCoder!) {
+        coder.encodeObject(self.grid, forKey: "gridsw")
+        coder.encodeInteger(_xct, forKey: "xctsw")
+        coder.encodeInteger(_xct, forKey: "yctsw")
+        coder.encodeInteger(self.stage, forKey:"stagesw")
+    }
+    
+    @objc init(coder: NSCoder!) {
+        //self.view = UIView() // just to quiet the compiler; we still need initialization of this
+        //super.init()
+        let grid = coder.decodeObjectForKey("gridsw") as Optional<Piece>[][]
+        self._xct = coder.decodeIntegerForKey("xctsw")
+        self._yct = coder.decodeIntegerForKey("yctsw")
+        self.stage = coder.decodeIntegerForKey("stagesw")
+        // make an empty grid...
+        self.grid = Optional<Piece>[][]()
+        for x in 0.._xct {
+            self.grid += Array(count:_yct, repeatedValue:nil)
+        }
+        // ... and fill it in one value at a time
+        for i in 0 .. _xct {
+            for j in 0 .. _yct {
+                self.grid[i][j] = grid[i][j]
+            }
+        }
     }
     
     func redeal () {
@@ -94,7 +136,7 @@ class Board : NSObject {
     // we need the one-piece margin because we have to be able to draw paths in it
     
     func pieceSize() -> CGSize {
-        assert(self.view != nil, "Meaningless to ask for piece size with no view.")
+        assert(self.view, "Meaningless to ask for piece size with no view.")
         assert((_xct > 0 && _yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
         // memoize piece size as an ivar
         // you may ask why I didn't just set the piece size when I set the grid
@@ -113,7 +155,7 @@ class Board : NSObject {
     // thus we are handed a context and we can just draw directly into it
     // the layer is holding an array that tells us what path to draw!
     
-    override func drawLayer(layer: CALayer!, inContext con: CGContext!) {
+    @objc func drawLayer(layer: CALayer!, inContext con: CGContext!) {
         let arr = layer.valueForKey("arr") as NSValue[]
         // arr is a series of CGPoint wrapped us as NSValue (because that is what Objective-C array will hold)
         // unwrap to CGPoints, unwrap to a pair of integers
@@ -154,8 +196,8 @@ class Board : NSObject {
     func pathLayer() -> CALayer {
         let trans = self.pathView()
         let lay1 = trans.layer
-        let pathLayer = lay1.sublayers.reverse()[0]
-        return pathLayer as CALayer
+        let pathLayer = lay1.sublayers.reverse()[0] as CALayer
+        return pathLayer
     }
     
     // utility for obtaining a reference to the view that holds the transparency layer
@@ -163,10 +205,6 @@ class Board : NSObject {
 
     func pathView() -> UIView {
         return self.view.viewWithTag(999)
-    }
-    
-    func setGridSizeX(x:Int, y:Int) {
-        
     }
     
     func pieceAt(p:Point) -> Piece? {
@@ -195,15 +233,12 @@ class Board : NSObject {
         // also place the Piece in the grid, and tell it where it is
         let (i,j) = p
         self.grid[i][j] = piece
-        (piece.x, piece.y) = p
+        (piece.x, piece.y) = (i,j)
+        println("Point was \(p), pic was \(picTitle)\nCreated \(piece)")
         // set up tap detection
         let t = UITapGestureRecognizer(target: self, action: "handleTap:")
         piece.addGestureRecognizer(t)
         // wow, that was easy
-    }
-    
-    func rebuild () {
-        
     }
     
     // as pieces are highlighted, we store them in an ivar
@@ -266,11 +301,9 @@ class Board : NSObject {
     // utility to remove a piece from the interface and from the grid (i.e. replace it by nil)
     // no more NSNull!
     
-    func removePieceAt(pt:Point) {
-        if let piece = self.pieceAt(pt) {
-            piece.removeFromSuperview()
-            self.grid[pt.0][pt.1] = nil
-        }
+    func removePiece(p:Piece) {
+        self.grid[p.x][p.y] = nil
+        p.removeFromSuperview()
     }
     
     // utility to learn whether the grid is empty, indicating that the game is over
@@ -290,7 +323,7 @@ class Board : NSObject {
     
     func originOf(p:Point) -> CGPoint {
         let (i,j) = p
-        assert(self.view != nil, "Meaningless to ask for piece position with no view")
+        assert(self.view, "Meaningless to ask for piece position with no view")
         assert(i >= -1 && i <= _xct, "Position requested out of bounds (x)")
         assert(j >= -1 && j <= _yct, "Position requested out of bounds (y)")
         // divide view bounds, allow 2 extra on all sides
@@ -317,7 +350,7 @@ class Board : NSObject {
         assert(self.pieceAt(newPoint) == nil, "Slot to move piece to must be empty")
         // move the piece within the *grid*
         let s = p.picName
-        self.removePieceAt((p.x, p.y))
+        self.removePiece(p)
         self.addPieceAt(newPoint, withPicture:s)
         // however, we are not yet redrawn, so now...
         // return piece to its previous position! but add to movenda
@@ -370,7 +403,7 @@ class Board : NSObject {
         nc.postNotificationName("userMoved", object: self)
         // actually remove the pieces (we happen to know there must be exactly two)
         for piece in self.hilitedPieces {
-            self.removePieceAt((piece.x, piece.y))
+            self.removePiece(piece)
         }
         self.hilitedPieces.removeAll()
         // game over? if so, notify along with current stage and we're out of here!
@@ -630,6 +663,7 @@ class Board : NSObject {
         if self.lineIsClearFrom(pt1, to:pt2) {
             return [pt1,pt2]
         }
+        println("failed straight line test")
         // 2. second check: are they at the corners of a rectangle with nothing on one pair of sides between them?
         let midpt1 = (p1.x, p2.y)
         let midpt2 = (p2.x, p1.y)
@@ -643,6 +677,7 @@ class Board : NSObject {
                 return [pt1, midpt2, pt2]
             }
         }
+        println("failed two-segment test")
         // 3. third check: The Way of the Moving Line
         // (this was the algorithmic insight that makes the whole thing possible)
         // connect the x or y coordinates of the pieces by a vertical or horizontal line;
@@ -652,7 +687,11 @@ class Board : NSObject {
         // we may find a longer one before we find a shorter one, which is counter-intuitive
         // so, accumulate all found paths and submit only the shortest
         var marr = Path[]()
+        println("=======")
         func addPathIfValid(midpt1:Point,midpt2:Point) {
+            println("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
+            // new in swift, reject if same midpoint
+            if midpt1.0 == midpt2.0 && midpt1.1 == midpt2.1 {return}
             if !self.pieceAt(midpt1) && !self.pieceAt(midpt2) {
                 if self.lineIsClearFrom(pt1, to:midpt1) &&
                     self.lineIsClearFrom(midpt1, to:midpt2) &&
@@ -661,10 +700,10 @@ class Board : NSObject {
                 }
             }
         }
-        for y in -1.._yct {
+        for y in -1..._yct {
             addPathIfValid((pt1.x,y),(pt2.x,y))
         }
-        for x in -1.._xct {
+        for x in -1..._xct {
             addPathIfValid((x,pt1.y),(x,pt2.y))
         }
         if marr.count > 0 { // got at least one! find the shortest and submit it
@@ -717,7 +756,7 @@ class Board : NSObject {
     // maintain an ivar pointing to hilited pieces
     // when that list has two items, check them for validity
 
-    func handleTap(g:UIGestureRecognizer) {
+    @objc func handleTap(g:UIGestureRecognizer) {
         let p = g.view as Piece
         let hilited = p.isHilited
         if !hilited {
@@ -726,14 +765,12 @@ class Board : NSObject {
             }
             self.hilitedPieces += p
         } else {
-            // okay, this is simply horrible
-            var hp = (self.hilitedPieces as NSArray).mutableCopy()
-            hp.removeObject(p) // but maybe the answer is to implement Equatable for Piece as object identity?
-            // yes, I've worked out how to do it, should fix later; see util function at top
-            self.hilitedPieces = hp as Piece[]
+            removeObject(&self.hilitedPieces, p) // see utility at top
         }
         p.toggleHilite()
         if self.hilitedPieces.count == 2 {
+            println("========")
+            println("about to check hilited pair \(self.hilitedPieces)")
             self.checkHilitedPair()
         }
     }
@@ -765,6 +802,8 @@ class Board : NSObject {
                         if picName2 != picName {
                             continue
                         }
+                        println("========")
+                        println("About to check \(piece!) vs. \(piece2!)")
                         let path = self.checkPair(piece!, and:piece2!)
                         if !path {
                             continue

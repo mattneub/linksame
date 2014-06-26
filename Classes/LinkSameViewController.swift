@@ -195,9 +195,10 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
             self.board = NSKeyedUnarchiver.unarchiveObjectWithData(boardData) as Board
             // but this board is not fully realized; it has no view pointer
             self.board.view = self.boardView
-            // another problem is that the board's reconstructed pieces are not actually showing
-            // but the board itself will fix that if we ask it to rebuild itself
-            self.board.rebuild()
+//            // another problem is that the board's reconstructed pieces are not actually showing
+//            // but the board itself will fix that if we ask it to rebuild itself
+//            self.board.rebuild()
+            self.boardView.setNeedsDisplay()
             // set interface up as practice and we're all set
             self.interfaceMode = .Practice
             self.displayStage()
@@ -352,8 +353,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         }
         
         // create new board object and configure it
-        self.board = Board(boardView:self.boardView)
-        self.board.setGridSizeX(w, y: h)
+        self.board = Board(boardView:self.boardView, gridSize:(w,h))
         
         // stage (current stage arrived in notification, or nil if we are just starting)
         self.board.stage = 0 // default
@@ -402,6 +402,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
                 self.board.addPieceAt((i,j), withPicture: deck.removeLast()) // heh heh, pops and returns
             }
         }
+        println(self.board.grid)
     }
     
     
