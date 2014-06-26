@@ -399,7 +399,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // deal out the pieces and we're all set! Pieces themselves and Board object take over interactions from here
         for i in 0..w {
             for j in 0..h {
-                self.board.addPieceAtX(i, y: j, withPicture: deck.removeLast()) // heh heh, pops and returns
+                self.board.addPieceAt((i,j), withPicture: deck.removeLast()) // heh heh, pops and returns
             }
         }
     }

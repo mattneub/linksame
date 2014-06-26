@@ -1,5 +1,6 @@
 
 import UIKit
+import QuartzCore
 
 func removeObject<T:Equatable>(inout arr:Array<T>, object:T) -> T? {
     if let found = find(arr,object) {
@@ -7,6 +8,11 @@ func removeObject<T:Equatable>(inout arr:Array<T>, object:T) -> T? {
     }
     return nil
 }
+
+let TOPMARGIN : CGFloat = (1.0/8.0)
+let BOTTOMMARGIN : CGFloat = (1.0/8.0)
+let LEFTMARGIN : CGFloat = (1.0/8.0)
+let RIGHTMARGIN : CGFloat = (1.0/8.0)
 
 class Board : NSObject {
     
@@ -22,41 +28,192 @@ class Board : NSObject {
     var movenda = Piece[]()
     var grid = Optional<Piece>[][]()
     
+    var _pieceSize = CGSizeMake(0.0,0.0)
+    
     init (boardView:UIView) {
         self.view = boardView
         super.init()
     }
     
     func redeal () {
-        
+        do {
+            UIApplication.sharedApplication().beginIgnoringInteractionEvents()
+            // gather up all pieces (as names), shuffle them, deal them into their current slots
+            var deck = String[]()
+            for i in 0 .. _xct {
+                for j in 0 .. _yct {
+                    let piece = self.pieceAt((i,j))
+                    if !piece {
+                        continue
+                    }
+                    deck += piece!.picName
+                }
+            }
+            deck.shuffle()
+            deck.shuffle()
+            deck.shuffle()
+            deck.shuffle()
+            for i in 0 .. _xct {
+                for j in 0 .. _yct {
+                    let piece = self.pieceAt((i,j))
+                    if !piece {
+                        continue
+                    }
+                    // very lightweight; we just assign the name, let the piece worry about the picture
+                    piece!.picName = deck.removeLast()
+                    UIView.animateWithDuration(0.7, delay: 0, options: UIViewAnimationOptions.TransitionFlipFromRight, animations: {
+                        piece!.setNeedsDisplay()
+                        }, completion: {
+                            _ in
+                            UIApplication.sharedApplication().endIgnoringInteractionEvents()
+                        })
+                }
+            }
+        } while !self.legalPath()
     }
+    
+    // given a series of CGPoints (wrapped up as NSValue), connect the dots
+    // we used to draw this ourselves and flash a view
+    // now, however, the view is already there
+    // all we do is store the array in the transparency layer and tell the layer it needs drawing
     
     func illuminate (arr: Path) {
-        
+        let pathLayer = self.pathLayer()
+        pathLayer.delegate = self
+        self.pathView().userInteractionEnabled = true
+        // transform path, which is an array of Point, into an NSArray of NSValue wrapping CGPoint
+        // so we can store it in the layer
+        let arrCGPoints : CGPoint[] = arr.map { CGPointMake(CGFloat($0.0),CGFloat($0.1)) }
+        let arrNSValues = arrCGPoints.map { NSValue(CGPoint:$0) }
+        pathLayer.setValue(arrNSValues, forKey:"arr")
+        pathLayer.setNeedsDisplay()
+        self.showingHint = true
     }
     
+    // there is (from outside in) a thin margin, then a one-piece margin, then the grid of drawn pieces
+    // we need the one-piece margin because we have to be able to draw paths in it
+    
+    func pieceSize() -> CGSize {
+        assert(self.view != nil, "Meaningless to ask for piece size with no view.")
+        assert((_xct > 0 && _yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
+        // memoize piece size as an ivar
+        // you may ask why I didn't just set the piece size when I set the grid
+        // this actually feels neater, though
+        if (self._pieceSize.width == 0.0) {
+            // divide view bounds, allow 1 extra plus margins
+            let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(_xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
+            let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(_yct) + 2.0 + TOPMARGIN + BOTTOMMARGIN)
+            self._pieceSize = CGSizeMake(pieceWidth, pieceHeight)
+        }
+        return self._pieceSize
+    }
+    
+    // this is the actual path drawing code
+    // we are the delegate of the transparency layer so we are called when the layer is told it needs redrawing
+    // thus we are handed a context and we can just draw directly into it
+    // the layer is holding an array that tells us what path to draw!
+    
+    override func drawLayer(layer: CALayer!, inContext con: CGContext!) {
+        let arr = layer.valueForKey("arr") as NSValue[]
+        // arr is a series of CGPoint wrapped us as NSValue (because that is what Objective-C array will hold)
+        // unwrap to CGPoints, unwrap to a pair of integers
+        let arr2 : Point[] = arr.map {let pt = $0.CGPointValue(); return (Int(pt.x),Int(pt.y))}
+        // connect the dots; however, the dots we want to connect are the *centers* of the pieces...
+        // whereas we are given piece *origins*, so calculate offsets
+        let sz = self.pieceSize()
+        let offx = sz.width/2.0
+        let offy = sz.width/2.0
+        CGContextSetLineJoin(con, kCGLineJoinRound)
+        CGContextSetRGBStrokeColor(con, 0.4, 0.4, 1.0, 1.0)
+        CGContextSetLineWidth(con, 3.0)
+        CGContextBeginPath(con)
+        for (var i = 0; i < arr2.count - 1; i++) {
+            let p1 = arr2[i]
+            let p2 = arr2[i+1]
+            let orig1 = self.originOf(p1)
+            let orig2 = self.originOf(p2)
+            CGContextMoveToPoint(con, orig1.x + offx, orig1.y + offy)
+            CGContextAddLineToPoint(con, orig2.x + offx, orig2.y + offy)
+        }
+        CGContextStrokePath(con)
+    }
+    
+    // erase the path by clearing the transparency layer (nil contents)
+    
     func unilluminate () {
-        
+        let pathLayer = self.pathLayer()
+        pathLayer.delegate = nil
+        pathLayer.contents = nil
+        self.pathView().userInteractionEnabled = false // make touches just fall thru once again
+        self.showingHint = false
+    }
+    
+    // utility for obtaining a reference to the transparency layer
+    // it is the only sublayer of the layer of subview 999
+
+    func pathLayer() -> CALayer {
+        let trans = self.pathView()
+        let lay1 = trans.layer
+        let pathLayer = lay1.sublayers.reverse()[0]
+        return pathLayer as CALayer
+    }
+    
+    // utility for obtaining a reference to the view that holds the transparency layer
+    // we need this so we can switch touch fall-thru on and off
+
+    func pathView() -> UIView {
+        return self.view.viewWithTag(999)
     }
     
     func setGridSizeX(x:Int, y:Int) {
         
     }
     
-    func pieceAt(Point) -> Piece? { // fix me later
-        return Piece()
+    func pieceAt(p:Point) -> Piece? {
+        let (i,j) = p
+        // it is legal to ask for piece one slot outside boundaries, but not further
+        assert(i >= -1 && i <= _xct, "Piece requested out of bounds (x)")
+        assert(j >= -1 && j <= _yct, "Piece requested out of bounds (y)")
+        // report slot outside boundaries as empty
+        if (i == -1 || i == _xct) { return nil }
+        if (j == -1 || j == _yct) { return nil }
+        // report actual value within boundaries
+        return self.grid[i][j]
     }
     
-    func addPieceAtX(i:Int, y j:Int, withPicture picTitle:String) {
-        
+    // public interface for putting a piece in a slot
+    
+    func addPieceAt(p:Point, withPicture picTitle:String) {
+        let sz = self.pieceSize()
+        let orig = self.originOf(p)
+        let f = CGRect(origin: orig, size: sz)
+        let piece = Piece(frame:f)
+        piece.picName = picTitle
+        // place the Piece in the interface
+        // we are conscious that we must not accidentally draw on top of the transparency view
+        self.view.insertSubview(piece, belowSubview: self.pathView())
+        // also place the Piece in the grid, and tell it where it is
+        let (i,j) = p
+        self.grid[i][j] = piece
+        (piece.x, piece.y) = p
+        // set up tap detection
+        let t = UITapGestureRecognizer(target: self, action: "handleTap:")
+        piece.addGestureRecognizer(t)
+        // wow, that was easy
     }
     
     func rebuild () {
         
     }
     
+    // as pieces are highlighted, we store them in an ivar
+    // thus, to unhighlight all highlighted piece, we just run thru that list
+    
     func cancelPair() {
-        
+        let p1 = self.hilitedPieces.removeLast()
+        p1.toggleHilite()
+        let p2 = self.hilitedPieces.removeLast()
+        p2.toggleHilite()
     }
     
     // bottleneck utility for when user correctly selects a pair
@@ -72,12 +229,42 @@ class Board : NSObject {
         }
     }
     
-    func lineIsClearFrom(pt1:Point, to:Point) -> Bool {
-        return false
+    // utility to determine whether the line from p1 to p2 consists entirely of nil
+    
+    func lineIsClearFrom(p1:(x:Int,y:Int), to p2:(x:Int,y:Int)) -> Bool {
+        if !(p1.x == p2.x || p1.y == p2.y) {
+            return false // they are not even on the same line
+        }
+        // determine which dimension they share, then which way they are ordered
+        var start:Point, end:Point
+        if p1.x == p2.x {
+            if p1.y < p2.y {
+                (start,end) = (p1,p2)
+            } else {
+                (start,end) = (p2,p1)
+            }
+            for i in start.1+1 .. end.1 {
+                if self.pieceAt((p1.x,i)) {
+                    return false
+                }
+            }
+        } else { // p1.y == p2.y
+            if p1.x < p2.x {
+                (start,end) = (p1,p2)
+            } else {
+                (start,end) = (p2,p1)
+            }
+            for i in start.0+1 .. end.0 {
+                if self.pieceAt((i,p1.y)) {
+                    return false
+                }
+            }
+        }
+        return true
     }
     
-    // utility to remove a piece from the interface and from the grid (i.e. replace it by NSNull)
-    // TODO can we make this simpler? we now have ability to store nil in an array in the form of optional...
+    // utility to remove a piece from the interface and from the grid (i.e. replace it by nil)
+    // no more NSNull!
     
     func removePieceAt(pt:Point) {
         if let piece = self.pieceAt(pt) {
@@ -86,17 +273,33 @@ class Board : NSObject {
         }
     }
     
+    // utility to learn whether the grid is empty, indicating that the game is over
+    
     func gameOver () -> Bool {
-        return false
+        for x in 0.._xct {
+            for y in 0.._yct {
+                if self.pieceAt((x,y)) {
+                    return false
+                }
+            }
+        }
+        return true
     }
     
+    // given a piece's place in the grid, where should it be physically drawn on the view?
     
-    func originOfX(x:Int, y:Int) -> CGPoint {
-        return CGPointZero
-    }
-    
-    func removePieceAtX(x:Int, y:Int) {
-        
+    func originOf(p:Point) -> CGPoint {
+        let (i,j) = p
+        assert(self.view != nil, "Meaningless to ask for piece position with no view")
+        assert(i >= -1 && i <= _xct, "Position requested out of bounds (x)")
+        assert(j >= -1 && j <= _yct, "Position requested out of bounds (y)")
+        // divide view bounds, allow 2 extra on all sides
+        let pieceWidth = self.pieceSize().width
+        let pieceHeight = self.pieceSize().height
+        let x = ((1.0 + LEFTMARGIN) * pieceWidth) + (CGFloat(i) * pieceWidth)
+        let y = ((1.0 + TOPMARGIN) * pieceHeight) + (CGFloat(j) * pieceHeight)
+        return CGPointMake(x,y)
+
     }
     
     // my finest hour!
@@ -110,18 +313,18 @@ class Board : NSObject {
     // yeah, very clever, but you gotta wonder whether I could do better now that I understand how animation works
     // TODO: look into it
     
-    func movePiece(p:Piece, toX x:Int, y:Int) {
-        assert(self.pieceAt((x,y)) == nil, "Slot to move piece to must be empty")
+    func movePiece(p:Piece, to newPoint:(Int,Int)) {
+        assert(self.pieceAt(newPoint) == nil, "Slot to move piece to must be empty")
         // move the piece within the *grid*
         let s = p.picName
-        self.removePieceAtX(p.x, y:p.y)
-        self.addPieceAtX(p.x, y:p.y, withPicture:s)
+        self.removePieceAt((p.x, p.y))
+        self.addPieceAt(newPoint, withPicture:s)
         // however, we are not yet redrawn, so now...
         // return piece to its previous position! but add to movenda
         // later call to moveMovenda will thus animate it into correct position
-        let pnew = self.pieceAt((x,y)) as Piece
+        let pnew = self.pieceAt(newPoint) as Piece
         var f = pnew.frame
-        f.origin = self.originOfX(x, y:y)
+        f.origin = self.originOf(newPoint)
         pnew.frame = f
         self.movenda += pnew
     }
@@ -144,7 +347,7 @@ class Board : NSObject {
             while self.movenda.count > 0 {
                 let p = self.movenda.removeLast()
                 var f = p.frame
-                f.origin = self.originOfX(p.x, y:p.y)
+                f.origin = self.originOf((p.x, p.y))
                 p.frame = f // this is the move that will be animated
             }
             }, completion: {
@@ -194,7 +397,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -210,7 +413,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -228,7 +431,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -241,7 +444,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -259,7 +462,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2! as Piece, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -272,7 +475,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -290,7 +493,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -303,7 +506,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -321,7 +524,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -334,7 +537,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -352,7 +555,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -367,7 +570,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -385,7 +588,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -400,7 +603,7 @@ class Board : NSObject {
                             if !piece2 {
                                 continue
                             }
-                            self.movePiece(piece2!, toX:x, y:y)
+                            self.movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
