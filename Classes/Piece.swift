@@ -6,9 +6,15 @@
 //
 //
 
+
+// define equality as identity
+func == (lhs:Piece, rhs:Piece) -> Bool {
+    return lhs === rhs
+}
+
 import UIKit
 
-class Piece : UIView, NSCoding {
+class Piece : UIView, NSCoding, Equatable, Printable {
     
     /*
 @property (nonatomic, copy) NSString* picName;
@@ -31,6 +37,10 @@ class Piece : UIView, NSCoding {
     var hilite : Bool = false
     var isHilited : Bool {
     return self.hilite
+    }
+    
+    override var description : String {
+    return "picname: \(picName); x: \(x); y: \(y)"
     }
     
     // interestingly, we MUST implement initWithFrame, even though we do nothing
