@@ -19,11 +19,33 @@ let LEFTMARGIN : CGFloat = (1.0/8.0)
 let RIGHTMARGIN : CGFloat = (1.0/8.0)
 
 // I was hoping there would be no good reason to be an NSObject derivative
-// but it turned out that messaging via tap gesture recognizer etc. requires this
-// however, then it didn't like my multidimensional grid, I guess because it can coerce this so easily
-// so I found it easiest to devise a helper object to handle the taps
-// that way I can keep Board a pure Swift object
-class Board : NSCoding {
+// but it turned out that keyed archiving requires it
+// however, unfortunately then my grid gave trouble, probably because it is multidimensional
+// but I didn't want to lose that, so I created a grid class, which hides (encapsulates) the actual grid
+
+class Grid {
+    var grid : Optional<Piece>[][]
+    let xct : Int
+    let yct : Int
+    init(_ x:Int, _ y:Int) {
+        self.xct = x
+        self.yct = y
+        // and now set up the empty grid with nils
+        // hold my beer and watch this!
+        // self.grid = Array(count:_xct, repeatedValue: Array(count:_yct, repeatedValue:nil))
+        // facepalm! that inserted multiple references _to the same array_, thus screwing up everything later
+        self.grid = Optional<Piece>[][]()
+        for x in 0..xct {
+            self.grid += Array(count:yct, repeatedValue:nil)
+        }
+    }
+    // oh boy, I've been wanting a reason to use subscripts!
+    subscript(i:Int) -> Optional<Piece>[] {
+        return self.grid[i]
+    }
+}
+
+class Board : NSObject, NSCoding {
     
     typealias Point = (Int,Int)
     typealias Path = Point[]
@@ -37,46 +59,50 @@ class Board : NSCoding {
     var _xct : Int
     var _yct : Int
     var movenda = Piece[]()
-    var grid : Optional<Piece>[][] // can't live without a grid
+    var grid : Grid // can't live without a grid, can't init until xct and yct are known
     
     var _pieceSize = CGSizeMake(0.0,0.0)
     
     init (boardView:UIView, gridSize:(Int,Int)) {
         self.view = boardView
         (self._xct, self._yct) = gridSize
-        // and now set up the empty grid with nils
-        // hold my beer and watch this!
-        // self.grid = Array(count:_xct, repeatedValue: Array(count:_yct, repeatedValue:nil))
-        // facepalm! that inserted multiple references _to the same array_, thus screwing up everything later
-        self.grid = Optional<Piece>[][]()
-        for x in 0.._xct {
-            self.grid += Array(count:_yct, repeatedValue:nil)
-        }
+        self.grid = Grid(self._xct, self._yct)
     }
     
-    @objc func encodeWithCoder(coder: NSCoder!) {
-        coder.encodeObject(self.grid, forKey: "gridsw")
+    func encodeWithCoder(coder: NSCoder!) {
+        // coder.encodeObject(self.grid, forKey: "gridsw")
+        // but that's never going to work; there are nils in our grid!
+        // flatten to single-dimensional array of strings
+        var saveableGrid = String[]()
+        for i in 0 .. _xct {
+            for j in 0 .. _yct {
+                let piece = self.grid[i][j]
+                saveableGrid += piece ? piece!.picName : ""
+            }
+        }
+        coder.encodeObject(saveableGrid, forKey: "gridsw")
         coder.encodeInteger(_xct, forKey: "xctsw")
-        coder.encodeInteger(_xct, forKey: "yctsw")
+        coder.encodeInteger(_yct, forKey: "yctsw")
         coder.encodeInteger(self.stage, forKey:"stagesw")
     }
     
-    @objc init(coder: NSCoder!) {
+    init(coder: NSCoder!) {
         //self.view = UIView() // just to quiet the compiler; we still need initialization of this
         //super.init()
-        let grid = coder.decodeObjectForKey("gridsw") as Optional<Piece>[][]
+        var flatGrid = coder.decodeObjectForKey("gridsw") as String[]
         self._xct = coder.decodeIntegerForKey("xctsw")
         self._yct = coder.decodeIntegerForKey("yctsw")
         self.stage = coder.decodeIntegerForKey("stagesw")
         // make an empty grid...
-        self.grid = Optional<Piece>[][]()
-        for x in 0.._xct {
-            self.grid += Array(count:_yct, repeatedValue:nil)
-        }
+        self.grid = Grid(self._xct, self._yct)
+        super.init()
         // ... and fill it in one value at a time
         for i in 0 .. _xct {
             for j in 0 .. _yct {
-                self.grid[i][j] = grid[i][j]
+                let picname = flatGrid.removeAtIndex(0)
+                if !picname.isEmpty {
+                    self.addPieceAt((i,j), withPicture: picname)
+                }
             }
         }
     }
@@ -156,7 +182,7 @@ class Board : NSCoding {
     // thus we are handed a context and we can just draw directly into it
     // the layer is holding an array that tells us what path to draw!
     
-    @objc func drawLayer(layer: CALayer!, inContext con: CGContext!) {
+    override func drawLayer(layer: CALayer!, inContext con: CGContext!) {
         let arr = layer.valueForKey("arr") as NSValue[]
         // arr is a series of CGPoint wrapped us as NSValue (because that is what Objective-C array will hold)
         // unwrap to CGPoints, unwrap to a pair of integers
@@ -757,7 +783,7 @@ class Board : NSCoding {
     // maintain an ivar pointing to hilited pieces
     // when that list has two items, check them for validity
 
-    @objc func handleTap(g:UIGestureRecognizer) {
+    func handleTap(g:UIGestureRecognizer) {
         let p = g.view as Piece
         let hilited = p.isHilited
         if !hilited {
