@@ -21,9 +21,10 @@ let RIGHTMARGIN : CGFloat = (1.0/8.0)
 // I was hoping there would be no good reason to be an NSObject derivative
 // but it turned out that keyed archiving requires it
 // however, unfortunately then my grid gave trouble, probably because it is multidimensional
-// but I didn't want to lose that, so I created a grid class, which hides (encapsulates) the actual grid
+// but I didn't want to lose that, so I created a grid struct (no need for full-fledged class), 
+// which hides (encapsulates) the actual grid
 
-class Grid {
+struct Grid {
     var grid : Optional<Piece>[][]
     let xct : Int
     let yct : Int
@@ -61,7 +62,23 @@ class Board : NSObject, NSCoding {
     var movenda = Piece[]()
     var grid : Grid // can't live without a grid, can't init until xct and yct are known
     
-    var _pieceSize = CGSizeMake(0.0,0.0)
+    var _memoizedPieceSize = CGSizeMake(0.0,0.0)
+    var pieceSize : CGSize {
+    // there is (from outside in) a thin margin, then a one-piece margin, then the grid of drawn pieces
+    // we need the one-piece margin because we have to be able to draw paths in it
+    // memoize piece size as an ivar
+    // you may ask why I didn't just set the piece size when I set the grid
+    // this actually feels neater, though
+    if (self._memoizedPieceSize.width == 0.0) {
+            assert(self.view, "Meaningless to ask for piece size with no view.")
+            assert((_xct > 0 && _yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
+            // divide view bounds, allow 1 extra plus margins
+            let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(_xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
+            let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(_yct) + 2.0 + TOPMARGIN + BOTTOMMARGIN)
+            self._memoizedPieceSize = CGSizeMake(pieceWidth, pieceHeight)
+        }
+        return self._memoizedPieceSize
+    }
     
     init (boardView:UIView, gridSize:(Int,Int)) {
         self.view = boardView
@@ -84,6 +101,7 @@ class Board : NSObject, NSCoding {
         coder.encodeInteger(_xct, forKey: "xctsw")
         coder.encodeInteger(_yct, forKey: "yctsw")
         coder.encodeInteger(self.stage, forKey:"stagesw")
+        coder.encodeCGSize(self._memoizedPieceSize, forKey: "piecesizesw")
     }
     
     init(coder: NSCoder!) {
@@ -93,6 +111,7 @@ class Board : NSObject, NSCoding {
         self._xct = coder.decodeIntegerForKey("xctsw")
         self._yct = coder.decodeIntegerForKey("yctsw")
         self.stage = coder.decodeIntegerForKey("stagesw")
+        self._memoizedPieceSize = coder.decodeCGSizeForKey("piecesizesw")
         // make an empty grid...
         self.grid = Grid(self._xct, self._yct)
         super.init()
@@ -102,6 +121,19 @@ class Board : NSObject, NSCoding {
                 let picname = flatGrid.removeAtIndex(0)
                 if !picname.isEmpty {
                     self.addPieceAt((i,j), withPicture: picname)
+                }
+            }
+        }
+    }
+    
+    // re-add all pieces (as pieces) to view
+    // called by client after initWithCoder, because we had no view at the time we were unarchived
+    func rebuild () {
+        assert(self.view != nil, "meaningless to rebuild without a real view")
+        for x in 0 .. _xct {
+            for y in 0 .. _yct {
+                if let piece = self.pieceAt((x,y)) {
+                    self.view?.insertSubview(piece, belowSubview: self.pathView())
                 }
             }
         }
@@ -159,24 +191,6 @@ class Board : NSObject, NSCoding {
         self.showingHint = true
     }
     
-    // there is (from outside in) a thin margin, then a one-piece margin, then the grid of drawn pieces
-    // we need the one-piece margin because we have to be able to draw paths in it
-    
-    func pieceSize() -> CGSize {
-        assert(self.view, "Meaningless to ask for piece size with no view.")
-        assert((_xct > 0 && _yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
-        // memoize piece size as an ivar
-        // you may ask why I didn't just set the piece size when I set the grid
-        // this actually feels neater, though
-        if (self._pieceSize.width == 0.0) {
-            // divide view bounds, allow 1 extra plus margins
-            let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(_xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
-            let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(_yct) + 2.0 + TOPMARGIN + BOTTOMMARGIN)
-            self._pieceSize = CGSizeMake(pieceWidth, pieceHeight)
-        }
-        return self._pieceSize
-    }
-    
     // this is the actual path drawing code
     // we are the delegate of the transparency layer so we are called when the layer is told it needs redrawing
     // thus we are handed a context and we can just draw directly into it
@@ -189,7 +203,7 @@ class Board : NSObject, NSCoding {
         let arr2 : Point[] = arr.map {let pt = $0.CGPointValue(); return (Int(pt.x),Int(pt.y))}
         // connect the dots; however, the dots we want to connect are the *centers* of the pieces...
         // whereas we are given piece *origins*, so calculate offsets
-        let sz = self.pieceSize()
+        let sz = self.pieceSize
         let offx = sz.width/2.0
         let offy = sz.width/2.0
         CGContextSetLineJoin(con, kCGLineJoinRound)
@@ -249,14 +263,14 @@ class Board : NSObject, NSCoding {
     // public interface for putting a piece in a slot
     
     func addPieceAt(p:Point, withPicture picTitle:String) {
-        let sz = self.pieceSize()
+        let sz = self.pieceSize
         let orig = self.originOf(p)
         let f = CGRect(origin: orig, size: sz)
         let piece = Piece(frame:f)
         piece.picName = picTitle
         // place the Piece in the interface
         // we are conscious that we must not accidentally draw on top of the transparency view
-        self.view.insertSubview(piece, belowSubview: self.pathView())
+        self.view?.insertSubview(piece, belowSubview: self.pathView())
         // also place the Piece in the grid, and tell it where it is
         let (i,j) = p
         self.grid[i][j] = piece
@@ -351,12 +365,11 @@ class Board : NSObject, NSCoding {
     
     func originOf(p:Point) -> CGPoint {
         let (i,j) = p
-        assert(self.view, "Meaningless to ask for piece position with no view")
         assert(i >= -1 && i <= _xct, "Position requested out of bounds (x)")
         assert(j >= -1 && j <= _yct, "Position requested out of bounds (y)")
         // divide view bounds, allow 2 extra on all sides
-        let pieceWidth = self.pieceSize().width
-        let pieceHeight = self.pieceSize().height
+        let pieceWidth = self.pieceSize.width
+        let pieceHeight = self.pieceSize.height
         let x = ((1.0 + LEFTMARGIN) * pieceWidth) + (CGFloat(i) * pieceWidth)
         let y = ((1.0 + TOPMARGIN) * pieceHeight) + (CGFloat(j) * pieceHeight)
         return CGPointMake(x,y)

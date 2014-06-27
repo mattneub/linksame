@@ -197,8 +197,8 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
             self.board.view = self.boardView
 //            // another problem is that the board's reconstructed pieces are not actually showing
 //            // but the board itself will fix that if we ask it to rebuild itself
-//            self.board.rebuild()
-            self.boardView.setNeedsDisplay()
+            self.board.rebuild()
+            // self.boardView.setNeedsDisplay()
             // set interface up as practice and we're all set
             self.interfaceMode = .Practice
             self.displayStage()
