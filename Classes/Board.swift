@@ -351,47 +351,17 @@ class Board : NSCoding {
         assert(self.pieceAt(newPoint) == nil, "Slot to move piece to must be empty")
         // move the piece within the *grid*
         let s = p.picName
+        let oldFrame = p.frame
         self.removePiece(p)
         self.addPieceAt(newPoint, withPicture:s)
         // however, we are not yet redrawn, so now...
         // return piece to its previous position! but add to movenda
         // later call to moveMovenda will thus animate it into correct position
-        let pnew = self.pieceAt(newPoint) as Piece
-        var f = pnew.frame
-        f.origin = self.originOf(newPoint)
-        pnew.frame = f
+        let pnew = self.pieceAt(newPoint)!
+        pnew.frame = oldFrame
         self.movenda += pnew
     }
 
-    
-    // utility to animate slide of pieces into their correct place
-    // okay, so all the pieces in movenda have the following odd feature:
-    // they are internally consistent (they are in the right place in the grid, and they know that place)
-    // but they are *physically* in the wrong place
-    // thus all we have to do is move them into the right place
-    // the big lesson here is that animations run in another thread...
-    // so as an animation begins, the interface is refreshed first
-    // thus it doesn't matter that we moved the piece into its right place;
-    // we also moved the piece back into its wrong place, and that is what the user will see when the animation starts
-    // looking at it another way, it is up to us to configure the interface to be right before the start of the animation
-    
-    func moveMovenda() {
-        UIApplication.sharedApplication().beginIgnoringInteractionEvents()
-        UIView.animateWithDuration(0.15, delay: 0, options: UIViewAnimationOptions.CurveLinear, animations: {
-            while self.movenda.count > 0 {
-                let p = self.movenda.removeLast()
-                var f = p.frame
-                f.origin = self.originOf((p.x, p.y))
-                p.frame = f // this is the move that will be animated
-            }
-            }, completion: {
-                _ in
-                UIApplication.sharedApplication().endIgnoringInteractionEvents()
-                self.checkStuck()
-                // we do this after the slide animation is over, so we can get two animations in row, cool
-            })
-    }
-    
     func checkStuck() {
         let path = self.legalPath()
         if !path {
@@ -546,7 +516,7 @@ class Board : NSCoding {
                     }
                 }
             }
-        case 6: // gravity toward central vertical line
+        case 6: // gravity away from central vertical line
             // exactly like 4 except we start at the outside
             let center = _xct/2 // integer div, deliberate
             for (var y = 0; y < _yct; y++) {
@@ -648,8 +618,37 @@ class Board : NSCoding {
             break
         }
         // animate!
-        self.moveMovenda() // and then check for stuck, in the delegate handler for moveMovenda
+        // and then check for stuck, in the delegate handler for moveMovenda
+    
+        // slide pieces into their correct place
+        // okay, so all the pieces in movenda have the following odd feature:
+        // they are internally consistent (they are in the right place in the grid, and they know that place)
+        // but they are *physically* in the wrong place
+        // thus all we have to do is move them into the right place
+        // the big lesson here is that animations run in another thread...
+        // so as an animation begins, the interface is refreshed first
+        // thus it doesn't matter that we moved the piece into its right place;
+        // we also moved the piece back into its wrong place, and that is what the user will see when the animation starts
+        // looking at it another way, it is up to us to configure the interface to be right before the start of the animation
+        
+        UIView.animateWithDuration(0.15, delay: 0.1, options: UIViewAnimationOptions.CurveLinear, animations: {
+            while self.movenda.count > 0 {
+                let p = self.movenda.removeLast()
+                var f = p.frame
+                f.origin = self.originOf((p.x, p.y))
+                printlnNOT("Will change frame of piece \(p)")
+                printlnNOT("From \(p.frame)")
+                printlnNOT("To \(f)")
+                p.frame = f // this is the move that will be animated
+            }
+            }, completion: {
+                _ in
+                self.checkStuck()
+                // we do this after the slide animation is over, so we can get two animations in row, cool
+            })
     }
+    
+
     
     // main game logic utility! this is how we know whether two pieces form a legal pair
     // the day I figured out how to do this is the day I realized I could write this game

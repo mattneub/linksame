@@ -357,6 +357,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         
         // stage (current stage arrived in notification, or nil if we are just starting)
         self.board.stage = 0 // default
+        // self.board.stage = 8 // testing, comment out!
         if let userInfo = (n as? NSNotification)?.userInfo {
             let stage = userInfo["stage"].integerValue
             if stage < ud.integerForKey(Default.kLastStage) {
