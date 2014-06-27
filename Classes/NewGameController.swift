@@ -125,7 +125,7 @@ extension NewGameController : UIPickerViewDelegate, UIPickerViewDataSource {
     }
     
     func pickerView(pickerView: UIPickerView!, didSelectRow row: Int, inComponent component: Int) {
-        ud.setObject(row, forKey:Default.kLastStage)
+        ud.setInteger(row, forKey:Default.kLastStage)
     }
     
     func pickerView(pickerView: UIPickerView!, rowHeightForComponent component: Int) -> CGFloat {

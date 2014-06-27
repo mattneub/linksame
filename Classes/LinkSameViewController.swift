@@ -151,7 +151,8 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     func scoresKey() -> String {
         let size = ud.stringForKey(Default.kSize)
         let stages = ud.integerForKey(Default.kLastStage)
-        return "\(size)\(stages)"
+        let key = "\(size)\(stages)"
+        return key
     }
     
     func initializeScores () {
@@ -291,9 +292,9 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
             UIView.transitionWithView(self.stageLabel, duration: 0.4,
                 options: UIViewAnimationOptions.TransitionFlipFromLeft,
                 animations: {
-                self.stageLabel.text =
-                    "Stage \(self.board.stage + 1) " +
+                    let s = "Stage \(self.board.stage + 1) " +
                     "of \(ud.integerForKey(Default.kLastStage) + 1)"
+                    self.stageLabel.text = s
                 }, completion: nil)
         }
     }
@@ -480,6 +481,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.initializeScores()
         self.interfaceMode = .Timed
         self.animateBoardReplacement(.Fade)
+        self.oldDefs = nil // crucial or we'll fall one behind
     }
     
     func popoverPresentationControllerShouldDismissPopover(pop: UIPopoverPresentationController!) -> Bool {
