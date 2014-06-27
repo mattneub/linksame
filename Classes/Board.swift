@@ -310,6 +310,7 @@ class Board : NSCoding {
     // utility to learn whether the grid is empty, indicating that the game is over
     
     func gameOver () -> Bool {
+        // return true // testing game end
         for x in 0.._xct {
             for y in 0.._yct {
                 if self.pieceAt((x,y)) {

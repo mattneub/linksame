@@ -20,7 +20,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             Default.kSize:Sizes.Easy,
             Default.kStyle:Styles.Snacks,
             Default.kLastStage:8, // meaning 0-thru-8, so there will be nine
-            Default.kScores:Dictionary<String,Int>()
+            Default.kScores:["Test":0] // NB didn't want to talk this way, but I was forced to "seed" the dictionary or crash
             ])
         
         self.window = UIWindow(frame:UIScreen.mainScreen().bounds)

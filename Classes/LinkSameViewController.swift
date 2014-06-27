@@ -369,8 +369,8 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
                 // do score and notification stuff only if user is not just practicing
                 if InterfaceMode.fromRaw(self.timedPractice.selectedSegmentIndex)! == .Timed {
                     let key = self.scoresKey()
-                    var d = ud.dictionaryForKey(Default.kScores) as Dictionary<String,Integer>
-                    let prev = d[key] as? Int
+                    var d = ud.dictionaryForKey(Default.kScores) as Dictionary<String,Int>
+                    let prev = d[key]
                     var newHigh = false
                     if !prev || prev < self.score {
                         newHigh = true
