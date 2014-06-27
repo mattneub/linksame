@@ -259,7 +259,8 @@ class Board : NSObject, NSCoding {
         return self.grid[i][j]
     }
     
-    // public interface for putting a piece in a slot
+    // public interface for putting a piece in a slot and into interface
+    // however, we use view optionally because we might not have a view
     
     func addPieceAt(p:Point, withPicture picTitle:String) {
         let sz = self.pieceSize
@@ -350,8 +351,8 @@ class Board : NSObject, NSCoding {
     
     func gameOver () -> Bool {
         // return true // testing game end
-        for x in 0.._xct {
-            for y in 0.._yct {
+        for x in 0..self._xct {
+            for y in 0..self._yct {
                 if self.pieceAt((x,y)) {
                     return false
                 }
