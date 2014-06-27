@@ -57,10 +57,10 @@ class Board : NSObject, NSCoding {
     var stage = 0
     var showingHint = false
     var hilitedPieces = Piece[]()
-    var _xct : Int
-    var _yct : Int
+    var _xct : Int { return self.grid.xct }
+    var _yct : Int { return self.grid.yct }
     var movenda = Piece[]()
-    var grid : Grid // can't live without a grid, can't init until xct and yct are known
+    var grid : Grid // can't live without a grid
     
     var _memoizedPieceSize = CGSizeMake(0.0,0.0)
     var pieceSize : CGSize {
@@ -73,8 +73,8 @@ class Board : NSObject, NSCoding {
             assert(self.view, "Meaningless to ask for piece size with no view.")
             assert((_xct > 0 && _yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
             // divide view bounds, allow 1 extra plus margins
-            let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(_xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
-            let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(_yct) + 2.0 + TOPMARGIN + BOTTOMMARGIN)
+            let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self._xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
+            let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self._yct) + 2.0 + TOPMARGIN + BOTTOMMARGIN)
             self._memoizedPieceSize = CGSizeMake(pieceWidth, pieceHeight)
         }
         return self._memoizedPieceSize
@@ -82,8 +82,7 @@ class Board : NSObject, NSCoding {
     
     init (boardView:UIView, gridSize:(Int,Int)) {
         self.view = boardView
-        (self._xct, self._yct) = gridSize
-        self.grid = Grid(self._xct, self._yct)
+        self.grid = Grid(gridSize)
     }
     
     func encodeWithCoder(coder: NSCoder!) {
@@ -91,15 +90,15 @@ class Board : NSObject, NSCoding {
         // but that's never going to work; there are nils in our grid!
         // flatten to single-dimensional array of strings
         var saveableGrid = String[]()
-        for i in 0 .. _xct {
-            for j in 0 .. _yct {
+        for i in 0 .. self._xct {
+            for j in 0 .. self._yct {
                 let piece = self.grid[i][j]
                 saveableGrid += piece ? piece!.picName : ""
             }
         }
         coder.encodeObject(saveableGrid, forKey: "gridsw")
-        coder.encodeInteger(_xct, forKey: "xctsw")
-        coder.encodeInteger(_yct, forKey: "yctsw")
+        coder.encodeInteger(self._xct, forKey: "xctsw")
+        coder.encodeInteger(self._yct, forKey: "yctsw")
         coder.encodeInteger(self.stage, forKey:"stagesw")
         coder.encodeCGSize(self._memoizedPieceSize, forKey: "piecesizesw")
     }
@@ -108,16 +107,16 @@ class Board : NSObject, NSCoding {
         //self.view = UIView() // just to quiet the compiler; we still need initialization of this
         //super.init()
         var flatGrid = coder.decodeObjectForKey("gridsw") as String[]
-        self._xct = coder.decodeIntegerForKey("xctsw")
-        self._yct = coder.decodeIntegerForKey("yctsw")
+        let xct = coder.decodeIntegerForKey("xctsw")
+        let yct = coder.decodeIntegerForKey("yctsw")
         self.stage = coder.decodeIntegerForKey("stagesw")
         self._memoizedPieceSize = coder.decodeCGSizeForKey("piecesizesw")
         // make an empty grid...
-        self.grid = Grid(self._xct, self._yct)
+        self.grid = Grid(xct, yct)
         super.init()
         // ... and fill it in one value at a time
-        for i in 0 .. _xct {
-            for j in 0 .. _yct {
+        for i in 0 .. self._xct {
+            for j in 0 .. self._yct {
                 let picname = flatGrid.removeAtIndex(0)
                 if !picname.isEmpty {
                     self.addPieceAt((i,j), withPicture: picname)
@@ -130,8 +129,8 @@ class Board : NSObject, NSCoding {
     // called by client after initWithCoder, because we had no view at the time we were unarchived
     func rebuild () {
         assert(self.view != nil, "meaningless to rebuild without a real view")
-        for x in 0 .. _xct {
-            for y in 0 .. _yct {
+        for x in 0 .. self._xct {
+            for y in 0 .. self._yct {
                 if let piece = self.pieceAt((x,y)) {
                     self.view?.insertSubview(piece, belowSubview: self.pathView())
                 }
@@ -144,8 +143,8 @@ class Board : NSObject, NSCoding {
             UIApplication.sharedApplication().beginIgnoringInteractionEvents()
             // gather up all pieces (as names), shuffle them, deal them into their current slots
             var deck = String[]()
-            for i in 0 .. _xct {
-                for j in 0 .. _yct {
+            for i in 0 .. self._xct {
+                for j in 0 .. self._yct {
                     let piece = self.pieceAt((i,j))
                     if !piece {
                         continue
@@ -158,8 +157,8 @@ class Board : NSObject, NSCoding {
             deck.shuffle()
             deck.shuffle()
             UIApplication.sharedApplication().endIgnoringInteractionEvents()
-            for i in 0 .. _xct {
-                for j in 0 .. _yct {
+            for i in 0 .. self._xct {
+                for j in 0 .. self._yct {
                     let piece = self.pieceAt((i,j))
                     if let piece = piece {
                         // very lightweight; we just assign the name, let the piece worry about the picture
@@ -251,11 +250,11 @@ class Board : NSObject, NSCoding {
     func pieceAt(p:Point) -> Piece? {
         let (i,j) = p
         // it is legal to ask for piece one slot outside boundaries, but not further
-        assert(i >= -1 && i <= _xct, "Piece requested out of bounds (x)")
-        assert(j >= -1 && j <= _yct, "Piece requested out of bounds (y)")
+        assert(i >= -1 && i <= self._xct, "Piece requested out of bounds (x)")
+        assert(j >= -1 && j <= self._yct, "Piece requested out of bounds (y)")
         // report slot outside boundaries as empty
-        if (i == -1 || i == _xct) { return nil }
-        if (j == -1 || j == _yct) { return nil }
+        if (i == -1 || i == self._xct) { return nil }
+        if (j == -1 || j == self._yct) { return nil }
         // report actual value within boundaries
         return self.grid[i][j]
     }
@@ -365,8 +364,8 @@ class Board : NSObject, NSCoding {
     
     func originOf(p:Point) -> CGPoint {
         let (i,j) = p
-        assert(i >= -1 && i <= _xct, "Position requested out of bounds (x)")
-        assert(j >= -1 && j <= _yct, "Position requested out of bounds (y)")
+        assert(i >= -1 && i <= self._xct, "Position requested out of bounds (x)")
+        assert(j >= -1 && j <= self._yct, "Position requested out of bounds (y)")
         // divide view bounds, allow 2 extra on all sides
         let pieceWidth = self.pieceSize.width
         let pieceHeight = self.pieceSize.height
