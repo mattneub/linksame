@@ -25,7 +25,7 @@ let RIGHTMARGIN : CGFloat = (1.0/8.0)
 // which hides (encapsulates) the actual grid
 
 struct Grid {
-    var grid : Optional<Piece>[][]
+    var grid : [[Piece?]]
     let xct : Int
     let yct : Int
     init(_ x:Int, _ y:Int) {
@@ -35,31 +35,37 @@ struct Grid {
         // hold my beer and watch this!
         // self.grid = Array(count:_xct, repeatedValue: Array(count:_yct, repeatedValue:nil))
         // facepalm! that inserted multiple references _to the same array_, thus screwing up everything later
-        self.grid = Optional<Piece>[][]()
-        for x in 0..xct {
+        self.grid = [[Piece?]]()
+        for x in 0..<xct {
             self.grid += Array(count:yct, repeatedValue:nil)
         }
     }
     // oh boy, I've been wanting a reason to use subscripts!
-    subscript(i:Int) -> Optional<Piece>[] {
-        return self.grid[i]
+    // starting in beta 3, must include setter to make inner
+    subscript(i:Int) -> [Piece?] {
+        get {
+            return self.grid[i]
+        }
+        set(val) {
+            self.grid[i] = val
+        }
     }
 }
 
 class Board : NSObject, NSCoding {
     
     typealias Point = (Int,Int)
-    typealias Path = Point[]
+    typealias Path = [Point]
     
     // unowned var view: UIView // can't live without a view (but see initwithcoder)
     // however, I found that referring to an unowned causes a crash, so I had to give up and make it weak
     weak var view: UIView!
     var stage = 0
     var showingHint = false
-    var hilitedPieces = Piece[]()
+    var hilitedPieces = [Piece]()
     var _xct : Int { return self.grid.xct }
     var _yct : Int { return self.grid.yct }
-    var movenda = Piece[]()
+    var movenda = [Piece]()
     var grid : Grid // can't live without a grid
     
     var _memoizedPieceSize = CGSizeMake(0.0,0.0)
@@ -89,9 +95,9 @@ class Board : NSObject, NSCoding {
         // coder.encodeObject(self.grid, forKey: "gridsw")
         // but that's never going to work; there are nils in our grid!
         // flatten to single-dimensional array of strings
-        var saveableGrid = String[]()
-        for i in 0 .. self._xct {
-            for j in 0 .. self._yct {
+        var saveableGrid = [String]()
+        for i in 0 ..< self._xct {
+            for j in 0 ..< self._yct {
                 let piece = self.grid[i][j]
                 saveableGrid += piece ? piece!.picName : ""
             }
@@ -106,7 +112,7 @@ class Board : NSObject, NSCoding {
     init(coder: NSCoder!) {
         //self.view = UIView() // just to quiet the compiler; we still need initialization of this
         //super.init()
-        var flatGrid = coder.decodeObjectForKey("gridsw") as String[]
+        var flatGrid = coder.decodeObjectForKey("gridsw") as [String]
         let xct = coder.decodeIntegerForKey("xctsw")
         let yct = coder.decodeIntegerForKey("yctsw")
         self.stage = coder.decodeIntegerForKey("stagesw")
@@ -115,8 +121,8 @@ class Board : NSObject, NSCoding {
         self.grid = Grid(xct, yct)
         super.init()
         // ... and fill it in one value at a time
-        for i in 0 .. self._xct {
-            for j in 0 .. self._yct {
+        for i in 0 ..< self._xct {
+            for j in 0 ..< self._yct {
                 let picname = flatGrid.removeAtIndex(0)
                 if !picname.isEmpty {
                     self.addPieceAt((i,j), withPicture: picname)
@@ -129,8 +135,8 @@ class Board : NSObject, NSCoding {
     // called by client after initWithCoder, because we had no view at the time we were unarchived
     func rebuild () {
         assert(self.view != nil, "meaningless to rebuild without a real view")
-        for x in 0 .. self._xct {
-            for y in 0 .. self._yct {
+        for x in 0 ..< self._xct {
+            for y in 0 ..< self._yct {
                 if let piece = self.pieceAt((x,y)) {
                     self.view?.insertSubview(piece, belowSubview: self.pathView())
                 }
@@ -142,9 +148,9 @@ class Board : NSObject, NSCoding {
         do {
             UIApplication.sharedApplication().beginIgnoringInteractionEvents()
             // gather up all pieces (as names), shuffle them, deal them into their current slots
-            var deck = String[]()
-            for i in 0 .. self._xct {
-                for j in 0 .. self._yct {
+            var deck = [String]()
+            for i in 0 ..< self._xct {
+                for j in 0 ..< self._yct {
                     let piece = self.pieceAt((i,j))
                     if !piece {
                         continue
@@ -157,8 +163,8 @@ class Board : NSObject, NSCoding {
             deck.shuffle()
             deck.shuffle()
             UIApplication.sharedApplication().endIgnoringInteractionEvents()
-            for i in 0 .. self._xct {
-                for j in 0 .. self._yct {
+            for i in 0 ..< self._xct {
+                for j in 0 ..< self._yct {
                     let piece = self.pieceAt((i,j))
                     if let piece = piece {
                         // very lightweight; we just assign the name, let the piece worry about the picture
@@ -183,7 +189,7 @@ class Board : NSObject, NSCoding {
         self.pathView().userInteractionEnabled = true
         // transform path, which is an array of Point, into an NSArray of NSValue wrapping CGPoint
         // so we can store it in the layer
-        let arrCGPoints : CGPoint[] = arr.map { CGPointMake(CGFloat($0.0),CGFloat($0.1)) }
+        let arrCGPoints : [CGPoint] = arr.map { CGPointMake(CGFloat($0.0),CGFloat($0.1)) }
         let arrNSValues = arrCGPoints.map { NSValue(CGPoint:$0) }
         pathLayer.setValue(arrNSValues, forKey:"arr")
         pathLayer.setNeedsDisplay()
@@ -196,10 +202,10 @@ class Board : NSObject, NSCoding {
     // the layer is holding an array that tells us what path to draw!
     
     override func drawLayer(layer: CALayer!, inContext con: CGContext!) {
-        let arr = layer.valueForKey("arr") as NSValue[]
+        let arr = layer.valueForKey("arr") as [NSValue]
         // arr is a series of CGPoint wrapped us as NSValue (because that is what Objective-C array will hold)
         // unwrap to CGPoints, unwrap to a pair of integers
-        let arr2 : Point[] = arr.map {let pt = $0.CGPointValue(); return (Int(pt.x),Int(pt.y))}
+        let arr2 : Path = arr.map {let pt = $0.CGPointValue(); return (Int(pt.x),Int(pt.y))}
         // connect the dots; however, the dots we want to connect are the *centers* of the pieces...
         // whereas we are given piece *origins*, so calculate offsets
         let sz = self.pieceSize
@@ -319,7 +325,7 @@ class Board : NSObject, NSCoding {
             } else {
                 (start,end) = (p2,p1)
             }
-            for i in start.1+1 .. end.1 {
+            for i in start.1+1 ..< end.1 {
                 if self.pieceAt((p1.x,i)) {
                     return false
                 }
@@ -330,7 +336,7 @@ class Board : NSObject, NSCoding {
             } else {
                 (start,end) = (p2,p1)
             }
-            for i in start.0+1 .. end.0 {
+            for i in start.0+1 ..< end.0 {
                 if self.pieceAt((i,p1.y)) {
                     return false
                 }
@@ -351,8 +357,8 @@ class Board : NSObject, NSCoding {
     
     func gameOver () -> Bool {
         // return true // testing game end
-        for x in 0..self._xct {
-            for y in 0..self._yct {
+        for x in 0..<self._xct {
+            for y in 0..<self._yct {
                 if self.pieceAt((x,y)) {
                     return false
                 }
@@ -726,7 +732,7 @@ class Board : NSObject, NSCoding {
         // the only drawback with this approach is that if there are multiple paths...
         // we may find a longer one before we find a shorter one, which is counter-intuitive
         // so, accumulate all found paths and submit only the shortest
-        var marr = Path[]()
+        var marr = [Path]()
         printlnNOT("=======")
         func addPathIfValid(midpt1:Point,midpt2:Point) {
             printlnNOT("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
@@ -757,7 +763,7 @@ class Board : NSObject, NSCoding {
             var shortestPath = Path()
             for thisPath in marr {
                 var thisLength = 0.0
-                for ix in 0..(thisPath.count-1) {
+                for ix in 0..<(thisPath.count-1) {
                     thisLength += distance(thisPath[ix],thisPath[ix+1])
                 }
                 if shortestLength < 0 || thisLength < shortestLength {
@@ -821,16 +827,16 @@ class Board : NSObject, NSCoding {
     // but caller can treat result as condition as well
     // the path is simply the path returned from checkPair
     
-    func legalPath () -> (Int,Int)[]? {
-        for x in 0.._xct {
-            for y in 0.._yct {
+    func legalPath () -> Path? {
+        for x in 0..<_xct {
+            for y in 0..<_yct {
                 let piece = self.pieceAt((x,y))
                 if !piece {
                     continue
                 }
                 let picName = piece!.picName
-                for xx in 0.._xct {
-                    for yy in 0.._yct {
+                for xx in 0..<_xct {
+                    for yy in 0..<_yct {
                         let piece2 = self.pieceAt((xx,yy))
                         if !piece2 {
                             continue

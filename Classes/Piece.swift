@@ -84,10 +84,10 @@ class Piece : UIView, NSCoding, Equatable, Printable {
         let lite = UIColor(red:1.000, green:0.999, blue:0.999, alpha:1.000)
         CGContextSetStrokeColorWithColor(context, lite.CGColor)
         let points = [
-            CGPointMake(CGRectGetMinX(peri), CGRectGetMaxY(peri)),
-            CGPointMake(CGRectGetMinX(peri), CGRectGetMinY(peri)),
-            CGPointMake(CGRectGetMinX(peri), CGRectGetMinY(peri)),
-            CGPointMake(CGRectGetMaxX(peri), CGRectGetMinY(peri))
+            CGPointMake(peri.minX, peri.maxY),
+            CGPointMake(peri.minX, peri.minY),
+            CGPointMake(peri.minX, peri.minY),
+            CGPointMake(peri.maxX, peri.minY)
         ]
         CGContextStrokeLineSegments(context, points, 4)
         
@@ -100,8 +100,8 @@ class Piece : UIView, NSCoding, Equatable, Printable {
         CGContextScaleCTM(context, 1, -1)
         CGContextDrawImage(context,
             CGRectInset(peri,
-                (CGRectGetWidth(peri) - picw)/2.0,
-                (CGRectGetHeight(peri) - pich)/2.0),
+                (peri.width - picw)/2.0,
+                (peri.height - pich)/2.0),
             self.pic.CGImage)
     }
     

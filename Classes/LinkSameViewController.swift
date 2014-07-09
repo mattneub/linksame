@@ -27,7 +27,7 @@ return NSNotificationCenter.defaultCenter()
 }
 
 extension Array {
-    func shuffle () {
+    mutating func shuffle () {
         for var i = self.count - 1; i != 0; i-- {
             let ix1 = i
             let ix2 = Int(arc4random_uniform(UInt32(i+1)))
@@ -48,7 +48,7 @@ struct Sizes {
     static let Easy = "Easy"
     static let Normal = "Normal"
     static let Hard = "Hard"
-    static func sizes () -> String[] {
+    static func sizes () -> [String] {
         return [Easy, Normal, Hard]
     }
     static func boardSize (s:String) -> (Int,Int) {
@@ -65,7 +65,7 @@ struct Sizes {
 struct Styles {
     static let Animals = "Animals"
     static let Snacks = "Snacks"
-    static func styles () -> String[] {
+    static func styles () -> [String] {
         return [Animals, Snacks]
     }
     static func pieces (s:String) -> (Int,Int) {
@@ -161,7 +161,8 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.incrementScore(0, resetTimer:false)
         // prev score, look up in user defaults
         self.prevLabel.text = ""
-        let prev : Int? = ud.dictionaryForKey(Default.kScores)[self.scoresKey()] as? Int
+        let scoresDict = ud.dictionaryForKey(Default.kScores) as [String:Int]
+        let prev = scoresDict[self.scoresKey()]
         if prev {
             self.prevLabel.text = "High score: \(prev)"
         }
@@ -270,7 +271,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     
     func clearViewAndCreatePathView () {
         // clear the view!
-        for v in self.boardView.subviews as UIView[] {
+        for v in self.boardView.subviews as [UIView] {
             v.removeFromSuperview()
         }
         // board is now completely empty
@@ -336,20 +337,20 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // determine which pieces to use
         let (start1,start2) = Styles.pieces(ud.stringForKey(Default.kStyle)!)
         // create deck of piece names
-        var deck = String[]()
-        for ct in 0..4 {
-            for i in start1..start1+9 {
+        var deck = [String]()
+        for ct in 0..<4 {
+            for i in start1..<start1+9 {
                 deck += String(i)
             }
         }
         // determine which additional pieces to use, finish deck of piece names
         let howmany : Int = ((w * h) / 4) - 9
-        for ct in 0..4 {
-            for i in start2..start2+howmany {
+        for ct in 0..<4 {
+            for i in start2..<start2+howmany {
                 deck += String(i)
             }
         }
-        for ct in 0..4 {
+        for ct in 0..<4 {
             deck.shuffle()
         }
         
@@ -360,7 +361,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.board.stage = 0 // default
         // self.board.stage = 8 // testing, comment out!
         if let userInfo = (n as? NSNotification)?.userInfo {
-            let stage = userInfo["stage"].integerValue
+            let stage = (userInfo["stage"] as NSNumber).integerValue
             if stage < ud.integerForKey(Default.kLastStage) {
                 self.board.stage = stage + 1
                 self.animateBoardReplacement(.Slide)
@@ -370,7 +371,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
                 // do score and notification stuff only if user is not just practicing
                 if InterfaceMode.fromRaw(self.timedPractice.selectedSegmentIndex)! == .Timed {
                     let key = self.scoresKey()
-                    var d = ud.dictionaryForKey(Default.kScores) as Dictionary<String,Int>
+                    var d = ud.dictionaryForKey(Default.kScores) as [String:Int]
                     let prev = d[key]
                     var newHigh = false
                     if !prev || prev < self.score {
@@ -399,8 +400,8 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // initialize empty board
         self.clearViewAndCreatePathView()
         // deal out the pieces and we're all set! Pieces themselves and Board object take over interactions from here
-        for i in 0..w {
-            for j in 0..h {
+        for i in 0..<w {
+            for j in 0..<h {
                 self.board.addPieceAt((i,j), withPicture: deck.removeLast()) // heh heh, pops and returns
             }
         }
