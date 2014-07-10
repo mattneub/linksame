@@ -180,6 +180,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     
     // setting up interface and observers in viewDidLoad was always wrong
     override func viewDidAppear(animated: Bool) {
+        super.viewDidAppear(animated) // crucial not to forget this
         if self.didSetUpObservers {
             return
         }
