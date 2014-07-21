@@ -97,13 +97,13 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     var didSetUpObservers = false
     
     var board : Board!
-    @IBOutlet var boardView : UIView
-    @IBOutlet var stageLabel : UILabel
-    @IBOutlet var scoreLabel : UILabel
-    @IBOutlet var prevLabel : UILabel
-    @IBOutlet var hintButton : UIBarButtonItem
-    @IBOutlet var timedPractice : UISegmentedControl
-    @IBOutlet var toolbar : UIToolbar
+    @IBOutlet weak var boardView : UIView!
+    @IBOutlet weak var stageLabel : UILabel!
+    @IBOutlet weak var scoreLabel : UILabel!
+    @IBOutlet weak var prevLabel : UILabel!
+    @IBOutlet weak var hintButton : UIBarButtonItem!
+    @IBOutlet weak var timedPractice : UISegmentedControl!
+    @IBOutlet weak var toolbar : UIToolbar!
     var popover : UIPopoverController!
     var oldDefs : NSDictionary!
     var timer : NSTimer!
