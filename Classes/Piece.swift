@@ -46,7 +46,7 @@ class Piece : UIView, NSCoding, Equatable, Printable {
     // interestingly, we MUST implement initWithFrame, even though we do nothing
     // we cannot merely inherit it
     
-    init(frame:CGRect) {
+    override init(frame:CGRect) {
         super.init(frame:frame)
     }
     
@@ -56,7 +56,7 @@ class Piece : UIView, NSCoding, Equatable, Printable {
         coder.encodeObject(self.picName, forKey:"picName")
     }
     
-    init(coder: NSCoder!) {
+    required init(coder: NSCoder!) {
         self.x = coder.decodeIntegerForKey("x")
         self.y = coder.decodeIntegerForKey("y")
         self.picName = coder.decodeObjectForKey("picName") as String

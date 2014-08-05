@@ -140,8 +140,12 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         case Fade
     }
     
-    init() {
+    override init() {
         super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init(coder: NSCoder) {
+        fatalError("NSCoding not supported")
     }
     
     func positionForBar(bar: UIBarPositioning!) -> UIBarPosition {
@@ -162,8 +166,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // prev score, look up in user defaults
         self.prevLabel.text = ""
         let scoresDict = ud.dictionaryForKey(Default.kScores) as [String:Int]
-        let prev = scoresDict[self.scoresKey()]
-        if prev {
+        if let prev = scoresDict[self.scoresKey()] {
             self.prevLabel.text = "High score: \(prev)"
         }
     }
@@ -341,14 +344,14 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         var deck = [String]()
         for ct in 0..<4 {
             for i in start1..<start1+9 {
-                deck += String(i)
+                deck += [String(i)]
             }
         }
         // determine which additional pieces to use, finish deck of piece names
         let howmany : Int = ((w * h) / 4) - 9
         for ct in 0..<4 {
             for i in start2..<start2+howmany {
-                deck += String(i)
+                deck += [String(i)]
             }
         }
         for ct in 0..<4 {
@@ -375,7 +378,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
                     var d = ud.dictionaryForKey(Default.kScores) as [String:Int]
                     let prev = d[key]
                     var newHigh = false
-                    if !prev || prev < self.score {
+                    if prev == nil || prev! < self.score {
                         newHigh = true
                         d[key] = self.score
                         ud.setObject(d, forKey:Default.kScores)
@@ -413,6 +416,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     // ============================ toolbar buttons =================================
     
     @IBAction func doHint(_:AnyObject?) { // hintButton
+        let v = self.boardView.viewWithTag(999)!
         if !self.board.showingHint {
             self.hintButton.title = HintButtonTitle.Hide.toRaw()
             self.incrementScore(-10, resetTimer:true)
@@ -420,11 +424,14 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
             // if user taps board now, this should have just the same effect as tapping button
             // so, attach gesture rec
             let t = UITapGestureRecognizer(target: self, action: "doHint:")
-            self.boardView.viewWithTag(999).addGestureRecognizer(t)
+            v.addGestureRecognizer(t)
         } else {
             self.hintButton.title = HintButtonTitle.Show.toRaw()
             self.board.unilluminate()
-            self.boardView.viewWithTag(999).gestureRecognizers = nil
+            let gs = v.gestureRecognizers as [UIGestureRecognizer]
+            for g in gs {
+                v.removeGestureRecognizer(g)
+            }
         }
     }
     

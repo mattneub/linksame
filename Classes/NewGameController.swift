@@ -11,9 +11,13 @@ import UIKit
 class NewGameController : UIViewController {
     weak var tableView : UITableView!
     
-    init () {
+    override init () {
         super.init(nibName: nil, bundle: nil)
         self.edgesForExtendedLayout = UIRectEdge.None
+    }
+    
+    required init(coder: NSCoder) {
+        fatalError("NSCoding not supported")
     }
     
     override func viewDidLoad() {
