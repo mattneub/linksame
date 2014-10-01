@@ -76,7 +76,7 @@ class Board : NSObject, NSCoding {
     // you may ask why I didn't just set the piece size when I set the grid
     // this actually feels neater, though
     if (self._memoizedPieceSize.width == 0.0) {
-            assert(self.view, "Meaningless to ask for piece size with no view.")
+            assert(self.view != nil, "Meaningless to ask for piece size with no view.")
             assert((_xct > 0 && _yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
             // divide view bounds, allow 1 extra plus margins
             let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self._xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
@@ -91,7 +91,7 @@ class Board : NSObject, NSCoding {
         self.grid = Grid(gridSize)
     }
     
-    func encodeWithCoder(coder: NSCoder!) {
+    func encodeWithCoder(coder: NSCoder) {
         // coder.encodeObject(self.grid, forKey: "gridsw")
         // but that's never going to work; there are nils in our grid!
         // flatten to single-dimensional array of strings
@@ -109,7 +109,7 @@ class Board : NSObject, NSCoding {
         coder.encodeCGSize(self._memoizedPieceSize, forKey: "piecesizesw")
     }
     
-    required init(coder: NSCoder!) {
+    required init(coder: NSCoder) {
         //self.view = UIView() // just to quiet the compiler; we still need initialization of this
         //super.init()
         var flatGrid = coder.decodeObjectForKey("gridsw") as [String]

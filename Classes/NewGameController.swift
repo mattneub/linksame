@@ -25,7 +25,7 @@ class NewGameController : UIViewController {
         super.viewDidLoad()
         let v = self.view
         
-        let tv = UITableView(frame:CGRectMake(0,0,320,350), style:.Grouped)
+        let tv = UITableView(frame:CGRectMake(0,0,320,350), style:.Grouped)!
         // unfortunately I have not found any way except to size manually like this by experimentation
         v.addSubview(tv)
         tv.dataSource = self
@@ -50,11 +50,11 @@ class NewGameController : UIViewController {
 }
 
 extension NewGameController : UITableViewDataSource, UITableViewDelegate {
-    func numberOfSectionsInTableView(tableView: UITableView!) -> Int {
+    func numberOfSectionsInTableView(tableView: UITableView) -> Int {
         return 2
     }
     
-    func tableView(tableView: UITableView!, titleForHeaderInSection section: Int) -> String! {
+    func tableView(tableView: UITableView, titleForHeaderInSection section: Int) -> String! {
         switch section {
         case 0:
             return Default.kSize
@@ -65,11 +65,11 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
         }
     }
     
-    func tableView(tableView: UITableView!, titleForFooterInSection section: Int) -> String! {
+    func tableView(tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         return nil
     }
     
-    func tableView(tableView: UITableView!, numberOfRowsInSection section: Int) -> Int {
+    func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
         case 0:
             return 3
@@ -80,10 +80,10 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
         }
     }
 
-    func tableView(tableView: UITableView!, cellForRowAtIndexPath indexPath: NSIndexPath!) -> UITableViewCell! {
+    func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cellId = "Cell"
         var cell : UITableViewCell! = tableView.dequeueReusableCellWithIdentifier(cellId) as? UITableViewCell
-        if (!cell) {
+        if (cell == nil) {
             cell = UITableViewCell(style:.Default, reuseIdentifier:cellId)
         }
         
@@ -92,23 +92,23 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
         
         switch section {
         case 0:
-            cell.textLabel.text = Sizes.sizes()[row]
+            cell.textLabel!.text = Sizes.sizes()[row]
         case 1:
-            cell.textLabel.text = Styles.styles()[row]
+            cell.textLabel!.text = Styles.styles()[row]
         default:
-            cell.textLabel.text = "" // throwaway
+            cell.textLabel!.text = "" // throwaway
         }
         
         cell.accessoryType = .None
-        if ud.stringForKey(Default.kStyle) == cell.textLabel.text || ud.stringForKey(Default.kSize) == cell.textLabel.text {
+        if ud.stringForKey(Default.kStyle) == cell.textLabel!.text || ud.stringForKey(Default.kSize) == cell.textLabel!.text {
             cell.accessoryType = .Checkmark
         }
         
         return cell
     }
 
-    func tableView(tableView: UITableView!, didSelectRowAtIndexPath indexPath: NSIndexPath!) {
-        let setting = tableView.cellForRowAtIndexPath(indexPath).textLabel.text
+    func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
+        let setting = tableView.cellForRowAtIndexPath(indexPath)!.textLabel!.text
         ud.setObject(setting, forKey: self.tableView(tableView, titleForHeaderInSection:indexPath.section))
         self.tableView.reloadData()
     }
@@ -116,23 +116,23 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
 
 extension NewGameController : UIPickerViewDelegate, UIPickerViewDataSource {
     
-    func numberOfComponentsInPickerView(pickerView: UIPickerView!) -> Int {
+    func numberOfComponentsInPickerView(pickerView: UIPickerView) -> Int {
         return 1
     }
     
-    func pickerView(pickerView: UIPickerView!, numberOfRowsInComponent component: Int) -> Int {
+    func pickerView(pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         return 9
     }
     
-    func pickerView(pickerView: UIPickerView!, titleForRow row: Int, forComponent component: Int) -> String! {
+    func pickerView(pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
         return "\(row+1) Stage" + ( row > 0 ? "s" : "")
     }
     
-    func pickerView(pickerView: UIPickerView!, didSelectRow row: Int, inComponent component: Int) {
+    func pickerView(pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
         ud.setInteger(row, forKey:Default.kLastStage)
     }
     
-    func pickerView(pickerView: UIPickerView!, rowHeightForComponent component: Int) -> CGFloat {
+    func pickerView(pickerView: UIPickerView, rowHeightForComponent component: Int) -> CGFloat {
         return 25
     }
 

@@ -125,7 +125,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         }
         self.scoreLabel.hidden = !timed
         self.prevLabel.hidden = !timed
-        self.timedPractice.selectedSegmentIndex = mode.toRaw()
+        self.timedPractice.selectedSegmentIndex = mode.rawValue
         self.timedPractice.enabled = timed
     }
     }
@@ -177,8 +177,8 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.initializeScores()
         // fix width of hint button to accomodate new labels Show Hint and Hide Hint
         self.hintButton.possibleTitles =
-            NSSet(objects: HintButtonTitle.Show.toRaw(), HintButtonTitle.Hide.toRaw())
-        self.hintButton.title = HintButtonTitle.Show.toRaw()
+            NSSet(objects: HintButtonTitle.Show.rawValue, HintButtonTitle.Hide.rawValue)
+        self.hintButton.title = HintButtonTitle.Show.rawValue
     }
     
     // setting up interface and observers in viewDidLoad was always wrong
@@ -192,7 +192,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // have we a state saved from prior practice?
         // return; // uncomment for launch image screen shot
         let boardData : AnyObject! = ud.objectForKey(Default.kBoardData)
-        if boardData { // reconstruct practice game from board data
+        if boardData != nil { // reconstruct practice game from board data
             // (non-practice game is not saved as board data!)
             // set up our own view
             self.clearViewAndCreatePathView()
@@ -250,7 +250,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // let's leave it
         self.timer?.invalidate()
         self.timer = nil
-        switch InterfaceMode.fromRaw(self.timedPractice.selectedSegmentIndex)! {
+        switch InterfaceMode(rawValue: self.timedPractice.selectedSegmentIndex)! {
         case .Timed:
             ud.removeObjectForKey(Default.kBoardData)
         case .Practice: // practice, save out board state
@@ -261,7 +261,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // and if there is one, it is dismissed
         // plus we restore prefs if needed
         self.dismissViewControllerAnimated(false, completion: nil)
-        if self.oldDefs {
+        if (self.oldDefs != nil) {
             printlnNOT("counts as cancelled, restoring old prefs")
             ud.setValuesForKeysWithDictionary(self.oldDefs)
             self.oldDefs = nil
@@ -373,7 +373,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
             // but if we received a stage in notification and it's the last stage, game is over!
             else {
                 // do score and notification stuff only if user is not just practicing
-                if InterfaceMode.fromRaw(self.timedPractice.selectedSegmentIndex)! == .Timed {
+                if InterfaceMode(rawValue: self.timedPractice.selectedSegmentIndex)! == .Timed {
                     let key = self.scoresKey()
                     var d = ud.dictionaryForKey(Default.kScores) as [String:Int]
                     let prev = d[key]
@@ -418,7 +418,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     @IBAction func doHint(_:AnyObject?) { // hintButton
         let v = self.boardView.viewWithTag(999)!
         if !self.board.showingHint {
-            self.hintButton.title = HintButtonTitle.Hide.toRaw()
+            self.hintButton.title = HintButtonTitle.Hide.rawValue
             self.incrementScore(-10, resetTimer:true)
             self.board.hint()
             // if user taps board now, this should have just the same effect as tapping button
@@ -426,7 +426,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
             let t = UITapGestureRecognizer(target: self, action: "doHint:")
             v.addGestureRecognizer(t)
         } else {
-            self.hintButton.title = HintButtonTitle.Show.toRaw()
+            self.hintButton.title = HintButtonTitle.Show.rawValue
             self.board.unilluminate()
             let gs = v.gestureRecognizers as [UIGestureRecognizer]
             for g in gs {
@@ -461,24 +461,25 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         dlg.navigationItem.rightBarButtonItem = b1
         let b2 = UIBarButtonItem(barButtonSystemItem: .Done, target: self, action: "saveNewGame:")
         dlg.navigationItem.leftBarButtonItem = b2
-        let nav = UINavigationController(rootViewController: dlg)
+        let nav = UINavigationController(rootViewController: dlg)!
         nav.modalPresentationStyle = .Popover // *
         self.presentViewController(nav, animated: true, completion: nil)
         // configure the popover _after_ presentation, even though, as Apple says, this may see counterintuitive
         // it isn't really there yet, so there is time
         // configuration is thru the implicitly created popover presentation controller
-        let pop = nav.popoverPresentationController
-        pop.permittedArrowDirections = .Any
-        pop.barButtonItem = sender as UIBarButtonItem
-        delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
-        pop.delegate = self // this is a whole new delegate protocol, of course
+        if let pop = nav.popoverPresentationController {
+            pop.permittedArrowDirections = .Any
+            pop.barButtonItem = sender as UIBarButtonItem
+            delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
+            pop.delegate = self // this is a whole new delegate protocol, of course
+        }
         // save defaults so we can restore them later if user cancels
         self.oldDefs = ud.dictionaryWithValuesForKeys([Default.kStyle, Default.kSize, Default.kLastStage])
     }
     
     func cancelNewGame(_:AnyObject?) { // cancel button in new game popover
         self.dismissViewControllerAnimated(true, completion: nil)
-        if self.oldDefs {
+        if (self.oldDefs != nil) {
             ud.setValuesForKeysWithDictionary(self.oldDefs)
             self.oldDefs = nil
         }
@@ -496,7 +497,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     func popoverPresentationControllerShouldDismissPopover(pop: UIPopoverPresentationController!) -> Bool {
         // we can identify which popover it is because it is our presentedViewController
         if let vc = self.presentedViewController as? UINavigationController {
-            if self.oldDefs {
+            if (self.oldDefs != nil) {
                 printlnNOT("counts as cancelled, restoring old prefs")
                 ud.setValuesForKeysWithDictionary(self.oldDefs)
                 self.oldDefs = nil
@@ -524,17 +525,18 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // create help from scratch
         let vc = UIViewController()
         let wv = UIWebView()
-        let path = NSBundle.mainBundle().pathForResource("linkhelp", ofType: "html")
-        let s = String.stringWithContentsOfFile(path, encoding:NSUTF8StringEncoding, error:nil)
+        let path = NSBundle.mainBundle().pathForResource("linkhelp", ofType: "html")!
+        let s = String(contentsOfFile:path, encoding:NSUTF8StringEncoding, error:nil)
         wv.loadHTMLString(s, baseURL: nil)
         vc.view = wv
         vc.modalPresentationStyle = .Popover
         vc.preferredContentSize = CGSizeMake(600,800) // NB! setting ppc's popoverContentSize didn't work
         self.presentViewController(vc, animated: true, completion: nil)
-        let pop = vc.popoverPresentationController
-        pop.permittedArrowDirections = .Any
-        pop.barButtonItem = sender as UIBarButtonItem
-        delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
+        if let pop = vc.popoverPresentationController {
+            pop.permittedArrowDirections = .Any
+            pop.barButtonItem = sender as UIBarButtonItem
+            delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
+        }
         // no delegate needed, as it turns out
     }
     

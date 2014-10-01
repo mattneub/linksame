@@ -30,7 +30,7 @@ class Piece : UIView, NSCoding, Equatable, Printable {
         // perhaps this is no savings of time and a waste of memory, I've no idea
         // also set actual picture at this time; outside world deals only with the name
         let path = NSBundle.mainBundle().pathForResource(self.picName, ofType: "png", inDirectory:"foods")
-        self.pic = UIImage(contentsOfFile:path)
+        self.pic = UIImage(contentsOfFile:path!)
     }
     }
     var x : Int = 0, y : Int = 0
@@ -50,13 +50,13 @@ class Piece : UIView, NSCoding, Equatable, Printable {
         super.init(frame:frame)
     }
     
-    override func encodeWithCoder(coder: NSCoder!) {
+    override func encodeWithCoder(coder: NSCoder) {
         coder.encodeInteger(self.x, forKey:"x")
         coder.encodeInteger(self.y, forKey:"y")
         coder.encodeObject(self.picName, forKey:"picName")
     }
     
-    required init(coder: NSCoder!) {
+    required init(coder: NSCoder) {
         self.x = coder.decodeIntegerForKey("x")
         self.y = coder.decodeIntegerForKey("y")
         self.picName = coder.decodeObjectForKey("picName") as String
