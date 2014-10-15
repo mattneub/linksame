@@ -108,6 +108,12 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     var oldDefs : NSDictionary!
     var timer : NSTimer!
     
+    override var nibName : String {
+        get {
+            return "LinkSameViewController"
+        }
+    }
+    
     enum InterfaceMode : Int {
         case Timed = 0
         case Practice = 1
@@ -496,7 +502,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     
     func popoverPresentationControllerShouldDismissPopover(pop: UIPopoverPresentationController!) -> Bool {
         // we can identify which popover it is because it is our presentedViewController
-        if let vc = self.presentedViewController as? UINavigationController {
+        if pop.presentedViewController is UINavigationController {
             if (self.oldDefs != nil) {
                 printlnNOT("counts as cancelled, restoring old prefs")
                 ud.setValuesForKeysWithDictionary(self.oldDefs)
