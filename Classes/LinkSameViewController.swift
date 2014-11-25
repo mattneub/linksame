@@ -467,7 +467,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         dlg.navigationItem.rightBarButtonItem = b1
         let b2 = UIBarButtonItem(barButtonSystemItem: .Done, target: self, action: "saveNewGame:")
         dlg.navigationItem.leftBarButtonItem = b2
-        let nav = UINavigationController(rootViewController: dlg)!
+        let nav = UINavigationController(rootViewController: dlg)
         nav.modalPresentationStyle = .Popover // *
         self.presentViewController(nav, animated: true, completion: nil)
         // configure the popover _after_ presentation, even though, as Apple says, this may see counterintuitive

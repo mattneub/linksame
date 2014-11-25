@@ -25,7 +25,7 @@ class NewGameController : UIViewController {
         super.viewDidLoad()
         let v = self.view
         
-        let tv = UITableView(frame:CGRectMake(0,0,320,350), style:.Grouped)!
+        let tv = UITableView(frame:CGRectMake(0,0,320,350), style:.Grouped)
         // unfortunately I have not found any way except to size manually like this by experimentation
         v.addSubview(tv)
         tv.dataSource = self
