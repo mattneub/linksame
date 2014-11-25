@@ -68,23 +68,33 @@ class Board : NSObject, NSCoding {
     var movenda = [Piece]()
     var grid : Grid // can't live without a grid
     
-    var _memoizedPieceSize = CGSizeMake(0.0,0.0)
-    var pieceSize : CGSize {
-    // there is (from outside in) a thin margin, then a one-piece margin, then the grid of drawn pieces
-    // we need the one-piece margin because we have to be able to draw paths in it
-    // memoize piece size as an ivar
-    // you may ask why I didn't just set the piece size when I set the grid
-    // this actually feels neater, though
-    if (self._memoizedPieceSize.width == 0.0) {
-            assert(self.view != nil, "Meaningless to ask for piece size with no view.")
-            assert((_xct > 0 && _yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
-            // divide view bounds, allow 1 extra plus margins
-            let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self._xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
-            let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self._yct) + 2.0 + TOPMARGIN + BOTTOMMARGIN)
-            self._memoizedPieceSize = CGSizeMake(pieceWidth, pieceHeight)
-        }
-        return self._memoizedPieceSize
-    }
+//    var _memoizedPieceSize = CGSizeMake(0.0,0.0)
+//    var pieceSize : CGSize {
+//    // there is (from outside in) a thin margin, then a one-piece margin, then the grid of drawn pieces
+//    // we need the one-piece margin because we have to be able to draw paths in it
+//    // memoize piece size as an ivar
+//    // you may ask why I didn't just set the piece size when I set the grid
+//    // this actually feels neater, though
+//    if (self._memoizedPieceSize.width == 0.0) {
+//            assert(self.view != nil, "Meaningless to ask for piece size with no view.")
+//            assert((_xct > 0 && _yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
+//            // divide view bounds, allow 1 extra plus margins
+//            let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self._xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
+//            let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self._yct) + 2.0 + TOPMARGIN + BOTTOMMARGIN)
+//            self._memoizedPieceSize = CGSizeMake(pieceWidth, pieceHeight)
+//        }
+//        return self._memoizedPieceSize
+//    }
+    
+    lazy var pieceSize : CGSize = {
+        assert(self.view != nil, "Meaningless to ask for piece size with no view.")
+        assert((self._xct > 0 && self._yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
+        println("calculating piece size")
+        // divide view bounds, allow 1 extra plus margins
+        let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self._xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
+        let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self._yct) + 2.0 + TOPMARGIN + BOTTOMMARGIN)
+        return CGSizeMake(pieceWidth, pieceHeight)
+    }()
     
     init (boardView:UIView, gridSize:(Int,Int)) {
         self.view = boardView
@@ -106,7 +116,7 @@ class Board : NSObject, NSCoding {
         coder.encodeInteger(self._xct, forKey: "xctsw")
         coder.encodeInteger(self._yct, forKey: "yctsw")
         coder.encodeInteger(self.stage, forKey:"stagesw")
-        coder.encodeCGSize(self._memoizedPieceSize, forKey: "piecesizesw")
+        coder.encodeCGSize(self.pieceSize, forKey: "piecesizesw")
     }
     
     required init(coder: NSCoder) {
@@ -116,10 +126,10 @@ class Board : NSObject, NSCoding {
         let xct = coder.decodeIntegerForKey("xctsw")
         let yct = coder.decodeIntegerForKey("yctsw")
         self.stage = coder.decodeIntegerForKey("stagesw")
-        self._memoizedPieceSize = coder.decodeCGSizeForKey("piecesizesw")
         // make an empty grid...
         self.grid = Grid(xct, yct)
         super.init()
+        self.pieceSize = coder.decodeCGSizeForKey("piecesizesw")
         // ... and fill it in one value at a time
         for i in 0 ..< self._xct {
             for j in 0 ..< self._yct {
