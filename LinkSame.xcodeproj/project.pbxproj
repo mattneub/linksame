@@ -13,7 +13,7 @@
 		2899E5220DE3E06400AC0155 /* LinkSameViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 2899E5210DE3E06400AC0155 /* LinkSameViewController.xib */; };
 		32294957192417C800BBF4FD /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A4C0B1121214AA4600D70DAF /* QuartzCore.framework */; };
 		322F131D1923DF9500F2BE47 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 322F131C1923DF9500F2BE47 /* Images.xcassets */; };
-		323E36D919586C3300114D56 /* LinkSameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 323E36D819586C3300114D56 /* LinkSameViewController.swift */; };
+		3293FF6D1A8BDF25003901A1 /* LinkSameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3293FF6C1A8BDF25003901A1 /* LinkSameViewController.swift */; };
 		32A7D4561957CE700002210A /* Piece.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A7D4551957CE700002210A /* Piece.swift */; };
 		32D59DA8195758A100E4A41C /* MyRightLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D59DA7195758A100E4A41C /* MyRightLabel.swift */; };
 		32DAD06E1959FF8C005095C6 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32DAD06D1959FF8C005095C6 /* AppDelegate.swift */; };
@@ -45,7 +45,7 @@
 		322F131F1923E72900F2BE47 /* bigIcon2.psd */ = {isa = PBXFileReference; lastKnownFileType = file; path = bigIcon2.psd; sourceTree = "<group>"; };
 		322F13201923E73200F2BE47 /* icon2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon2.png; sourceTree = "<group>"; };
 		322F13221923E8A600F2BE47 /* icon2singleresolution.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon2singleresolution.png; sourceTree = "<group>"; };
-		323E36D819586C3300114D56 /* LinkSameViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LinkSameViewController.swift; sourceTree = "<group>"; };
+		3293FF6C1A8BDF25003901A1 /* LinkSameViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LinkSameViewController.swift; sourceTree = "<group>"; };
 		32A7D4551957CE700002210A /* Piece.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Piece.swift; sourceTree = "<group>"; };
 		32CA4F630368D1EE00C91783 /* LinkSame_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LinkSame_Prefix.pch; sourceTree = "<group>"; };
 		32D59DA6195758A000E4A41C /* LinkSame-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "LinkSame-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -99,7 +99,7 @@
 				32DAD06D1959FF8C005095C6 /* AppDelegate.swift */,
 				28D7ACF60DDB3853001CB0EB /* LinkSameViewController.h */,
 				28D7ACF70DDB3853001CB0EB /* LinkSameViewController.m */,
-				323E36D819586C3300114D56 /* LinkSameViewController.swift */,
+				3293FF6C1A8BDF25003901A1 /* LinkSameViewController.swift */,
 				2899E5210DE3E06400AC0155 /* LinkSameViewController.xib */,
 				A4B7B64212130DC5008BEA15 /* Piece.h */,
 				A4B7B64312130DC5008BEA15 /* Piece.m */,
@@ -258,9 +258,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				323E36D919586C3300114D56 /* LinkSameViewController.swift in Sources */,
 				32DAD06E1959FF8C005095C6 /* AppDelegate.swift in Sources */,
 				32D59DA8195758A100E4A41C /* MyRightLabel.swift in Sources */,
+				3293FF6D1A8BDF25003901A1 /* LinkSameViewController.swift in Sources */,
 				32FE1D80195790270068B6B0 /* NewGameController.swift in Sources */,
 				32A7D4561957CE700002210A /* Piece.swift in Sources */,
 				32EEBEFC195A5C5B004E0823 /* Board.swift in Sources */,

@@ -54,7 +54,7 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
         return 2
     }
     
-    func tableView(tableView: UITableView, titleForHeaderInSection section: Int) -> String! {
+    func tableView(tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         switch section {
         case 0:
             return Default.kSize
@@ -108,8 +108,8 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
     }
 
     func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
-        let setting = tableView.cellForRowAtIndexPath(indexPath)!.textLabel!.text
-        ud.setObject(setting, forKey: self.tableView(tableView, titleForHeaderInSection:indexPath.section))
+        let setting = tableView.cellForRowAtIndexPath(indexPath)!.textLabel!.text!
+        ud.setObject(setting, forKey: self.tableView(tableView, titleForHeaderInSection:indexPath.section)!)
         self.tableView.reloadData()
     }
 }

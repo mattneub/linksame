@@ -1,13 +1,6 @@
-//
-//  LinkSameViewController.swift
-//  LinkSame
-//
-//  Created by Matt Neuburg on 6/23/14.
-//
-//
+
 
 import UIKit
-import QuartzCore
 
 func delay(delay:Double, closure:()->()) {
     dispatch_after(
@@ -18,13 +11,11 @@ func delay(delay:Double, closure:()->()) {
         dispatch_get_main_queue(), closure)
 }
 
-var ud : NSUserDefaults {
-return NSUserDefaults.standardUserDefaults()
-}
+// these were calculated properties, but 1.2 segfaults on those; would like to restore
 
-var nc : NSNotificationCenter {
-return NSNotificationCenter.defaultCenter()
-}
+var ud = NSUserDefaults.standardUserDefaults()
+
+var nc = NSNotificationCenter.defaultCenter()
 
 extension Array {
     mutating func shuffle () {
@@ -78,16 +69,6 @@ struct Styles {
 }
 
 
-/*
-@{@"Size": @"Easy",
-    @"Style": @"Snacks",
-    @"Stages": @8,
-    @"Scores": @{}}];
-So Size and Style are strings;
-Stages is an integer;
-and Scores is a dictionary of string-and-integer
-*/
-
 
 class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPresentationControllerDelegate {
     
@@ -105,7 +86,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     @IBOutlet weak var timedPractice : UISegmentedControl!
     @IBOutlet weak var toolbar : UIToolbar!
     var popover : UIPopoverController!
-    var oldDefs : NSDictionary!
+    var oldDefs : [NSObject : AnyObject]!
     var timer : NSTimer!
     
     override var nibName : String {
@@ -121,19 +102,19 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     }
     
     var interfaceMode : InterfaceMode = .Timed {
-    willSet (mode) {
-        var timed : Bool
-        switch mode {
-        case .Timed:
-            timed = true
-        case .Practice:
-            timed = false
+        willSet (mode) {
+            var timed : Bool
+            switch mode {
+            case .Timed:
+                timed = true
+            case .Practice:
+                timed = false
+            }
+            self.scoreLabel.hidden = !timed
+            self.prevLabel.hidden = !timed
+            self.timedPractice.selectedSegmentIndex = mode.rawValue
+            self.timedPractice.enabled = timed
         }
-        self.scoreLabel.hidden = !timed
-        self.prevLabel.hidden = !timed
-        self.timedPractice.selectedSegmentIndex = mode.rawValue
-        self.timedPractice.enabled = timed
-    }
     }
     
     enum HintButtonTitle : String {
@@ -154,7 +135,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         fatalError("NSCoding not supported")
     }
     
-    func positionForBar(bar: UIBarPositioning!) -> UIBarPosition {
+    func positionForBar(bar: UIBarPositioning) -> UIBarPosition {
         return .TopAttached
     }
     
@@ -171,7 +152,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.incrementScore(0, resetTimer:false)
         // prev score, look up in user defaults
         self.prevLabel.text = ""
-        let scoresDict = ud.dictionaryForKey(Default.kScores) as [String:Int]
+        let scoresDict = ud.dictionaryForKey(Default.kScores) as! [String:Int]
         if let prev = scoresDict[self.scoresKey()] {
             self.prevLabel.text = "High score: \(prev)"
         }
@@ -183,7 +164,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.initializeScores()
         // fix width of hint button to accomodate new labels Show Hint and Hide Hint
         self.hintButton.possibleTitles =
-            NSSet(objects: HintButtonTitle.Show.rawValue, HintButtonTitle.Hide.rawValue)
+            Set([HintButtonTitle.Show.rawValue, HintButtonTitle.Hide.rawValue])
         self.hintButton.title = HintButtonTitle.Show.rawValue
     }
     
@@ -203,12 +184,12 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
             // set up our own view
             self.clearViewAndCreatePathView()
             // fetch stored board
-            let boardData = ud.objectForKey(Default.kBoardData) as NSData
-            self.board = NSKeyedUnarchiver.unarchiveObjectWithData(boardData) as Board
+            let boardData = ud.objectForKey(Default.kBoardData) as! NSData
+            self.board = NSKeyedUnarchiver.unarchiveObjectWithData(boardData) as! Board
             // but this board is not fully realized; it has no view pointer
             self.board.view = self.boardView
-//            // another problem is that the board's reconstructed pieces are not actually showing
-//            // but the board itself will fix that if we ask it to rebuild itself
+            //            // another problem is that the board's reconstructed pieces are not actually showing
+            //            // but the board itself will fix that if we ask it to rebuild itself
             self.board.rebuild()
             // self.boardView.setNeedsDisplay()
             // set interface up as practice and we're all set
@@ -281,7 +262,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     
     func clearViewAndCreatePathView () {
         // clear the view!
-        for v in self.boardView.subviews as [UIView] {
+        for v in self.boardView.subviews as! [UIView] {
             v.removeFromSuperview()
         }
         // board is now completely empty
@@ -371,17 +352,17 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.board.stage = 0 // default
         // self.board.stage = 8 // testing, comment out!
         if let userInfo = (n as? NSNotification)?.userInfo {
-            let stage = (userInfo["stage"] as NSNumber).integerValue
+            let stage = (userInfo["stage"] as! NSNumber).integerValue
             if stage < ud.integerForKey(Default.kLastStage) {
                 self.board.stage = stage + 1
                 self.animateBoardReplacement(.Slide)
             }
-            // but if we received a stage in notification and it's the last stage, game is over!
+                // but if we received a stage in notification and it's the last stage, game is over!
             else {
                 // do score and notification stuff only if user is not just practicing
                 if InterfaceMode(rawValue: self.timedPractice.selectedSegmentIndex)! == .Timed {
                     let key = self.scoresKey()
-                    var d = ud.dictionaryForKey(Default.kScores) as [String:Int]
+                    var d = ud.dictionaryForKey(Default.kScores) as! [String:Int]
                     let prev = d[key]
                     var newHigh = false
                     if prev == nil || prev! < self.score {
@@ -434,7 +415,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         } else {
             self.hintButton.title = HintButtonTitle.Show.rawValue
             self.board.unilluminate()
-            let gs = v.gestureRecognizers as [UIGestureRecognizer]
+            let gs = v.gestureRecognizers as! [UIGestureRecognizer]
             for g in gs {
                 v.removeGestureRecognizer(g)
             }
@@ -455,7 +436,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     So in iOS 8 Apple has tried to solve the popover problem at last!
     A popover is just a style of presented view controller. No need to retain a reference to it, therefore.
     Let's see...
-*/
+    */
     
     @IBAction func doNew(sender:AnyObject?) {
         if self.board.showingHint {
@@ -475,7 +456,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // configuration is thru the implicitly created popover presentation controller
         if let pop = nav.popoverPresentationController {
             pop.permittedArrowDirections = .Any
-            pop.barButtonItem = sender as UIBarButtonItem
+            pop.barButtonItem = sender as! UIBarButtonItem
             delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
             pop.delegate = self // this is a whole new delegate protocol, of course
         }
@@ -500,7 +481,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.oldDefs = nil // crucial or we'll fall one behind
     }
     
-    func popoverPresentationControllerShouldDismissPopover(pop: UIPopoverPresentationController!) -> Bool {
+    func popoverPresentationControllerShouldDismissPopover(pop: UIPopoverPresentationController) -> Bool {
         // we can identify which popover it is because it is our presentedViewController
         if pop.presentedViewController is UINavigationController {
             if (self.oldDefs != nil) {
@@ -540,7 +521,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.presentViewController(vc, animated: true, completion: nil)
         if let pop = vc.popoverPresentationController {
             pop.permittedArrowDirections = .Any
-            pop.barButtonItem = sender as UIBarButtonItem
+            pop.barButtonItem = sender as! UIBarButtonItem
             delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
         }
         // no delegate needed, as it turns out
@@ -550,7 +531,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     
     // the board notifies us that the user removed a pair of pieces
     // track time between moves, award points (and remember, points mean prizes)
-
+    
     func userMoved ( _ : AnyObject?) {
         let t = NSDate.timeIntervalSinceReferenceDate()
         let told = self.lastTime
@@ -562,5 +543,5 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         }
         self.incrementScore(1 + bonus, resetTimer:true)
     }
-    
 }
+

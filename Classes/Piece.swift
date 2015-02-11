@@ -59,7 +59,7 @@ class Piece : UIView, NSCoding, Equatable, Printable {
     required init(coder: NSCoder) {
         self.x = coder.decodeIntegerForKey("x")
         self.y = coder.decodeIntegerForKey("y")
-        self.picName = coder.decodeObjectForKey("picName") as String
+        self.picName = coder.decodeObjectForKey("picName") as! String
         super.init(frame:CGRectMake(0,0,0,0)) // dummy value
     }
     
