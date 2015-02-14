@@ -262,7 +262,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     
     func clearViewAndCreatePathView () {
         // clear the view!
-        for v in self.boardView.subviews as! [UIView] {
+        for v in self.boardView.subviews as NSArray as! [UIView] {
             v.removeFromSuperview()
         }
         // board is now completely empty
@@ -415,7 +415,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         } else {
             self.hintButton.title = HintButtonTitle.Show.rawValue
             self.board.unilluminate()
-            let gs = v.gestureRecognizers as! [UIGestureRecognizer]
+            let gs = v.gestureRecognizers! as NSArray as! [UIGestureRecognizer]
             for g in gs {
                 v.removeGestureRecognizer(g)
             }

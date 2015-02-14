@@ -122,7 +122,7 @@ class Board : NSObject, NSCoding {
     required init(coder: NSCoder) {
         //self.view = UIView() // just to quiet the compiler; we still need initialization of this
         //super.init()
-        var flatGrid = coder.decodeObjectForKey("gridsw") as! [String]
+        var flatGrid = coder.decodeObjectForKey("gridsw")! as! NSArray as! [String]
         let xct = coder.decodeIntegerForKey("xctsw")
         let yct = coder.decodeIntegerForKey("yctsw")
         self.stage = coder.decodeIntegerForKey("stagesw")
@@ -212,7 +212,7 @@ class Board : NSObject, NSCoding {
     // the layer is holding an array that tells us what path to draw!
     
     override func drawLayer(layer: CALayer!, inContext con: CGContext!) {
-        let arr = layer.valueForKey("arr") as! [NSValue]
+        let arr = layer.valueForKey("arr")! as! NSArray as! [NSValue]
         // arr is a series of CGPoint wrapped us as NSValue (because that is what Objective-C array will hold)
         // unwrap to CGPoints, unwrap to a pair of integers
         let arr2 : Path = arr.map {let pt = $0.CGPointValue(); return (Int(pt.x),Int(pt.y))}
