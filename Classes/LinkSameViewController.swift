@@ -360,6 +360,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
                 // but if we received a stage in notification and it's the last stage, game is over!
             else {
                 // do score and notification stuff only if user is not just practicing
+                // TODO: why not just if self.interfaceMode == .Timed? I seem not to have adopted enum all the way here
                 if InterfaceMode(rawValue: self.timedPractice.selectedSegmentIndex)! == .Timed {
                     let key = self.scoresKey()
                     var d = ud.dictionaryForKey(Default.kScores) as! [String:Int]
