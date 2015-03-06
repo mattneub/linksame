@@ -28,11 +28,11 @@ extension Array {
 }
 
 struct Default {
-    static let kSize = "Size"
-    static let kStyle = "Style"
-    static let kLastStage = "Stages"
-    static let kScores = "Scores"
-    static let kBoardData = "boardData"
+    static let Size = "Size"
+    static let Style = "Style"
+    static let LastStage = "Stages"
+    static let Scores = "Scores"
+    static let BoardData = "boardData"
 }
 
 struct Sizes {
@@ -140,8 +140,8 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     }
     
     func scoresKey() -> String {
-        let size = ud.stringForKey(Default.kSize)
-        let stages = ud.integerForKey(Default.kLastStage)
+        let size = ud.stringForKey(Default.Size)
+        let stages = ud.integerForKey(Default.LastStage)
         let key = "\(size)\(stages)"
         return key
     }
@@ -152,7 +152,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.incrementScore(0, resetTimer:false)
         // prev score, look up in user defaults
         self.prevLabel.text = ""
-        let scoresDict = ud.dictionaryForKey(Default.kScores) as! [String:Int]
+        let scoresDict = ud.dictionaryForKey(Default.Scores) as! [String:Int]
         if let prev = scoresDict[self.scoresKey()] {
             self.prevLabel.text = "High score: \(prev)"
         }
@@ -178,13 +178,13 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // must wait until rotation has settled down before finishing interface, otherwise dimensions are wrong
         // have we a state saved from prior practice?
         // return; // uncomment for launch image screen shot
-        let boardData : AnyObject! = ud.objectForKey(Default.kBoardData)
+        let boardData : AnyObject! = ud.objectForKey(Default.BoardData)
         if boardData != nil { // reconstruct practice game from board data
             // (non-practice game is not saved as board data!)
             // set up our own view
             self.clearViewAndCreatePathView()
             // fetch stored board
-            let boardData = ud.objectForKey(Default.kBoardData) as! NSData
+            let boardData = ud.objectForKey(Default.BoardData) as! NSData
             self.board = NSKeyedUnarchiver.unarchiveObjectWithData(boardData) as! Board
             // but this board is not fully realized; it has no view pointer
             self.board.view = self.boardView
@@ -239,10 +239,10 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.timer = nil
         switch InterfaceMode(rawValue: self.timedPractice.selectedSegmentIndex)! {
         case .Timed:
-            ud.removeObjectForKey(Default.kBoardData)
+            ud.removeObjectForKey(Default.BoardData)
         case .Practice: // practice, save out board state
             let boardData = NSKeyedArchiver.archivedDataWithRootObject(self.board)
-            ud.setObject(boardData, forKey:Default.kBoardData)
+            ud.setObject(boardData, forKey:Default.BoardData)
         }
         // this stuff does no harm if no popovers...
         // and if there is one, it is dismissed
@@ -285,7 +285,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
                 options: UIViewAnimationOptions.TransitionFlipFromLeft,
                 animations: {
                     let s = "Stage \(self.board.stage + 1) " +
-                    "of \(ud.integerForKey(Default.kLastStage) + 1)"
+                    "of \(ud.integerForKey(Default.LastStage) + 1)"
                     self.stageLabel.text = s
                 }, completion: nil)
         }
@@ -324,9 +324,9 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.timer?.invalidate()
         self.timer = nil
         // determine layout dimensions
-        let (w,h) = Sizes.boardSize(ud.stringForKey(Default.kSize)!)
+        let (w,h) = Sizes.boardSize(ud.stringForKey(Default.Size)!)
         // determine which pieces to use
-        let (start1,start2) = Styles.pieces(ud.stringForKey(Default.kStyle)!)
+        let (start1,start2) = Styles.pieces(ud.stringForKey(Default.Style)!)
         // create deck of piece names
         var deck = [String]()
         for ct in 0..<4 {
@@ -353,7 +353,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // self.board.stage = 8 // testing, comment out!
         if let userInfo = (n as? NSNotification)?.userInfo {
             let stage = (userInfo["stage"] as! NSNumber).integerValue
-            if stage < ud.integerForKey(Default.kLastStage) {
+            if stage < ud.integerForKey(Default.LastStage) {
                 self.board.stage = stage + 1
                 self.animateBoardReplacement(.Slide)
             }
@@ -363,13 +363,13 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
                 // TODO: why not just if self.interfaceMode == .Timed? I seem not to have adopted enum all the way here
                 if InterfaceMode(rawValue: self.timedPractice.selectedSegmentIndex)! == .Timed {
                     let key = self.scoresKey()
-                    var d = ud.dictionaryForKey(Default.kScores) as! [String:Int]
+                    var d = ud.dictionaryForKey(Default.Scores) as! [String:Int]
                     let prev = d[key]
                     var newHigh = false
                     if prev == nil || prev! < self.score {
                         newHigh = true
                         d[key] = self.score
-                        ud.setObject(d, forKey:Default.kScores)
+                        ud.setObject(d, forKey:Default.Scores)
                     }
                     // notify user
                     let alert = UIAlertController(
@@ -462,7 +462,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
             pop.delegate = self // this is a whole new delegate protocol, of course
         }
         // save defaults so we can restore them later if user cancels
-        self.oldDefs = ud.dictionaryWithValuesForKeys([Default.kStyle, Default.kSize, Default.kLastStage])
+        self.oldDefs = ud.dictionaryWithValuesForKeys([Default.Style, Default.Size, Default.LastStage])
     }
     
     func cancelNewGame(_:AnyObject?) { // cancel button in new game popover

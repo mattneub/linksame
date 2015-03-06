@@ -1,12 +1,9 @@
-//
-//  NewGameController.swift
-//  LinkSame
-//
-//  Created by Matt Neuburg on 6/22/14.
-//
-//
+
 
 import UIKit
+import Swift
+
+private let cellid = "Cell"
 
 class NewGameController : UIViewController {
     weak var tableView : UITableView!
@@ -32,6 +29,7 @@ class NewGameController : UIViewController {
         tv.delegate = self
         tv.bounces = false
         tv.scrollEnabled = false
+        tv.registerClass(UITableViewCell.self, forCellReuseIdentifier: cellid)
         self.tableView = tv
         
         let pv = UIPickerView(frame:CGRectMake(0,0,320,160)) // not really
@@ -41,12 +39,10 @@ class NewGameController : UIViewController {
         pv.frame.origin.y = tv.frame.size.height
         v.addSubview(pv)
         pv.showsSelectionIndicator = true
-        pv.selectRow(ud.integerForKey(Default.kLastStage), inComponent: 0, animated: false)
+        pv.selectRow(ud.integerForKey(Default.LastStage), inComponent: 0, animated: false)
 
         self.preferredContentSize = CGSizeMake(320, tv.frame.size.height + pv.frame.size.height)
-
     }
-    
 }
 
 extension NewGameController : UITableViewDataSource, UITableViewDelegate {
@@ -57,9 +53,9 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
     func tableView(tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         switch section {
         case 0:
-            return Default.kSize
+            return Default.Size
         case 1:
-            return Default.kStyle
+            return Default.Style
         default:
             return nil
         }
@@ -81,11 +77,7 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
     }
 
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cellId = "Cell"
-        var cell : UITableViewCell! = tableView.dequeueReusableCellWithIdentifier(cellId) as? UITableViewCell
-        if (cell == nil) {
-            cell = UITableViewCell(style:.Default, reuseIdentifier:cellId)
-        }
+        let cell = tableView.dequeueReusableCellWithIdentifier(cellid, forIndexPath:indexPath) as! UITableViewCell
         
         let section = indexPath.section
         let row = indexPath.row
@@ -100,10 +92,10 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
         }
         
         cell.accessoryType = .None
-        if ud.stringForKey(Default.kStyle) == cell.textLabel!.text || ud.stringForKey(Default.kSize) == cell.textLabel!.text {
+        if contains([ud.stringForKey(Default.Style), ud.stringForKey(Default.Size)], {$0 == cell.textLabel!.text}) {
             cell.accessoryType = .Checkmark
         }
-        
+
         return cell
     }
 
@@ -129,11 +121,11 @@ extension NewGameController : UIPickerViewDelegate, UIPickerViewDataSource {
     }
     
     func pickerView(pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        ud.setInteger(row, forKey:Default.kLastStage)
+        ud.setInteger(row, forKey:Default.LastStage)
     }
     
     func pickerView(pickerView: UIPickerView, rowHeightForComponent component: Int) -> CGFloat {
-        return 25
+        return 35
     }
 
 

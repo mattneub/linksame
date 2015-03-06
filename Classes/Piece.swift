@@ -1,10 +1,3 @@
-//
-//  Piece.swift
-//  LinkSame
-//
-//  Created by Matt Neuburg on 6/22/14.
-//
-//
 
 
 // define equality as identity
@@ -12,35 +5,46 @@ func == (lhs:Piece, rhs:Piece) -> Bool {
     return lhs === rhs
 }
 
+extension CGRect {
+    var center : CGPoint {
+        return CGPointMake(CGRectGetMidX(self), CGRectGetMidY(self))
+    }
+}
+extension CGRect {
+    func centeredRectOfSize(sz:CGSize) -> CGRect {
+        let c = self.center
+        let x = c.x - sz.width/2.0
+        let y = c.y - sz.height/2.0
+        return CGRect(origin:CGPointMake(x,y), size:sz)
+    }
+}
+
 import UIKit
+import AVFoundation
 
 class Piece : UIView, NSCoding, Equatable, Printable {
     
-    /*
-@property (nonatomic, copy) NSString* picName;
-@property (nonatomic) int x, y;
-@property (nonatomic, readonly, getter=isHilited) BOOL hilite;
-- (void) toggleHilite;
-*/
-    var pic : UIImage!
+    private var pic : UIImage!
     var picName : String = "" {
-    didSet {
-        // when name is set, we also fetch picture and set it
-        // that way, we don't have to fetch picture each time we draw ourself
-        // perhaps this is no savings of time and a waste of memory, I've no idea
-        // also set actual picture at this time; outside world deals only with the name
-        let path = NSBundle.mainBundle().pathForResource(self.picName, ofType: "png", inDirectory:"foods")
-        self.pic = UIImage(contentsOfFile:path!)
+        didSet {
+            // when name is set, we also fetch picture and set it
+            // that way, we don't have to fetch picture each time we draw ourself
+            // perhaps this is no savings of time and a waste of memory, I've no idea
+            // but hey, the pictures are tiny
+            let path = NSBundle.mainBundle().pathForResource(self.picName, ofType: "png", inDirectory:"foods")
+            self.pic = UIImage(contentsOfFile:path!)
+        }
     }
-    }
-    var x : Int = 0, y : Int = 0
-    var hilite : Bool = false
+    
+    var x : Int = 0, y : Int = 0 // where we are slotted
+    
+    private var hilite : Bool = false
     var isHilited : Bool {
-    return self.hilite
+        return self.hilite
     }
     
     override var description : String {
-    return "picname: \(picName); x: \(x); y: \(y)"
+        return "picname: \(picName); x: \(x); y: \(y)"
     }
     
     // interestingly, we MUST implement initWithFrame, even though we do nothing
@@ -64,15 +68,15 @@ class Piece : UIView, NSCoding, Equatable, Printable {
     }
     
     override func drawRect(rect: CGRect) {
-        let perireal = CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height)
+        let perireal = CGRectMake(0, 0, self.bounds.width, self.bounds.height)
         let context = UIGraphicsGetCurrentContext()
         
-        CGContextSetLineCap(context, kCGLineCapSquare) // notice nothing fancy happens with these pure c types
+        CGContextSetLineCap(context, kCGLineCapSquare)
         
-        // fill, according to highlight state
+        // fill: according to highlight state
         let beige = UIColor(red:0.900, green:0.798, blue:0.499, alpha:1.000)
         let purple = UIColor(red:0.898, green:0.502, blue:0.901, alpha:1.000)
-        CGContextSetFillColorWithColor(context, self.hilite ? purple.CGColor : beige.CGColor)
+        CGContextSetFillColorWithColor(context, self.isHilited ? purple.CGColor : beige.CGColor)
         CGContextFillRect(context, CGRectInset(perireal, -1, -1)) // outset to ensure full coverage
         
         // frame: draw shade all the way round, then light round two sides
@@ -91,18 +95,16 @@ class Piece : UIView, NSCoding, Equatable, Printable {
         ]
         CGContextStrokeLineSegments(context, points, 4)
         
-        // draw picture centered
-        let ppic = self.pic.CGImage
-        let picw = CGFloat(CGImageGetWidth(ppic))
-        let pich = CGFloat(CGImageGetHeight(ppic))
-        // flip!
-        CGContextTranslateCTM(context, 0, self.bounds.size.height)
-        CGContextScaleCTM(context, 1, -1)
-        CGContextDrawImage(context,
-            CGRectInset(peri,
-                (peri.width - picw)/2.0,
-                (peri.height - pich)/2.0),
-            self.pic.CGImage)
+        // draw centered
+        // grapple with what would happen if rect were smaller than pic.size
+        let inset : CGFloat = 4
+        let maxrect = rect.rectByInsetting(dx: inset, dy: inset)
+        var drawrect = maxrect.centeredRectOfSize(pic.size)
+        if pic.size.width > maxrect.width || pic.size.height > maxrect.height {
+            let smallerrect = AVMakeRectWithAspectRatioInsideRect(pic.size, maxrect)
+            drawrect = maxrect.centeredRectOfSize(smallerrect.size)
+        }
+        self.pic.drawInRect(drawrect)
     }
     
     func toggleHilite () {
