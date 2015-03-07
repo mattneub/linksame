@@ -13,7 +13,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             Default.Size: Sizes.Easy,
             Default.Style: Styles.Snacks,
             Default.LastStage: 8, // meaning 0-thru-8, so there will be nine
-            Default.Scores: ["Test":0] // NB didn't want to talk this way, but I was forced to "seed" the dictionary or crash
             ])
         
         self.window = UIWindow(frame:UIScreen.mainScreen().bounds)

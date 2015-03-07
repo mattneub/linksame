@@ -68,6 +68,9 @@
                             </connections>
                         </barButtonItem>
                     </items>
+                    <connections>
+                        <outlet property="delegate" destination="-1" id="TDP-Cu-d7Q"/>
+                    </connections>
                 </toolbar>
                 <label opaque="NO" userInteractionEnabled="NO" alpha="0.85211265087127686" contentMode="left" text="" lineBreakMode="tailTruncation" minimumFontSize="10" adjustsFontSizeToFit="NO" id="17">
                     <rect key="frame" x="15" y="64" width="251" height="29"/>

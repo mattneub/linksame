@@ -11,11 +11,9 @@ func delay(delay:Double, closure:()->()) {
         dispatch_get_main_queue(), closure)
 }
 
-// these were calculated properties, but 1.2 segfaults on those; would like to restore
+let ud = NSUserDefaults.standardUserDefaults()
 
-var ud = NSUserDefaults.standardUserDefaults()
-
-var nc = NSNotificationCenter.defaultCenter()
+let nc = NSNotificationCenter.defaultCenter()
 
 extension Array {
     mutating func shuffle () {
@@ -52,7 +50,6 @@ struct Sizes {
     }
 }
 
-
 struct Styles {
     static let Animals = "Animals"
     static let Snacks = "Snacks"
@@ -70,12 +67,11 @@ struct Styles {
 
 
 
-class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPresentationControllerDelegate {
+class LinkSameViewController : UIViewController {
     
-    
-    var score = 0
-    var lastTime : NSTimeInterval = 0
-    var didSetUpObservers = false
+    private var score = 0
+    private var lastTime : NSTimeInterval = 0
+    private var didSetUp = false
     
     var board : Board!
     @IBOutlet weak var boardView : UIView!
@@ -85,9 +81,9 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     @IBOutlet weak var hintButton : UIBarButtonItem!
     @IBOutlet weak var timedPractice : UISegmentedControl!
     @IBOutlet weak var toolbar : UIToolbar!
-    var popover : UIPopoverController!
-    var oldDefs : [NSObject : AnyObject]!
-    var timer : NSTimer!
+    private var popover : UIPopoverController!
+    private var oldDefs : [NSObject : AnyObject]!
+    private var timer : NSTimer!
     
     override var nibName : String {
         get {
@@ -95,15 +91,15 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         }
     }
     
-    enum InterfaceMode : Int {
+    private enum InterfaceMode : Int {
         case Timed = 0
         case Practice = 1
         // and these are also the indexes of the timedPractice segmented control, heh heh
     }
     
-    var interfaceMode : InterfaceMode = .Timed {
+    private var interfaceMode : InterfaceMode = .Timed {
         willSet (mode) {
-            var timed : Bool
+            let timed : Bool
             switch mode {
             case .Timed:
                 timed = true
@@ -117,12 +113,12 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         }
     }
     
-    enum HintButtonTitle : String {
+    private enum HintButtonTitle : String {
         case Show = "Show Hint"
         case Hide = "Hide Hint"
     }
     
-    enum BoardTransition {
+    private enum BoardTransition {
         case Slide
         case Fade
     }
@@ -135,87 +131,127 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         fatalError("NSCoding not supported")
     }
     
-    func positionForBar(bar: UIBarPositioning) -> UIBarPosition {
-        return .TopAttached
-    }
-    
-    func scoresKey() -> String {
+    var scoresKey : String {
         let size = ud.stringForKey(Default.Size)
         let stages = ud.integerForKey(Default.LastStage)
         let key = "\(size)\(stages)"
         return key
     }
     
-    func initializeScores () {
+    private func initializeScores () {
         // current score
         self.score = 0
         self.incrementScore(0, resetTimer:false)
         // prev score, look up in user defaults
         self.prevLabel.text = ""
-        let scoresDict = ud.dictionaryForKey(Default.Scores) as! [String:Int]
-        if let prev = scoresDict[self.scoresKey()] {
-            self.prevLabel.text = "High score: \(prev)"
+        if let scoresDict = ud.dictionaryForKey(Default.Scores) as? [String:Int] {
+            if let prev = scoresDict[self.scoresKey] {
+                self.prevLabel.text = "High score: \(prev)"
+            }
         }
     }
     
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        self.toolbar.delegate = self
+    override func viewWillLayoutSubviews() {
+        if self.didSetUp {
+            return
+        }
+        self.didSetUp = true
+        // one-time launch initializations of model and interface
         self.initializeScores()
         // fix width of hint button to accomodate new labels Show Hint and Hide Hint
         self.hintButton.possibleTitles =
             Set([HintButtonTitle.Show.rawValue, HintButtonTitle.Hide.rawValue])
         self.hintButton.title = HintButtonTitle.Show.rawValue
-    }
-    
-    // setting up interface and observers in viewDidLoad was always wrong
-    override func viewDidAppear(animated: Bool) {
-        super.viewDidAppear(animated) // crucial not to forget this
-        if self.didSetUpObservers {
-            return
-        }
-        self.didSetUpObservers = true
-        // must wait until rotation has settled down before finishing interface, otherwise dimensions are wrong
-        // have we a state saved from prior practice?
         // return; // uncomment for launch image screen shot
-        let boardData : AnyObject! = ud.objectForKey(Default.BoardData)
-        if boardData != nil { // reconstruct practice game from board data
-            // (non-practice game is not saved as board data!)
+        // have we a state saved from prior practice? (non-practice game is not saved as board data!)
+        // if so, reconstruct practice game from board data
+        if let boardData = ud.objectForKey(Default.BoardData) as? NSData {
             // set up our own view
             self.clearViewAndCreatePathView()
-            // fetch stored board
-            let boardData = ud.objectForKey(Default.BoardData) as! NSData
             self.board = NSKeyedUnarchiver.unarchiveObjectWithData(boardData) as! Board
             // but this board is not fully realized; it has no view pointer
             self.board.view = self.boardView
-            //            // another problem is that the board's reconstructed pieces are not actually showing
-            //            // but the board itself will fix that if we ask it to rebuild itself
-            self.board.rebuild()
-            // self.boardView.setNeedsDisplay()
+            self.board.rebuild() // cause pieces to be displayed
             // set interface up as practice and we're all set
             self.interfaceMode = .Practice
             self.displayStage()
-        } else {
-            self.saveNewGame(nil)
+        } else { // otherwise, create new game from scratch
+            self.saveNewGame()
         }
-        delay(2) { // but we still need a delay to prevent didBecomeActive being called immediately
+        delay(2) { // delay to prevent didBecomeActive being called immediately
             // I have filed a bug on this; it's the same issue I had in 99 Bottles
             nc.addObserver(self, selector: "setUpInterface:", name: "gameOver", object: nil)
-            nc.addObserver(self, selector: "userMoved:", name: "userMoved", object: nil)
-            nc.addObserver(self, selector: "screenOff", name: UIApplicationWillResignActiveNotification, object: nil)
-            nc.addObserver(self, selector: "screenOff", name: UIApplicationWillTerminateNotification, object: nil)
-            nc.addObserver(self, selector: "screenOn", name: UIApplicationDidBecomeActiveNotification, object: nil)
+            nc.addObserverForName("userMoved", object: nil, queue: nil) {
+                // the board notifies us that the user removed a pair of pieces
+                // track time between moves, award points (and remember, points mean prizes)
+                _ in
+                let now = NSDate.timeIntervalSinceReferenceDate()
+                let diff = now - self.lastTime
+                self.lastTime = now
+                var bonus = 0
+                if diff < 10 {
+                    bonus = Int(ceil(10.0/diff))
+                }
+                self.incrementScore(1 + bonus, resetTimer:true)
+            }
+            nc.addObserverForName(UIApplicationWillResignActiveNotification, object: nil, queue: nil) {
+                _ in
+                // remove hint
+                if self.board.showingHint {
+                    self.doHint(nil)
+                }
+                // stop timer
+                self.timer?.invalidate()
+                self.timer = nil
+                // dismiss popover if any; counts as cancelling, so restore defaults if needed
+                self.dismissViewControllerAnimated(false, completion: nil)
+                if (self.oldDefs != nil) {
+                    ud.setValuesForKeysWithDictionary(self.oldDefs)
+                    self.oldDefs = nil
+                }
+            }
+            nc.addObserverForName(UIApplicationDidBecomeActiveNotification, object: nil, queue: nil) {
+                _ in
+                // if we are coming back from mere deactivation, just restart the timer
+                self.resetTimer()
+                // but if we are coming back from suspension, and if we are in timed mode...
+                // ... we have created a whole new game; in that case, don't start the timer
+                if self.score == 0 {
+                    self.timer?.invalidate()
+                    self.timer = nil
+                }
+            }
+            nc.addObserverForName(UIApplicationDidEnterBackgroundNotification, object: nil, queue: nil) {
+                _ in
+                // set up board data defaults
+                // user cannot escape the timer by suspending the app; the game just ends if we background
+                switch self.interfaceMode {
+                case .Timed: // timed, make sure there is no saved board data
+                    ud.removeObjectForKey(Default.BoardData)
+                case .Practice: // practice, save out board state
+                    let boardData = NSKeyedArchiver.archivedDataWithRootObject(self.board)
+                    ud.setObject(boardData, forKey:Default.BoardData)
+                }
+            }
+            nc.addObserverForName(UIApplicationWillEnterForegroundNotification, object: nil, queue: nil) {
+                // if there is no saved board, start the whole game over
+                _ in
+                if ud.objectForKey(Default.BoardData) == nil {
+                    self.saveNewGame()
+                }
+            }
         }
     }
     
     func resetTimer() {
         self.timer?.invalidate()
-        if self.interfaceMode == InterfaceMode.Practice {
+        if self.interfaceMode == .Practice {
             return // don't bother making a new timer, we were doing that (harmlessly) but why bother?
         }
         self.timer = NSTimer.scheduledTimerWithTimeInterval(10, target: self, selector: "decrementScore", userInfo: nil, repeats: true)
     }
     
+    // called by timer
     func decrementScore () {
         self.incrementScore(-1, resetTimer:false, red:true)
     }
@@ -230,37 +266,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         }
     }
     
-    // called when we resign active
-    func screenOff () { // TODO: is this working as expected?
-        // I see what the problem is: yes, I'm removing the board data...
-        // but we exist in suspension so this does not affect us unless we are also terminated
-        // let's leave it
-        self.timer?.invalidate()
-        self.timer = nil
-        switch InterfaceMode(rawValue: self.timedPractice.selectedSegmentIndex)! {
-        case .Timed:
-            ud.removeObjectForKey(Default.BoardData)
-        case .Practice: // practice, save out board state
-            let boardData = NSKeyedArchiver.archivedDataWithRootObject(self.board)
-            ud.setObject(boardData, forKey:Default.BoardData)
-        }
-        // this stuff does no harm if no popovers...
-        // and if there is one, it is dismissed
-        // plus we restore prefs if needed
-        self.dismissViewControllerAnimated(false, completion: nil)
-        if (self.oldDefs != nil) {
-            printlnNOT("counts as cancelled, restoring old prefs")
-            ud.setValuesForKeysWithDictionary(self.oldDefs)
-            self.oldDefs = nil
-        }
-    }
-    
-    // called when we resume active
-    func screenOn () {
-        self.resetTimer()
-    }
-    
-    func clearViewAndCreatePathView () {
+    private func clearViewAndCreatePathView () {
         // clear the view!
         for v in self.boardView.subviews as NSArray as! [UIView] {
             v.removeFromSuperview()
@@ -291,7 +297,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         }
     }
     
-    func animateBoardReplacement (transition: BoardTransition) {
+    private func animateBoardReplacement (transition: BoardTransition) {
         self.boardView.userInteractionEnabled = false
         // about to animate, turn off interaction; will turn back on in delegate
         let t = CATransition()
@@ -316,7 +322,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
     
     // called at startup
     // called when user asks for a new game
-    // called when user completes a stage
+    // called via notification when user completes a stage
     func setUpInterface (n : AnyObject?) {
         // initialize time
         self.lastTime = NSDate.timeIntervalSinceReferenceDate()
@@ -362,14 +368,20 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
                 // do score and notification stuff only if user is not just practicing
                 // TODO: why not just if self.interfaceMode == .Timed? I seem not to have adopted enum all the way here
                 if InterfaceMode(rawValue: self.timedPractice.selectedSegmentIndex)! == .Timed {
-                    let key = self.scoresKey()
-                    var d = ud.dictionaryForKey(Default.Scores) as! [String:Int]
-                    let prev = d[key]
+                    let key = self.scoresKey
                     var newHigh = false
+                    // get dict from defaults, or an empty dict
+                    var scoresDict = [String:Int]()
+                    if var d = ud.dictionaryForKey(Default.Scores) as? [String:Int] {
+                        scoresDict = d
+                    }
+                    // self.score is new high score if it is higher than corresponding previous dict entry...
+                    // ...or if there was no corresponding previous dict entry
+                    let prev = scoresDict[key]
                     if prev == nil || prev! < self.score {
                         newHigh = true
-                        d[key] = self.score
-                        ud.setObject(d, forKey:Default.Scores)
+                        scoresDict[key] = self.score
+                        ud.setObject(scoresDict, forKey:Default.Scores)
                     }
                     // notify user
                     let alert = UIAlertController(
@@ -431,6 +443,12 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         self.incrementScore(-20, resetTimer:true)
     }
     
+    
+    
+}
+
+extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
+    
     // === popovers ===
     
     /*
@@ -447,7 +465,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         let dlg = NewGameController()
         let b1 = UIBarButtonItem(barButtonSystemItem: .Cancel, target: self, action: "cancelNewGame:")
         dlg.navigationItem.rightBarButtonItem = b1
-        let b2 = UIBarButtonItem(barButtonSystemItem: .Done, target: self, action: "saveNewGame:")
+        let b2 = UIBarButtonItem(barButtonSystemItem: .Done, target: self, action: "saveNewGame")
         dlg.navigationItem.leftBarButtonItem = b2
         let nav = UINavigationController(rootViewController: dlg)
         nav.modalPresentationStyle = .Popover // *
@@ -473,7 +491,7 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         }
     }
     
-    func saveNewGame(_:AnyObject?) { // save button in new game popover; can also be called manually at launch
+    func saveNewGame() { // save button in new game popover; can also be called manually at launch
         self.dismissViewControllerAnimated(true, completion: nil) // and if there is no presented vc, no problem
         self.setUpInterface(nil)
         self.initializeScores()
@@ -494,19 +512,19 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         return true
     }
     
-    
     @IBAction func doTimedPractice(_ : AnyObject?) {
         if self.board.showingHint {
             self.doHint(nil)
         }
-        let ix = self.timedPractice.selectedSegmentIndex
-        // 0 = timed; 1 = practice
-        // in reality the user should never be able to switch to timed! it's just an indicator
-        if ix == 1 {
-            self.scoreLabel.hidden = true
-            self.prevLabel.hidden = true
-            self.timedPractice.enabled = false
-        }
+        self.interfaceMode = InterfaceMode(rawValue:self.timedPractice.selectedSegmentIndex)!
+//        let ix = self.timedPractice.selectedSegmentIndex
+//        // 0 = timed; 1 = practice
+//        // in reality the user should never be able to switch to timed! it's just an indicator
+//        if ix == 1 {
+//            self.scoreLabel.hidden = true
+//            self.prevLabel.hidden = true
+//            self.timedPractice.enabled = false
+//        }
     }
     
     @IBAction func doHelp(sender : AnyObject?) {
@@ -528,21 +546,13 @@ class LinkSameViewController : UIViewController, UIToolbarDelegate, UIPopoverPre
         // no delegate needed, as it turns out
     }
     
-    // ================= notif from board =================
-    
-    // the board notifies us that the user removed a pair of pieces
-    // track time between moves, award points (and remember, points mean prizes)
-    
-    func userMoved ( _ : AnyObject?) {
-        let t = NSDate.timeIntervalSinceReferenceDate()
-        let told = self.lastTime
-        self.lastTime = t
-        let diff = t - told
-        var bonus = 0
-        if diff < 10 {
-            bonus = Int(ceil(10.0/diff))
-        }
-        self.incrementScore(1 + bonus, resetTimer:true)
+}
+
+extension LinkSameViewController : UIToolbarDelegate {
+    func positionForBar(bar: UIBarPositioning) -> UIBarPosition {
+        return .TopAttached
     }
 }
+
+
 
