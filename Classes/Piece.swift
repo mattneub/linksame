@@ -9,8 +9,6 @@ extension CGRect {
     var center : CGPoint {
         return CGPointMake(CGRectGetMidX(self), CGRectGetMidY(self))
     }
-}
-extension CGRect {
     func centeredRectOfSize(sz:CGSize) -> CGRect {
         let c = self.center
         let x = c.x - sz.width/2.0
