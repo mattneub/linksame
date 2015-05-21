@@ -123,7 +123,7 @@ class LinkSameViewController : UIViewController {
         case Fade
     }
     
-    override init() {
+    init() {
         super.init(nibName: nil, bundle: nil)
     }
     

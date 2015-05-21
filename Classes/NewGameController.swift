@@ -8,7 +8,7 @@ private let cellid = "Cell"
 class NewGameController : UIViewController {
     weak var tableView : UITableView!
     
-    override init () {
+    init () {
         super.init(nibName: nil, bundle: nil)
         self.edgesForExtendedLayout = UIRectEdge.None
     }
