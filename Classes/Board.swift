@@ -63,7 +63,7 @@ struct Grid {
     }
 }
 
-class Board : NSObject, NSCoding {
+final class Board : NSObject, NSCoding {
     
     typealias Point = (Int,Int)
     typealias Path = [Point]
@@ -73,11 +73,26 @@ class Board : NSObject, NSCoding {
     weak var view: UIView!
     var stage = 0
     var showingHint = false
-    var hilitedPieces = [Piece]()
-    var _xct : Int { return self.grid.xct }
-    var _yct : Int { return self.grid.yct }
-    var movenda = [Piece]()
-    var grid : Grid // can't live without a grid
+    private var hilitedPieces = [Piece]()
+    private var _xct : Int { return self.grid.xct }
+    private var _yct : Int { return self.grid.yct }
+    private var movenda = [Piece]()
+    private var grid : Grid // can't live without a grid
+    // utility for obtaining a reference to the view that holds the transparency layer
+    // we need this so we can switch touch fall-thru on and off
+    private var pathView : UIView {
+        return self.view.viewWithTag(999)!
+    }
+    // utility for obtaining a reference to the transparency layer
+    // it is the only sublayer of the layer of subview 999
+    private var pathLayer : CALayer {
+        let trans = self.pathView
+        let lay1 = trans.layer
+        let lay2 = lay1.sublayers.reverse()[0] as! CALayer
+        return lay2
+    }
+
+
     
 //    var _memoizedPieceSize = CGSizeMake(0.0,0.0)
 //    var pieceSize : CGSize {
@@ -97,7 +112,7 @@ class Board : NSObject, NSCoding {
 //        return self._memoizedPieceSize
 //    }
     
-    lazy var pieceSize : CGSize = {
+    private lazy var pieceSize : CGSize = {
         assert(self.view != nil, "Meaningless to ask for piece size with no view.")
         assert((self._xct > 0 && self._yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
         println("calculating piece size")
@@ -156,10 +171,11 @@ class Board : NSObject, NSCoding {
     // called by client after initWithCoder, because we had no view at the time we were unarchived
     func rebuild () {
         assert(self.view != nil, "meaningless to rebuild without a real view")
+        let pv = self.pathView
         for x in 0 ..< self._xct {
             for y in 0 ..< self._yct {
                 if let piece = self.pieceAt((x,y)) {
-                    self.view?.insertSubview(piece, belowSubview: self.pathView())
+                    self.view?.insertSubview(piece, belowSubview: pv)
                 }
             }
         }
@@ -204,10 +220,10 @@ class Board : NSObject, NSCoding {
     // now, however, the view is already there
     // all we do is store the array in the transparency layer and tell the layer it needs drawing
     
-    func illuminate (arr: Path) {
-        let pathLayer = self.pathLayer()
+    private func illuminate (arr: Path) {
+        let pathLayer = self.pathLayer
         pathLayer.delegate = self
-        self.pathView().userInteractionEnabled = true
+        self.pathView.userInteractionEnabled = true
         // transform path, which is an array of Point, into an NSArray of NSValue wrapping CGPoint
         // so we can store it in the layer
         let arrCGPoints : [CGPoint] = arr.map { CGPointMake(CGFloat($0.0),CGFloat($0.1)) }
@@ -250,31 +266,14 @@ class Board : NSObject, NSCoding {
     // erase the path by clearing the transparency layer (nil contents)
     
     func unilluminate () {
-        let pathLayer = self.pathLayer()
+        let pathLayer = self.pathLayer
         pathLayer.delegate = nil
         pathLayer.contents = nil
-        self.pathView().userInteractionEnabled = false // make touches just fall thru once again
+        self.pathView.userInteractionEnabled = false // make touches just fall thru once again
         self.showingHint = false
     }
     
-    // utility for obtaining a reference to the transparency layer
-    // it is the only sublayer of the layer of subview 999
-
-    func pathLayer() -> CALayer {
-        let trans = self.pathView()
-        let lay1 = trans.layer
-        let pathLayer = lay1.sublayers.reverse()[0] as! CALayer
-        return pathLayer
-    }
-    
-    // utility for obtaining a reference to the view that holds the transparency layer
-    // we need this so we can switch touch fall-thru on and off
-
-    func pathView() -> UIView {
-        return self.view.viewWithTag(999)!
-    }
-    
-    func pieceAt(p:Point) -> Piece? {
+    private func pieceAt(p:Point) -> Piece? {
         let (i,j) = p
         // it is legal to ask for piece one slot outside boundaries, but not further
         assert(i >= -1 && i <= self._xct, "Piece requested out of bounds (x)")
@@ -297,7 +296,7 @@ class Board : NSObject, NSCoding {
         piece.picName = picTitle
         // place the Piece in the interface
         // we are conscious that we must not accidentally draw on top of the transparency view
-        self.view?.insertSubview(piece, belowSubview: self.pathView())
+        self.view?.insertSubview(piece, belowSubview: self.pathView)
         // also place the Piece in the grid, and tell it where it is
         let (i,j) = p
         self.grid[i][j] = piece
@@ -312,7 +311,7 @@ class Board : NSObject, NSCoding {
     // as pieces are highlighted, we store them in an ivar
     // thus, to unhighlight all highlighted piece, we just run thru that list
     
-    func cancelPair() {
+    private func cancelPair() {
         let p1 = self.hilitedPieces.removeLast()
         p1.toggleHilite()
         let p2 = self.hilitedPieces.removeLast()
@@ -322,7 +321,7 @@ class Board : NSObject, NSCoding {
     // bottleneck utility for when user correctly selects a pair
     // flash the path and remove the two pieces
     
-    func removePairAndIlluminatePath(path:Path) {
+    private func removePairAndIlluminatePath(path:Path) {
         ui(false)
         self.illuminate(path)
         delay(0.2) {
@@ -336,7 +335,7 @@ class Board : NSObject, NSCoding {
     
     // utility to determine whether the line from p1 to p2 consists entirely of nil
     
-    func lineIsClearFrom(p1:(x:Int,y:Int), to p2:(x:Int,y:Int)) -> Bool {
+    private func lineIsClearFrom(p1:(x:Int,y:Int), to p2:(x:Int,y:Int)) -> Bool {
         if !(p1.x == p2.x || p1.y == p2.y) {
             return false // they are not even on the same line
         }
@@ -371,14 +370,14 @@ class Board : NSObject, NSCoding {
     // utility to remove a piece from the interface and from the grid (i.e. replace it by nil)
     // no more NSNull!
     
-    func removePiece(p:Piece) {
+    private func removePiece(p:Piece) {
         self.grid[p.x][p.y] = nil
         p.removeFromSuperview()
     }
     
     // utility to learn whether the grid is empty, indicating that the game is over
     
-    func gameOver () -> Bool {
+    private func gameOver () -> Bool {
         // return true // testing game end
         for x in 0..<self._xct {
             for y in 0..<self._yct {
@@ -392,7 +391,7 @@ class Board : NSObject, NSCoding {
     
     // given a piece's place in the grid, where should it be physically drawn on the view?
     
-    func originOf(p:Point) -> CGPoint {
+    private func originOf(p:Point) -> CGPoint {
         let (i,j) = p
         assert(i >= -1 && i <= self._xct, "Position requested out of bounds (x)")
         assert(j >= -1 && j <= self._yct, "Position requested out of bounds (y)")
@@ -416,7 +415,7 @@ class Board : NSObject, NSCoding {
     // yeah, very clever, but you gotta wonder whether I could do better now that I understand how animation works
     // TODO: look into it
     
-    func movePiece(p:Piece, to newPoint:(Int,Int)) {
+    private func movePiece(p:Piece, to newPoint:(Int,Int)) {
         assert(self.pieceAt(newPoint) == nil, "Slot to move piece to must be empty")
         // move the piece within the *grid*
         let s = p.picName
@@ -431,14 +430,14 @@ class Board : NSObject, NSCoding {
         self.movenda += [pnew]
     }
 
-    func checkStuck() {
+    private func checkStuck() {
         let path = self.legalPath()
         if path == nil {
             self.redeal()
         }
     }
     
-    func reallyRemovePair () {
+    private func reallyRemovePair () {
         ui(false)
         // notify (so score can be incremented)
         nc.postNotificationName("userMoved", object: self)
@@ -726,7 +725,7 @@ class Board : NSObject, NSCoding {
     // the day I figured out how to do this is the day I realized I could write this game
     // we hand back the legal path joining the pieces, rather than a bool, so that the caller can draw the path
     
-    func checkPair(p1:Piece, and p2:Piece) -> Path? {
+    private func checkPair(p1:Piece, and p2:Piece) -> Path? {
         // if not a pair, return nil
         // if a pair, return an array of successive xy positions showing the legal path
         let pt1 = (x:p1.x, y:p1.y)
@@ -804,9 +803,7 @@ class Board : NSObject, NSCoding {
         return nil
     }
     
-
-    
-    func checkHilitedPair () {
+    private func checkHilitedPair () {
         assert(self.hilitedPieces.count == 2, "Must have a pair to check")
         for piece in self.hilitedPieces {
             assert(piece.superview == self.view, "Pieces to check must be displayed on board")
@@ -827,11 +824,11 @@ class Board : NSObject, NSCoding {
         ui(true)
     }
     
-    
+    // tab gesture recognizer action handler
     // maintain an ivar pointing to hilited pieces
     // when that list has two items, check them for validity
 
-    func handleTap(g:UIGestureRecognizer) {
+    @objc private func handleTap(g:UIGestureRecognizer) {
         ui(false)
         let p = g.view as! Piece
         let hilited = p.isHilited
@@ -859,7 +856,7 @@ class Board : NSObject, NSCoding {
     // but caller can treat result as condition as well
     // the path is simply the path returned from checkPair
     
-    func legalPath () -> Path? {
+    private func legalPath () -> Path? {
         for x in 0..<_xct {
             for y in 0..<_yct {
                 let piece = self.pieceAt((x,y))
