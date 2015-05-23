@@ -44,15 +44,7 @@ struct Grid {
         // and now set up the empty grid with nils
         // hold my beer and watch this!
         self.grid = Array(count:xct, repeatedValue: Array(count:yct, repeatedValue:nil))
-        // facepalm! that inserted multiple references _to the same array_, thus screwing up everything later
-        // oooh, look like they fixed that
-//        self.grid = [[Piece?]]()
-//        for x in 0..<xct {
-//            self.grid.append(Array(count:yct, repeatedValue:nil))
-//        }
     }
-    // oh boy, I've been wanting a reason to use subscripts!
-    // starting in beta 3, must include setter to make inner
     subscript(i:Int) -> [Piece?] {
         get {
             return self.grid[i]
@@ -68,9 +60,22 @@ final class Board : NSObject, NSCoding {
     typealias Point = (Int,Int)
     typealias Path = [Point]
     
-    // unowned var view: UIView // can't live without a view (but see initwithcoder)
-    // however, I found that referring to an unowned causes a crash, so I had to give up and make it weak
-    weak var view: UIView!
+    var view: UIView {
+        didSet {
+            // there are two ways we can be initialized: init(boardView:) and init(coder:)
+            // but in the latter case, our view is fake; someone has to _assign_ us a view
+            // in that case, we must populate it with pieces
+            if let pv = self.pathView {
+                for x in 0 ..< self._xct {
+                    for y in 0 ..< self._yct {
+                        if let piece = self.pieceAt((x,y)) {
+                            self.view.insertSubview(piece, belowSubview: pv)
+                        }
+                    }
+                }
+            }
+        }
+    }
     var stage = 0
     var showingHint = false
     private var hilitedPieces = [Piece]()
@@ -80,40 +85,22 @@ final class Board : NSObject, NSCoding {
     private var grid : Grid // can't live without a grid
     // utility for obtaining a reference to the view that holds the transparency layer
     // we need this so we can switch touch fall-thru on and off
-    private var pathView : UIView {
-        return self.view.viewWithTag(999)!
+    private var pathView : UIView? {
+        return self.view.viewWithTag(999)
     }
     // utility for obtaining a reference to the transparency layer
     // it is the only sublayer of the layer of subview 999
-    private var pathLayer : CALayer {
-        let trans = self.pathView
-        let lay1 = trans.layer
-        let lay2 = lay1.sublayers.reverse()[0] as! CALayer
-        return lay2
+    private var pathLayer : CALayer? {
+        if let trans = self.pathView {
+            let lay1 = trans.layer
+            let lay2 = lay1.sublayers.reverse()[0] as! CALayer
+            return lay2
+        }
+        return nil
     }
 
-
-    
-//    var _memoizedPieceSize = CGSizeMake(0.0,0.0)
-//    var pieceSize : CGSize {
-//    // there is (from outside in) a thin margin, then a one-piece margin, then the grid of drawn pieces
-//    // we need the one-piece margin because we have to be able to draw paths in it
-//    // memoize piece size as an ivar
-//    // you may ask why I didn't just set the piece size when I set the grid
-//    // this actually feels neater, though
-//    if (self._memoizedPieceSize.width == 0.0) {
-//            assert(self.view != nil, "Meaningless to ask for piece size with no view.")
-//            assert((_xct > 0 && _yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
-//            // divide view bounds, allow 1 extra plus margins
-//            let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self._xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
-//            let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self._yct) + 2.0 + TOPMARGIN + BOTTOMMARGIN)
-//            self._memoizedPieceSize = CGSizeMake(pieceWidth, pieceHeight)
-//        }
-//        return self._memoizedPieceSize
-//    }
-    
     private lazy var pieceSize : CGSize = {
-        assert(self.view != nil, "Meaningless to ask for piece size with no view.")
+        // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
         assert((self._xct > 0 && self._yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
         println("calculating piece size")
         // divide view bounds, allow 1 extra plus margins
@@ -127,6 +114,14 @@ final class Board : NSObject, NSCoding {
         self.grid = Grid(gridSize)
     }
     
+    private struct Coder {
+        static let grid = "gridsw"
+        static let x = "xctsw"
+        static let y = "yctsw"
+        static let stage = "stagesw"
+        static let size = "piecesizesw"
+    }
+    
     func encodeWithCoder(coder: NSCoder) {
         // coder.encodeObject(self.grid, forKey: "gridsw")
         // but that's never going to work; there are nils in our grid!
@@ -135,27 +130,26 @@ final class Board : NSObject, NSCoding {
         for i in 0 ..< self._xct {
             for j in 0 ..< self._yct {
                 let piece = self.grid[i][j]
-                saveableGrid.append( piece != nil ? piece!.picName : "" )
+                saveableGrid.append( piece?.picName ?? "" )
             }
         }
-        coder.encodeObject(saveableGrid, forKey: "gridsw")
-        coder.encodeInteger(self._xct, forKey: "xctsw")
-        coder.encodeInteger(self._yct, forKey: "yctsw")
-        coder.encodeInteger(self.stage, forKey:"stagesw")
-        coder.encodeCGSize(self.pieceSize, forKey: "piecesizesw")
+        coder.encodeObject(saveableGrid, forKey: Coder.grid)
+        coder.encodeInteger(self._xct, forKey: Coder.x)
+        coder.encodeInteger(self._yct, forKey: Coder.y)
+        coder.encodeInteger(self.stage, forKey: Coder.stage)
+        coder.encodeCGSize(self.pieceSize, forKey: Coder.size)
     }
     
     required init(coder: NSCoder) {
-        //self.view = UIView() // just to quiet the compiler; we still need initialization of this
-        //super.init()
-        var flatGrid = coder.decodeObjectForKey("gridsw")! as! NSArray as! [String]
-        let xct = coder.decodeIntegerForKey("xctsw")
-        let yct = coder.decodeIntegerForKey("yctsw")
-        self.stage = coder.decodeIntegerForKey("stagesw")
+        var flatGrid = coder.decodeObjectForKey( Coder.grid ) as! [String]
+        let xct = coder.decodeIntegerForKey( Coder.x )
+        let yct = coder.decodeIntegerForKey( Coder.y )
+        self.stage = coder.decodeIntegerForKey( Coder.stage )
+        self.view = UIView() // this is a fake value! someone needs to assign us a view
         // make an empty grid...
         self.grid = Grid(xct, yct)
         super.init()
-        self.pieceSize = coder.decodeCGSizeForKey("piecesizesw")
+        self.pieceSize = coder.decodeCGSizeForKey( Coder.size )
         // ... and fill it in one value at a time
         for i in 0 ..< self._xct {
             for j in 0 ..< self._yct {
@@ -167,23 +161,9 @@ final class Board : NSObject, NSCoding {
         }
     }
     
-    // re-add all pieces (as pieces) to view
-    // called by client after initWithCoder, because we had no view at the time we were unarchived
-    func rebuild () {
-        assert(self.view != nil, "meaningless to rebuild without a real view")
-        let pv = self.pathView
-        for x in 0 ..< self._xct {
-            for y in 0 ..< self._yct {
-                if let piece = self.pieceAt((x,y)) {
-                    self.view?.insertSubview(piece, belowSubview: pv)
-                }
-            }
-        }
-    }
-    
     func redeal () {
         do {
-            UIApplication.sharedApplication().beginIgnoringInteractionEvents()
+            ui(false)
             // gather up all pieces (as names), shuffle them, deal them into their current slots
             var deck = [String]()
             for i in 0 ..< self._xct {
@@ -199,7 +179,7 @@ final class Board : NSObject, NSCoding {
             deck.shuffle()
             deck.shuffle()
             deck.shuffle()
-            UIApplication.sharedApplication().endIgnoringInteractionEvents()
+            ui(true)
             for i in 0 ..< self._xct {
                 for j in 0 ..< self._yct {
                     let piece = self.pieceAt((i,j))
@@ -221,27 +201,27 @@ final class Board : NSObject, NSCoding {
     // all we do is store the array in the transparency layer and tell the layer it needs drawing
     
     private func illuminate (arr: Path) {
-        let pathLayer = self.pathLayer
-        pathLayer.delegate = self
-        self.pathView.userInteractionEnabled = true
-        // transform path, which is an array of Point, into an NSArray of NSValue wrapping CGPoint
-        // so we can store it in the layer
-        let arrCGPoints : [CGPoint] = arr.map { CGPointMake(CGFloat($0.0),CGFloat($0.1)) }
-        let arrNSValues = arrCGPoints.map { NSValue(CGPoint:$0) }
-        pathLayer.setValue(arrNSValues, forKey:"arr")
-        pathLayer.setNeedsDisplay()
-        self.showingHint = true
+        if let pathLayer = self.pathLayer {
+            pathLayer.delegate = self // tee-hee
+            self.pathView?.userInteractionEnabled = true
+            // transform path, which is an array of Point, into an NSArray of NSValue wrapping CGPoint
+            // so we can store it in the layer
+            let arrCGPoints : [CGPoint] = arr.map { CGPointMake(CGFloat($0.0),CGFloat($0.1)) }
+            let arrNSValues = arrCGPoints.map { NSValue(CGPoint:$0) }
+            pathLayer.setValue(arrNSValues, forKey:"arr")
+            pathLayer.setNeedsDisplay()
+            self.showingHint = true
+        }
     }
     
     // this is the actual path drawing code
     // we are the delegate of the transparency layer so we are called when the layer is told it needs redrawing
     // thus we are handed a context and we can just draw directly into it
-    // the layer is holding an array that tells us what path to draw!
+    // the layer is holding an array of NSValues wrapping CGPoints that tells us what path to draw!
     
     override func drawLayer(layer: CALayer!, inContext con: CGContext!) {
-        let arr = layer.valueForKey("arr")! as! NSArray as! [NSValue]
-        // arr is a series of CGPoint wrapped us as NSValue (because that is what Objective-C array will hold)
-        // unwrap to CGPoints, unwrap to a pair of integers
+        let arr = layer.valueForKey("arr") as! [NSValue]
+        // unwrap arr to CGPoints, unwrap to a pair of integers
         let arr2 : Path = arr.map {let pt = $0.CGPointValue(); return (Int(pt.x),Int(pt.y))}
         // connect the dots; however, the dots we want to connect are the *centers* of the pieces...
         // whereas we are given piece *origins*, so calculate offsets
@@ -266,11 +246,12 @@ final class Board : NSObject, NSCoding {
     // erase the path by clearing the transparency layer (nil contents)
     
     func unilluminate () {
-        let pathLayer = self.pathLayer
-        pathLayer.delegate = nil
-        pathLayer.contents = nil
-        self.pathView.userInteractionEnabled = false // make touches just fall thru once again
-        self.showingHint = false
+        if let pathLayer = self.pathLayer {
+            pathLayer.delegate = nil
+            pathLayer.contents = nil
+            self.pathView?.userInteractionEnabled = false // make touches just fall thru once again
+            self.showingHint = false
+        }
     }
     
     private func pieceAt(p:Point) -> Piece? {
@@ -286,7 +267,6 @@ final class Board : NSObject, NSCoding {
     }
     
     // public interface for putting a piece in a slot and into interface
-    // however, we use view optionally because we might not have a view
     
     func addPieceAt(p:Point, withPicture picTitle:String) {
         let sz = self.pieceSize
@@ -296,7 +276,9 @@ final class Board : NSObject, NSCoding {
         piece.picName = picTitle
         // place the Piece in the interface
         // we are conscious that we must not accidentally draw on top of the transparency view
-        self.view?.insertSubview(piece, belowSubview: self.pathView)
+        if let pathView = self.pathView {
+            self.view.insertSubview(piece, belowSubview: pathView)
+        }
         // also place the Piece in the grid, and tell it where it is
         let (i,j) = p
         self.grid[i][j] = piece
@@ -893,6 +875,9 @@ final class Board : NSObject, NSCoding {
     }
     
     func hint () {
+        // however, there is a repetition here; we must already have checked the legal path...
+        // ... or we would not be here; thus we are wasting time
+        // instead, we should _store_ the legal path whenever legalPath() is called, and check the store here
         let path = self.legalPath()
         if path != nil {
             self.illuminate(path!)

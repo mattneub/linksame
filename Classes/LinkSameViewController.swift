@@ -175,8 +175,7 @@ class LinkSameViewController : UIViewController {
             self.emptyBoardViewAndCreatePathView()
             self.board = NSKeyedUnarchiver.unarchiveObjectWithData(boardData) as! Board
             // but this board is not fully realized; it has no view pointer
-            self.board.view = self.boardView
-            self.board.rebuild() // cause pieces to be displayed
+            self.board.view = self.boardView // also causes pieces to be displayed
             // set interface up as practice and we're all set
             self.interfaceMode = .Practice
             self.animateBoardTransition(.Fade)
@@ -314,8 +313,9 @@ class LinkSameViewController : UIViewController {
     // delegate from previous, called when animation ends
     override func animationDidStop(anim: CAAnimation!, finished flag: Bool) {
         if anim.valueForKey("name") as? NSString == "boardReplacement" {
+            // why am I not showing the stage label when we are in practice mode? Seems to me I should
             ui(true)
-            if self.interfaceMode == .Timed {
+            // if self.interfaceMode == .Timed {
                 ui(false)
                 // set and animated showing of "stage" label
                 UIView.transitionWithView(self.stageLabel, duration: 0.4,
@@ -325,7 +325,7 @@ class LinkSameViewController : UIViewController {
                         "of \(ud.integerForKey(Default.LastStage) + 1)"
                         self.stageLabel.text = s
                     }, completion: {_ in ui(true) })
-            }
+            // }
         }
     }
     
