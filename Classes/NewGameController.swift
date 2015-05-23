@@ -100,9 +100,10 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
     }
 
     func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
-        let setting = tableView.cellForRowAtIndexPath(indexPath)!.textLabel!.text!
-        ud.setObject(setting, forKey: self.tableView(tableView, titleForHeaderInSection:indexPath.section)!)
-        self.tableView.reloadData()
+        if let setting = tableView.cellForRowAtIndexPath(indexPath)?.textLabel?.text {
+            ud.setObject(setting, forKey: self.tableView(tableView, titleForHeaderInSection:indexPath.section)!)
+            self.tableView.reloadData()
+        }
     }
 }
 
