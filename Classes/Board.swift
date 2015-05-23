@@ -2,8 +2,10 @@
 import UIKit
 import QuartzCore
 
-func printlnNOT<T>(object: T) {
-    // do nothing, turn off println
+func println(object: Any) {
+    #if DEBUG
+        Swift.println(object)
+    #endif
 }
 
 func removeObject<T:Equatable>(inout arr:Array<T>, object:T) -> T? {
@@ -11,6 +13,14 @@ func removeObject<T:Equatable>(inout arr:Array<T>, object:T) -> T? {
         return arr.removeAtIndex(found)
     }
     return nil
+}
+
+func ui(yn:Bool) { // false means no user interaction, true means turn it back on
+    if !yn {
+        UIApplication.sharedApplication().beginIgnoringInteractionEvents()
+    } else {
+        UIApplication.sharedApplication().endIgnoringInteractionEvents()
+    }
 }
 
 let TOPMARGIN : CGFloat = (1.0/8.0)
@@ -33,12 +43,13 @@ struct Grid {
         self.yct = y
         // and now set up the empty grid with nils
         // hold my beer and watch this!
-        // self.grid = Array(count:_xct, repeatedValue: Array(count:_yct, repeatedValue:nil))
+        self.grid = Array(count:xct, repeatedValue: Array(count:yct, repeatedValue:nil))
         // facepalm! that inserted multiple references _to the same array_, thus screwing up everything later
-        self.grid = [[Piece?]]()
-        for x in 0..<xct {
-            self.grid.append(Array(count:yct, repeatedValue:nil))
-        }
+        // oooh, look like they fixed that
+//        self.grid = [[Piece?]]()
+//        for x in 0..<xct {
+//            self.grid.append(Array(count:yct, repeatedValue:nil))
+//        }
     }
     // oh boy, I've been wanting a reason to use subscripts!
     // starting in beta 3, must include setter to make inner
@@ -291,7 +302,7 @@ class Board : NSObject, NSCoding {
         let (i,j) = p
         self.grid[i][j] = piece
         (piece.x, piece.y) = (i,j)
-        printlnNOT("Point was \(p), pic was \(picTitle)\nCreated \(piece)")
+        println("Point was \(p), pic was \(picTitle)\nCreated \(piece)")
         // set up tap detection
         let t = UITapGestureRecognizer(target: self, action: "handleTap:")
         piece.addGestureRecognizer(t)
@@ -312,10 +323,12 @@ class Board : NSObject, NSCoding {
     // flash the path and remove the two pieces
     
     func removePairAndIlluminatePath(path:Path) {
+        ui(false)
         self.illuminate(path)
         delay(0.2) {
             self.unilluminate()
             delay(0.1) {
+                ui(true)
                 self.reallyRemovePair()
             }
         }
@@ -426,6 +439,7 @@ class Board : NSObject, NSCoding {
     }
     
     func reallyRemovePair () {
+        ui(false)
         // notify (so score can be incremented)
         nc.postNotificationName("userMoved", object: self)
         // actually remove the pieces (we happen to know there must be exactly two)
@@ -436,6 +450,7 @@ class Board : NSObject, NSCoding {
         // game over? if so, notify along with current stage and we're out of here!
         if self.gameOver() {
             delay(0.1) { // added this delay in swift, since I've never like what happens at game end
+                ui(true)
                 nc.postNotificationName("gameOver", object: self, userInfo: ["stage":self.stage])
             }
             return
@@ -692,14 +707,15 @@ class Board : NSObject, NSCoding {
                 let p = self.movenda.removeLast()
                 var f = p.frame
                 f.origin = self.originOf((p.x, p.y))
-                printlnNOT("Will change frame of piece \(p)")
-                printlnNOT("From \(p.frame)")
-                printlnNOT("To \(f)")
+                println("Will change frame of piece \(p)")
+                println("From \(p.frame)")
+                println("To \(f)")
                 p.frame = f // this is the move that will be animated
             }
             }, completion: {
                 _ in
                 self.checkStuck()
+                ui(true)
                 // we do this after the slide animation is over, so we can get two animations in row, cool
             })
     }
@@ -719,7 +735,7 @@ class Board : NSObject, NSCoding {
         if self.lineIsClearFrom(pt1, to:pt2) {
             return [pt1,pt2]
         }
-        printlnNOT("failed straight line test")
+        println("failed straight line test")
         // 2. second check: are they at the corners of a rectangle with nothing on one pair of sides between them?
         let midpt1 = (p1.x, p2.y)
         let midpt2 = (p2.x, p1.y)
@@ -733,7 +749,7 @@ class Board : NSObject, NSCoding {
                 return [pt1, midpt2, pt2]
             }
         }
-        printlnNOT("failed two-segment test")
+        println("failed two-segment test")
         // 3. third check: The Way of the Moving Line
         // (this was the algorithmic insight that makes the whole thing possible)
         // connect the x or y coordinates of the pieces by a vertical or horizontal line;
@@ -743,9 +759,9 @@ class Board : NSObject, NSCoding {
         // we may find a longer one before we find a shorter one, which is counter-intuitive
         // so, accumulate all found paths and submit only the shortest
         var marr = [Path]()
-        printlnNOT("=======")
+        println("=======")
         func addPathIfValid(midpt1:Point,midpt2:Point) {
-            printlnNOT("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
+            println("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
             // new in swift, reject if same midpoint
             if midpt1.0 == midpt2.0 && midpt1.1 == midpt2.1 {return}
             if self.pieceAt(midpt1) == nil && self.pieceAt(midpt2) == nil {
@@ -795,10 +811,12 @@ class Board : NSObject, NSCoding {
         for piece in self.hilitedPieces {
             assert(piece.superview == self.view, "Pieces to check must be displayed on board")
         }
+        ui(false)
         let p1 = self.hilitedPieces[0]
         let p2 = self.hilitedPieces[1]
         if p1.picName != p2.picName {
             self.cancelPair()
+            ui(true)
             return
         }
         if let path = self.checkPair(p1, and:p2) {
@@ -806,6 +824,7 @@ class Board : NSObject, NSCoding {
         } else {
             self.cancelPair()
         }
+        ui(true)
     }
     
     
@@ -813,10 +832,12 @@ class Board : NSObject, NSCoding {
     // when that list has two items, check them for validity
 
     func handleTap(g:UIGestureRecognizer) {
+        ui(false)
         let p = g.view as! Piece
         let hilited = p.isHilited
         if !hilited {
             if self.hilitedPieces.count > 1 {
+                ui(true)
                 return
             }
             self.hilitedPieces += [p]
@@ -825,10 +846,11 @@ class Board : NSObject, NSCoding {
         }
         p.toggleHilite()
         if self.hilitedPieces.count == 2 {
-            printlnNOT("========")
-            printlnNOT("about to check hilited pair \(self.hilitedPieces)")
+            println("========")
+            println("about to check hilited pair \(self.hilitedPieces)")
             self.checkHilitedPair()
         }
+        ui(true)
     }
     
     // utility to run thru the entire grid and make sure there is at least one legal path somewhere
@@ -858,8 +880,8 @@ class Board : NSObject, NSCoding {
                         if picName2 != picName {
                             continue
                         }
-                        printlnNOT("========")
-                        printlnNOT("About to check \(piece!) vs. \(piece2!)")
+                        println("========")
+                        println("About to check \(piece!) vs. \(piece2!)")
                         let path = self.checkPair(piece!, and:piece2!)
                         if path == nil {
                             continue
