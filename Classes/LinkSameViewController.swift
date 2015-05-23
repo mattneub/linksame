@@ -83,7 +83,11 @@ class LinkSameViewController : UIViewController {
     @IBOutlet private weak var toolbar : UIToolbar!
     private var popover : UIPopoverController!
     private var oldDefs : [NSObject : AnyObject]!
-    private var timer : NSTimer!
+    private var timer : NSTimer! { // any time the timer is to be replaced, invalidate existing timer
+        willSet {
+            self.timer?.invalidate() // to stop timer, set it to nil, we invalidate
+        }
+    }
     
     override var nibName : String {
         get {
@@ -156,6 +160,7 @@ class LinkSameViewController : UIViewController {
             return
         }
         self.didSetUp = true
+        ui(false)
         // one-time launch initializations of model and interface
         self.initializeScores()
         // fix width of hint button to accomodate new labels Show Hint and Hide Hint
@@ -178,6 +183,7 @@ class LinkSameViewController : UIViewController {
         } else { // otherwise, create new game from scratch
             self.startNewGame()
         }
+        ui(true)
         delay(2) { // delay to prevent didBecomeActive being called immediately
             // I have filed a bug on this; it's the same issue I had in 99 Bottles
             nc.addObserverForName("gameOver", object: nil, queue: nil) {
@@ -204,7 +210,6 @@ class LinkSameViewController : UIViewController {
                     self.doHint(nil)
                 }
                 // stop timer
-                self.timer?.invalidate()
                 self.timer = nil
                 // dismiss popover if any; counts as cancelling, so restore defaults if needed
                 self.dismissViewControllerAnimated(false, completion: nil)
@@ -220,7 +225,6 @@ class LinkSameViewController : UIViewController {
                 // but if we are coming back from suspension, and if we are in timed mode...
                 // ... we have created a whole new game; in that case, don't start the timer
                 if self.score == 0 {
-                    self.timer?.invalidate()
                     self.timer = nil
                 }
             }
@@ -247,7 +251,7 @@ class LinkSameViewController : UIViewController {
     }
     
     private func resetTimer() {
-        self.timer?.invalidate()
+        self.timer = nil
         if self.interfaceMode == .Practice {
             return // don't bother making a new timer, we were doing that (harmlessly) but why bother?
         }
@@ -291,7 +295,7 @@ class LinkSameViewController : UIViewController {
     }
     
     private func animateBoardTransition (transition: BoardTransition) {
-        self.boardView.userInteractionEnabled = false
+        ui(false)
         // about to animate, turn off interaction; will turn back on in delegate
         let t = CATransition()
         if transition == .Slide { // default is .Fade, fade in
@@ -310,8 +314,9 @@ class LinkSameViewController : UIViewController {
     // delegate from previous, called when animation ends
     override func animationDidStop(anim: CAAnimation!, finished flag: Bool) {
         if anim.valueForKey("name") as? NSString == "boardReplacement" {
-            self.boardView.userInteractionEnabled = true
+            ui(true)
             if self.interfaceMode == .Timed {
+                ui(false)
                 // set and animated showing of "stage" label
                 UIView.transitionWithView(self.stageLabel, duration: 0.4,
                     options: UIViewAnimationOptions.TransitionFlipFromLeft,
@@ -319,7 +324,7 @@ class LinkSameViewController : UIViewController {
                         let s = "Stage \(self.board.stage + 1) " +
                         "of \(ud.integerForKey(Default.LastStage) + 1)"
                         self.stageLabel.text = s
-                    }, completion: nil)
+                    }, completion: {_ in ui(true) })
             }
         }
     }
@@ -327,12 +332,6 @@ class LinkSameViewController : UIViewController {
     // utility used only by next method: make deck, deal it out, show it
     // if new game, also set up scores and mode
     private func newBoard(# newGame:Bool) {
-        
-        // initialize time
-        self.lastTime = NSDate.timeIntervalSinceReferenceDate()
-        // remove existing timer; timing will start when user moves
-        self.timer?.invalidate()
-        self.timer = nil
         
         let boardTransition : BoardTransition = newGame ? .Fade : .Slide
         if newGame {
@@ -378,6 +377,13 @@ class LinkSameViewController : UIViewController {
     // called when user asks for a new game
     // called via notification when user completes a stage
     @objc private func prepareNewStage (n : AnyObject?) {
+        ui(false)
+        // stop timer!
+        // initialize time
+        self.lastTime = NSDate.timeIntervalSinceReferenceDate()
+        // remove existing timer; timing will start when user moves
+        self.timer = nil
+        
         // determine layout dimensions
         let (w,h) = Sizes.boardSize(ud.stringForKey(Default.Size)!)
         // create new board object and configure it
@@ -438,6 +444,7 @@ class LinkSameViewController : UIViewController {
             // * startup, or user asked for new game
             self.newBoard(newGame:true)
         }
+        ui(true)
     }
     
     
@@ -493,6 +500,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         }
         // create dialog from scratch (see NewGameController for rest of interface)
         let dlg = NewGameController()
+        dlg.modalInPopover = true // must be before presentation to work
         let b1 = UIBarButtonItem(barButtonSystemItem: .Cancel, target: self, action: "cancelNewGame")
         dlg.navigationItem.rightBarButtonItem = b1
         let b2 = UIBarButtonItem(barButtonSystemItem: .Done, target: self, action: "startNewGame")
@@ -514,7 +522,8 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
     }
     
     @objc private func cancelNewGame() { // cancel button in new game popover
-        self.dismissViewControllerAnimated(true, completion: nil)
+        ui(false)
+        self.dismissViewControllerAnimated(true, completion: {_ in ui(true)})
         if (self.oldDefs != nil) {
             ud.setValuesForKeysWithDictionary(self.oldDefs)
             self.oldDefs = nil
@@ -535,6 +544,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         }
     }
     
+    // this should now never happen, because I've made this popover modal
     func popoverPresentationControllerShouldDismissPopover(pop: UIPopoverPresentationController) -> Bool {
         // we can identify which popover it is because it is our presentedViewController
         if pop.presentedViewController is UINavigationController {
