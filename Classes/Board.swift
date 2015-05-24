@@ -83,20 +83,15 @@ final class Board : NSObject, NSCoding {
     private var _yct : Int { return self.grid.yct }
     private var movenda = [Piece]()
     private var grid : Grid // can't live without a grid
+    private var hintPath : Path?
     // utility for obtaining a reference to the view that holds the transparency layer
     // we need this so we can switch touch fall-thru on and off
     private var pathView : UIView? {
         return self.view.viewWithTag(999)
     }
     // utility for obtaining a reference to the transparency layer
-    // it is the only sublayer of the layer of subview 999
     private var pathLayer : CALayer? {
-        if let trans = self.pathView {
-            let lay1 = trans.layer
-            let lay2 = lay1.sublayers.reverse()[0] as! CALayer
-            return lay2
-        }
-        return nil
+        return (self.pathView?.layer.sublayers as? [CALayer])?.last
     }
 
     private lazy var pieceSize : CGSize = {
@@ -866,23 +861,27 @@ final class Board : NSObject, NSCoding {
                             continue
                         }
                         // got one!
+                        self.hintPath = path // store so hint can fetch it
                         return path
                     }
                 }
             }
         }
+        self.hintPath = nil // store so hint can fetch it (should not happen)
         return nil
     }
     
     func hint () {
-        // however, there is a repetition here; we must already have checked the legal path...
-        // ... or we would not be here; thus we are wasting time
-        // instead, we should _store_ the legal path whenever legalPath() is called, and check the store here
-        let path = self.legalPath()
+        let path = self.hintPath // no need to waste time calling legalPath()
         if path != nil {
             self.illuminate(path!)
         }
-        else {
+        else { // can happen like right after dealing that hintPath was never set
+            let path = self.legalPath()
+            if path != nil {
+                self.illuminate(path!)
+                return
+            }
             self.redeal() // should never happen at this point
         }
     }
