@@ -74,13 +74,14 @@ class LinkSameViewController : UIViewController {
     private var didSetUp = false
     
     private var board : Board!
-    @IBOutlet private weak var boardView : UIView!
+    @IBOutlet private weak var backgroundView : UIView!
     @IBOutlet private weak var stageLabel : UILabel!
     @IBOutlet private weak var scoreLabel : UILabel!
     @IBOutlet private weak var prevLabel : UILabel!
     @IBOutlet private weak var hintButton : UIBarButtonItem!
     @IBOutlet private weak var timedPractice : UISegmentedControl!
     @IBOutlet private weak var toolbar : UIToolbar!
+    private var boardView : UIView!
     private var popover : UIPopoverController!
     private var oldDefs : [NSObject : AnyObject]!
     private var timer : NSTimer! { // any time the timer is to be replaced, invalidate existing timer
@@ -171,11 +172,10 @@ class LinkSameViewController : UIViewController {
         // have we a state saved from prior practice? (non-practice game is not saved as board data!)
         // if so, reconstruct practice game from board data
         if let boardData = ud.objectForKey(Default.BoardData) as? NSData {
-            // set up our own view
-            self.emptyBoardViewAndCreatePathView()
             self.board = NSKeyedUnarchiver.unarchiveObjectWithData(boardData) as! Board
-            // but this board is not fully realized; it has no view pointer
-            self.board.view = self.boardView // also causes pieces to be displayed
+            self.boardView = self.board.view
+            self.backgroundView.addSubview(self.boardView)
+            self.boardView.autoresizingMask = .FlexibleWidth | .FlexibleHeight
             // set interface up as practice and we're all set
             self.interfaceMode = .Practice
             self.animateBoardTransition(.Fade)
@@ -275,24 +275,6 @@ class LinkSameViewController : UIViewController {
         }
     }
     
-    private func emptyBoardViewAndCreatePathView() {
-        // clear the view!
-        for v in self.boardView.subviews as! [UIView] {
-            v.removeFromSuperview()
-        }
-        // board is now completely empty
-        // place invisible view on top of it; this is where paths will be drawn
-        // board will draw directly into its layer using layer delegate's drawLayer:inContext:
-        // but we must not set a view's layer's delegate, so we create a sublayer
-        let v = UIView(frame: self.boardView.bounds)
-        v.tag = 999
-        v.userInteractionEnabled = false // clicks just fall right thru
-        let lay = CALayer()
-        v.layer.addSublayer(lay)
-        lay.frame = v.layer.bounds
-        self.boardView.addSubview(v)
-    }
-    
     private func animateBoardTransition (transition: BoardTransition) {
         ui(false)
         // about to animate, turn off interaction; will turn back on in delegate
@@ -339,9 +321,6 @@ class LinkSameViewController : UIViewController {
             self.interfaceMode = .Timed // every new game is a timed game
         }
         
-        // initialize empty board
-        self.emptyBoardViewAndCreatePathView()
-        
         // determine which pieces to use
         let (start1,start2) = Styles.pieces(ud.stringForKey(Default.Style)!)
         // create deck of piece names
@@ -387,7 +366,12 @@ class LinkSameViewController : UIViewController {
         // determine layout dimensions
         let (w,h) = Sizes.boardSize(ud.stringForKey(Default.Size)!)
         // create new board object and configure it
-        self.board = Board(boardView:self.boardView, gridSize:(w,h))
+        self.board = Board(boardFrame:self.backgroundView.bounds, gridSize:(w,h))
+        // put its `view` into the interface, replacing the one that may be there already
+        self.boardView?.removeFromSuperview()
+        self.boardView = self.board.view
+        self.backgroundView.addSubview(self.boardView)
+        self.boardView.autoresizingMask = UIViewAutoresizing.FlexibleHeight | UIViewAutoresizing.FlexibleWidth
         // stage (current stage arrived in notification, or nil if we are just starting)
         self.board.stage = 0 // default
         // self.board.stage = 8 // testing, comment out!

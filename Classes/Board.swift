@@ -60,7 +60,9 @@ final class Board : NSObject, NSCoding {
     typealias Point = (Int,Int)
     typealias Path = [Point]
     
-    var view: UIView {
+    var view: UIView
+        /*
+        {
         didSet {
             // there are two ways we can be initialized: init(boardView:) and init(coder:)
             // but in the latter case, our view is fake; someone has to _assign_ us a view
@@ -76,6 +78,7 @@ final class Board : NSObject, NSCoding {
             }
         }
     }
+*/
     var stage = 0
     var showingHint = false
     private var hilitedPieces = [Piece]()
@@ -104,9 +107,11 @@ final class Board : NSObject, NSCoding {
         return CGSizeMake(pieceWidth, pieceHeight)
     }()
     
-    init (boardView:UIView, gridSize:(Int,Int)) {
-        self.view = boardView
+    init (boardFrame:CGRect, gridSize:(Int,Int)) {
+        self.view = UIView(frame:boardFrame)
         self.grid = Grid(gridSize)
+        super.init()
+        self.createPathView()
     }
     
     private struct Coder {
@@ -115,6 +120,21 @@ final class Board : NSObject, NSCoding {
         static let y = "yctsw"
         static let stage = "stagesw"
         static let size = "piecesizesw"
+        static let frame = "framesw"
+    }
+    
+    private func createPathView() {
+        // board is now completely empty
+        // place invisible view on top of it; this is where paths will be drawn
+        // board will draw directly into its layer using layer delegate's drawLayer:inContext:
+        // but we must not set a view's layer's delegate, so we create a sublayer
+        let v = UIView(frame: self.view.bounds)
+        v.tag = 999
+        v.userInteractionEnabled = false // clicks just fall right thru
+        let lay = CALayer()
+        v.layer.addSublayer(lay)
+        lay.frame = v.layer.bounds
+        self.view.addSubview(v)
     }
     
     func encodeWithCoder(coder: NSCoder) {
@@ -133,19 +153,22 @@ final class Board : NSObject, NSCoding {
         coder.encodeInteger(self._yct, forKey: Coder.y)
         coder.encodeInteger(self.stage, forKey: Coder.stage)
         coder.encodeCGSize(self.pieceSize, forKey: Coder.size)
+        coder.encodeCGRect(self.view.frame, forKey: Coder.frame)
     }
     
-    required init(coder: NSCoder) {
-        var flatGrid = coder.decodeObjectForKey( Coder.grid ) as! [String]
+    // little-known fact: you have to implement init(coder:), but no law says it cannot be a convenience initializer!
+    // thus we can eliminate repetition by calling the other initializer
+    
+    required convenience init(coder: NSCoder) {
         let xct = coder.decodeIntegerForKey( Coder.x )
         let yct = coder.decodeIntegerForKey( Coder.y )
+        let frame = coder.decodeCGRectForKey( Coder.frame )
+        self.init(boardFrame:frame, gridSize:(xct,yct))
+        
         self.stage = coder.decodeIntegerForKey( Coder.stage )
-        self.view = UIView() // this is a fake value! someone needs to assign us a view
-        // make an empty grid...
-        self.grid = Grid(xct, yct)
-        super.init()
         self.pieceSize = coder.decodeCGSizeForKey( Coder.size )
-        // ... and fill it in one value at a time
+        
+        var flatGrid = coder.decodeObjectForKey( Coder.grid ) as! [String]
         for i in 0 ..< self._xct {
             for j in 0 ..< self._yct {
                 let picname = flatGrid.removeAtIndex(0)
@@ -155,7 +178,7 @@ final class Board : NSObject, NSCoding {
             }
         }
     }
-    
+
     func redeal () {
         do {
             ui(false)
