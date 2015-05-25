@@ -311,7 +311,7 @@ class LinkSameViewController : UIViewController {
         }
     }
     
-    // utility used only by next method: make deck, deal it out, show it
+    // utility used only by next method: show board
     // if new game, also set up scores and mode
     private func newBoard(# newGame:Bool) {
         
@@ -319,34 +319,6 @@ class LinkSameViewController : UIViewController {
         if newGame {
             self.initializeScores()
             self.interfaceMode = .Timed // every new game is a timed game
-        }
-        
-        // determine which pieces to use
-        let (start1,start2) = Styles.pieces(ud.stringForKey(Default.Style)!)
-        // create deck of piece names
-        var deck = [String]()
-        for ct in 0..<4 {
-            for i in start1..<start1+9 {
-                deck += [String(i)]
-            }
-        }
-        // determine which additional pieces to use, finish deck of piece names
-        let (w,h) = Sizes.boardSize(ud.stringForKey(Default.Size)!)
-        let howmany : Int = ((w * h) / 4) - 9
-        for ct in 0..<4 {
-            for i in start2..<start2+howmany {
-                deck += [String(i)]
-            }
-        }
-        for ct in 0..<4 {
-            deck.shuffle()
-        }
-
-        // deal out the pieces and we're all set! Pieces themselves and Board object take over interactions from here
-        for i in 0..<w {
-            for j in 0..<h {
-                self.board.addPieceAt((i,j), withPicture: deck.removeLast()) // heh heh, pops and returns
-            }
         }
         self.animateBoardTransition(boardTransition)
     }
