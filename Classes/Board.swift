@@ -61,24 +61,6 @@ final class Board : NSObject, NSCoding {
     typealias Path = [Point]
     
     var view: UIView
-        /*
-        {
-        didSet {
-            // there are two ways we can be initialized: init(boardView:) and init(coder:)
-            // but in the latter case, our view is fake; someone has to _assign_ us a view
-            // in that case, we must populate it with pieces
-            if let pv = self.pathView {
-                for x in 0 ..< self._xct {
-                    for y in 0 ..< self._yct {
-                        if let piece = self.pieceAt((x,y)) {
-                            self.view.insertSubview(piece, belowSubview: pv)
-                        }
-                    }
-                }
-            }
-        }
-    }
-*/
     var stage = 0
     var showingHint = false
     private var hilitedPieces = [Piece]()
@@ -177,6 +159,7 @@ final class Board : NSObject, NSCoding {
                 }
             }
         }
+        self.legalPath() // generate initial hint
     }
     
     func createAndDealDeck() {
@@ -207,6 +190,8 @@ final class Board : NSObject, NSCoding {
                 self.addPieceAt((i,j), withPicture: deck.removeLast()) // heh heh, pops and returns
             }
         }
+        
+        self.legalPath() // generate initial hint
     }
 
     func redeal () {
@@ -929,7 +914,7 @@ final class Board : NSObject, NSCoding {
         if path != nil {
             self.illuminate(path!)
         }
-        else { // can happen like right after dealing that hintPath was never set
+        else { // just in case hintPath was somehow never set
             let path = self.legalPath()
             if path != nil {
                 self.illuminate(path!)
