@@ -343,13 +343,15 @@ final class Board : NSObject, NSCoding {
     }
     
     // as pieces are highlighted, we store them in an ivar
-    // thus, to unhighlight all highlighted piece, we just run thru that list
+    // thus, to unhighlight all highlighted pieces, we just run thru that list
+    // now public, because controller might need to cancel existing highlight
+    // make no assumptions about how many are in list!
     
-    private func cancelPair() {
-        let p1 = self.hilitedPieces.removeLast()
-        p1.toggleHilite()
-        let p2 = self.hilitedPieces.removeLast()
-        p2.toggleHilite()
+    func unhilite() {
+        while self.hilitedPieces.count > 0 {
+            let p = self.hilitedPieces.removeLast()
+            p.toggleHilite()
+        }
     }
     
     // bottleneck utility for when user correctly selects a pair
@@ -846,14 +848,14 @@ final class Board : NSObject, NSCoding {
         let p1 = self.hilitedPieces[0]
         let p2 = self.hilitedPieces[1]
         if p1.picName != p2.picName {
-            self.cancelPair()
+            self.unhilite()
             ui(true)
             return
         }
         if let path = self.checkPair(p1, and:p2) {
             self.removePairAndIlluminatePath(path)
         } else {
-            self.cancelPair()
+            self.unhilite()
         }
         ui(true)
     }

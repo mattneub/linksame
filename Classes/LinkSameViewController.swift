@@ -407,10 +407,11 @@ class LinkSameViewController : UIViewController {
     // ============================ toolbar buttons =================================
     
     @IBAction private func toggleHint(_:AnyObject?) { // hintButton
+        self.board.unhilite()
         if let v = self.board.pathView {
             if !self.board.showingHint {
                 self.hintButton.title = HintButtonTitle.Hide
-                self.incrementScore(-10, resetTimer:true)
+                self.incrementScore(-10, resetTimer:true, red:true)
                 self.board.hint()
                 // if user taps board now, this should have just the same effect as tapping button
                 // so, attach gesture rec
@@ -432,14 +433,16 @@ class LinkSameViewController : UIViewController {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
+        self.board.unhilite()
         self.board.redeal()
-        self.incrementScore(-20, resetTimer:true)
+        self.incrementScore(-20, resetTimer:true, red:true)
     }
     
     @IBAction private func doRestartStage(_:AnyObject?) {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
+        self.board.unhilite()
         let alert = UIAlertController(title: "Restart Stage", message: "Really restart this stage?", preferredStyle: .Alert)
         alert.addAction(UIAlertAction(title: "Cancel", style: .Cancel, handler: nil))
         alert.addAction(UIAlertAction(title: "OK", style: .Default, handler: {
@@ -469,6 +472,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
+        self.board.unhilite()
         // create dialog from scratch (see NewGameController for rest of interface)
         let dlg = NewGameController()
         dlg.modalInPopover = true // must be before presentation to work
@@ -532,6 +536,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
+        self.board.unhilite()
         self.interfaceMode = InterfaceMode(rawValue:self.timedPractice.selectedSegmentIndex)!
         // and changing the interface mode changes the interface accordingly
     }
