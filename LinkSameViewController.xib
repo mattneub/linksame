@@ -9,6 +9,7 @@
                 <outlet property="backgroundView" destination="4" id="H5g-Ra-N5H"/>
                 <outlet property="hintButton" destination="6" id="25"/>
                 <outlet property="prevLabel" destination="23" id="24"/>
+                <outlet property="restartStageButton" destination="0J1-lS-nla" id="70D-sT-dV0"/>
                 <outlet property="scoreLabel" destination="21" id="22"/>
                 <outlet property="stageLabel" destination="17" id="18"/>
                 <outlet property="timedPractice" destination="26" id="30"/>
@@ -62,6 +63,12 @@
                             </segmentedControl>
                         </barButtonItem>
                         <barButtonItem style="plain" systemItem="flexibleSpace" id="8"/>
+                        <barButtonItem title="Restart Stage" id="0J1-lS-nla">
+                            <connections>
+                                <action selector="doRestartStage:" destination="-1" id="tbo-di-vLI"/>
+                            </connections>
+                        </barButtonItem>
+                        <barButtonItem width="42" style="plain" systemItem="fixedSpace" id="NPG-Gm-nG3"/>
                         <barButtonItem title="Help" id="9">
                             <connections>
                                 <action selector="doHelp:" destination="-1" id="12"/>

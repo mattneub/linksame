@@ -185,6 +185,9 @@ final class Board : NSObject, NSCoding {
             deck.shuffle()
         }
         
+        // store a copy so we can restart the stage if we have to
+        self.deckAtStartOfStage = deck
+        
         // deal out the pieces and we're all set! Pieces themselves and Board object take over interactions from here
         for i in 0..<w {
             for j in 0..<h {
@@ -194,6 +197,21 @@ final class Board : NSObject, NSCoding {
         
         self.legalPath() // generate initial hint
     }
+    
+    func restartStage() {
+        // deal stored deck; we have to remove existing pieces as we go
+        var deck = self.deckAtStartOfStage
+        for i in 0..<self.xct {
+            for j in 0..<self.yct {
+                if let oldPiece = self.pieceAt(i,j) {
+                    self.removePiece(oldPiece)
+                }
+                self.addPieceAt((i,j), withPicture: deck.removeLast()) // heh heh, pops and returns
+            }
+        }
+        self.legalPath() // generate initial hint
+    }
+
 
     func redeal () {
         do {
@@ -924,5 +942,6 @@ final class Board : NSObject, NSCoding {
             self.redeal() // should never happen at this point
         }
     }
+    
 
 }

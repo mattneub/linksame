@@ -70,6 +70,7 @@ struct Styles {
 class LinkSameViewController : UIViewController {
     
     private var score = 0
+    private var scoreAtStartOfStage = 0
     private var lastTime : NSTimeInterval = 0
     private var didSetUp = false
     
@@ -80,6 +81,7 @@ class LinkSameViewController : UIViewController {
     @IBOutlet private weak var prevLabel : UILabel!
     @IBOutlet private weak var hintButton : UIBarButtonItem!
     @IBOutlet private weak var timedPractice : UISegmentedControl!
+    @IBOutlet private weak var restartStageButton : UIBarButtonItem!
     @IBOutlet private weak var toolbar : UIToolbar!
     private var boardView : UIView!
     private var popover : UIPopoverController!
@@ -115,6 +117,7 @@ class LinkSameViewController : UIViewController {
             self.prevLabel.hidden = !timed
             self.timedPractice.selectedSegmentIndex = mode.rawValue
             self.timedPractice.enabled = timed
+            self.restartStageButton.enabled = timed
         }
     }
     
@@ -316,6 +319,7 @@ class LinkSameViewController : UIViewController {
             self.interfaceMode = .Timed // every new game is a timed game
         }
         board.createAndDealDeck()
+        self.scoreAtStartOfStage = self.score // in case we have to restart this stage
         self.animateBoardTransition(boardTransition)
     }
 
@@ -432,6 +436,21 @@ class LinkSameViewController : UIViewController {
         self.incrementScore(-20, resetTimer:true)
     }
     
+    @IBAction private func doRestartStage(_:AnyObject?) {
+        if self.board.showingHint {
+            self.toggleHint(nil)
+        }
+        let alert = UIAlertController(title: "Restart Stage", message: "Really restart this stage?", preferredStyle: .Alert)
+        alert.addAction(UIAlertAction(title: "Cancel", style: .Cancel, handler: nil))
+        alert.addAction(UIAlertAction(title: "OK", style: .Default, handler: {
+            _ in
+            self.board.restartStage()
+            self.score = self.scoreAtStartOfStage
+            self.incrementScore(0, resetTimer: true) // cause new score to show, stop timer and wait
+            self.animateBoardTransition(.Fade)
+        }))
+        self.presentViewController(alert, animated: true, completion: nil)
+    }
     
     
 }
