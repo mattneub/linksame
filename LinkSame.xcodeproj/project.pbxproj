@@ -12,11 +12,12 @@
 		288765A50DF7441C002DB57D /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 288765A40DF7441C002DB57D /* CoreGraphics.framework */; };
 		2899E5220DE3E06400AC0155 /* LinkSameViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 2899E5210DE3E06400AC0155 /* LinkSameViewController.xib */; };
 		32294957192417C800BBF4FD /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A4C0B1121214AA4600D70DAF /* QuartzCore.framework */; };
-		322F131D1923DF9500F2BE47 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 322F131C1923DF9500F2BE47 /* Images.xcassets */; };
 		3293FF6D1A8BDF25003901A1 /* LinkSameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3293FF6C1A8BDF25003901A1 /* LinkSameViewController.swift */; };
 		32A7D4561957CE700002210A /* Piece.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A7D4551957CE700002210A /* Piece.swift */; };
 		32D59DA8195758A100E4A41C /* MyRightLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D59DA7195758A100E4A41C /* MyRightLabel.swift */; };
 		32DAD06E1959FF8C005095C6 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32DAD06D1959FF8C005095C6 /* AppDelegate.swift */; };
+		32E460EE1B138BAF00F9067B /* ImagesNew.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32E460ED1B138BAF00F9067B /* ImagesNew.xcassets */; };
+		32E460F01B138D7800F9067B /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 32E460EF1B138D7800F9067B /* LaunchScreen.xib */; };
 		32EEBEFC195A5C5B004E0823 /* Board.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EEBEFB195A5C5B004E0823 /* Board.swift */; };
 		32FE1D80195790270068B6B0 /* NewGameController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32FE1D7F195790270068B6B0 /* NewGameController.swift */; };
 		A41D6EC91216F85E00638030 /* linkhelp.html in Resources */ = {isa = PBXBuildFile; fileRef = A41D6EC81216F85E00638030 /* linkhelp.html */; };
@@ -39,7 +40,6 @@
 		3229495B1924233D00BBF4FD /* launchImageSingle.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = launchImageSingle.png; sourceTree = "<group>"; };
 		3229495C19244A0600BBF4FD /* MyRightLabel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MyRightLabel.h; sourceTree = "<group>"; };
 		3229495D19244A0600BBF4FD /* MyRightLabel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MyRightLabel.m; sourceTree = "<group>"; };
-		322F131C1923DF9500F2BE47 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = LinkSame/Images.xcassets; sourceTree = "<group>"; };
 		322F131E1923E71800F2BE47 /* bigIcon2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = bigIcon2.png; sourceTree = "<group>"; };
 		322F131F1923E72900F2BE47 /* bigIcon2.psd */ = {isa = PBXFileReference; lastKnownFileType = file; path = bigIcon2.psd; sourceTree = "<group>"; };
 		322F13201923E73200F2BE47 /* icon2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon2.png; sourceTree = "<group>"; };
@@ -48,6 +48,8 @@
 		32A7D4551957CE700002210A /* Piece.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Piece.swift; sourceTree = "<group>"; };
 		32D59DA7195758A100E4A41C /* MyRightLabel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MyRightLabel.swift; sourceTree = "<group>"; };
 		32DAD06D1959FF8C005095C6 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		32E460ED1B138BAF00F9067B /* ImagesNew.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = ImagesNew.xcassets; sourceTree = "<group>"; };
+		32E460EF1B138D7800F9067B /* LaunchScreen.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LaunchScreen.xib; sourceTree = "<group>"; };
 		32EEBEFB195A5C5B004E0823 /* Board.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Board.swift; sourceTree = "<group>"; };
 		32FE1D7F195790270068B6B0 /* NewGameController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NewGameController.swift; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* LinkSame-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "LinkSame-Info.plist"; plistStructureDefinitionIdentifier = "com.apple.xcode.plist.structure-definition.iphone.info-plist"; sourceTree = "<group>"; };
@@ -125,7 +127,8 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				322F131C1923DF9500F2BE47 /* Images.xcassets */,
+				32E460EF1B138D7800F9067B /* LaunchScreen.xib */,
+				32E460ED1B138BAF00F9067B /* ImagesNew.xcassets */,
 				A4C07EB31219EB6A005D1E53 /* bigIcon.png */,
 				A4C07EB41219EB6A005D1E53 /* bigIcon.psd */,
 				322F131E1923E71800F2BE47 /* bigIcon2.png */,
@@ -236,9 +239,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				322F131D1923DF9500F2BE47 /* Images.xcassets in Resources */,
 				2899E5220DE3E06400AC0155 /* LinkSameViewController.xib in Resources */,
+				32E460EE1B138BAF00F9067B /* ImagesNew.xcassets in Resources */,
 				A4B7B5E9121306DF008BEA15 /* foods in Resources */,
+				32E460F01B138D7800F9067B /* LaunchScreen.xib in Resources */,
 				A4B7B5EC121307AB008BEA15 /* background.jpg in Resources */,
 				A4439A8812158819003831A0 /* About these icons.rtf in Resources */,
 				A41D6EC91216F85E00638030 /* linkhelp.html in Resources */,
@@ -270,7 +274,6 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -300,7 +303,6 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -342,11 +344,10 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: Matt Neuburg (W3LHX5RGV2)";
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				COPY_PHASE_STRIP = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = LinkSame_Prefix.pch;
@@ -356,7 +357,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = LinkSame;
 				PROVISIONING_PROFILE = "";
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "4FD990A9-F867-47F2-B59E-D77A2DB45CAB";
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 				VALIDATE_PRODUCT = YES;
