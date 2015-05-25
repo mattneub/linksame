@@ -311,7 +311,7 @@ class LinkSameViewController : UIViewController {
         }
     }
     
-    // utility used only by next method: show board
+    // utility used only by next method: show board containing new deal
     // if new game, also set up scores and mode
     private func newBoard(# newGame:Bool) {
         
@@ -320,6 +320,7 @@ class LinkSameViewController : UIViewController {
             self.initializeScores()
             self.interfaceMode = .Timed // every new game is a timed game
         }
+        board.createAndDealDeck()
         self.animateBoardTransition(boardTransition)
     }
 
