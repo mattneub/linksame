@@ -206,7 +206,7 @@ class LinkSameViewController : UIViewController {
                 _ in
                 // remove hint
                 if self.board.showingHint {
-                    self.doHint(nil)
+                    self.toggleHint(nil)
                 }
                 // stop timer
                 self.timer = nil
@@ -295,19 +295,14 @@ class LinkSameViewController : UIViewController {
     // delegate from previous, called when animation ends
     override func animationDidStop(anim: CAAnimation!, finished flag: Bool) {
         if anim.valueForKey("name") as? NSString == "boardReplacement" {
-            // why am I not showing the stage label when we are in practice mode? Seems to me I should
-            ui(true)
-            // if self.interfaceMode == .Timed {
-                ui(false)
-                // set and animated showing of "stage" label
-                UIView.transitionWithView(self.stageLabel, duration: 0.4,
-                    options: UIViewAnimationOptions.TransitionFlipFromLeft,
-                    animations: {
-                        let s = "Stage \(self.board.stage + 1) " +
-                        "of \(ud.integerForKey(Default.LastStage) + 1)"
-                        self.stageLabel.text = s
-                    }, completion: {_ in ui(true) })
-            // }
+            // set and animated showing of "stage" label
+            UIView.transitionWithView(self.stageLabel, duration: 0.4,
+                options: UIViewAnimationOptions.TransitionFlipFromLeft,
+                animations: {
+                    let s = "Stage \(self.board.stage + 1) " +
+                    "of \(ud.integerForKey(Default.LastStage) + 1)"
+                    self.stageLabel.text = s
+                }, completion: {_ in ui(true) })
         }
     }
     
@@ -407,15 +402,15 @@ class LinkSameViewController : UIViewController {
     
     // ============================ toolbar buttons =================================
     
-    @IBAction private func doHint(_:AnyObject?) { // hintButton
-        if let v = self.boardView.viewWithTag(999) {
+    @IBAction private func toggleHint(_:AnyObject?) { // hintButton
+        if let v = self.board.pathView {
             if !self.board.showingHint {
                 self.hintButton.title = HintButtonTitle.Hide
                 self.incrementScore(-10, resetTimer:true)
                 self.board.hint()
                 // if user taps board now, this should have just the same effect as tapping button
                 // so, attach gesture rec
-                let t = UITapGestureRecognizer(target: self, action: "doHint:")
+                let t = UITapGestureRecognizer(target: self, action: "toggleHint:")
                 v.addGestureRecognizer(t)
             } else {
                 self.hintButton.title = HintButtonTitle.Show
@@ -431,7 +426,7 @@ class LinkSameViewController : UIViewController {
     
     @IBAction private func doShuffle(_:AnyObject?) {
         if self.board.showingHint {
-            self.doHint(nil)
+            self.toggleHint(nil)
         }
         self.board.redeal()
         self.incrementScore(-20, resetTimer:true)
@@ -453,7 +448,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
     
     @IBAction private func doNew(sender:AnyObject?) {
         if self.board.showingHint {
-            self.doHint(nil)
+            self.toggleHint(nil)
         }
         // create dialog from scratch (see NewGameController for rest of interface)
         let dlg = NewGameController()
@@ -516,7 +511,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
     
     @IBAction private func doTimedPractice(_ : AnyObject?) {
         if self.board.showingHint {
-            self.doHint(nil)
+            self.toggleHint(nil)
         }
         self.interfaceMode = InterfaceMode(rawValue:self.timedPractice.selectedSegmentIndex)!
         // and changing the interface mode changes the interface accordingly

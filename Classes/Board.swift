@@ -89,7 +89,7 @@ final class Board : NSObject, NSCoding {
     private var hintPath : Path?
     // utility for obtaining a reference to the view that holds the transparency layer
     // we need this so we can switch touch fall-thru on and off
-    private var pathView : UIView? {
+    var pathView : UIView? {
         return self.view.viewWithTag(999)
     }
     // utility for obtaining a reference to the transparency layer

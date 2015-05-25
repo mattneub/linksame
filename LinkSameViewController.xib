@@ -32,7 +32,7 @@
                     <items>
                         <barButtonItem title="Hint" id="6">
                             <connections>
-                                <action selector="doHint:" destination="-1" id="10"/>
+                                <action selector="toggleHint:" destination="-1" id="gqk-Xc-ECL"/>
                             </connections>
                         </barButtonItem>
                         <barButtonItem width="42" style="plain" systemItem="fixedSpace" id="19"/>

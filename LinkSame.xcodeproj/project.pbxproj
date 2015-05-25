@@ -44,7 +44,7 @@
 		322F131F1923E72900F2BE47 /* bigIcon2.psd */ = {isa = PBXFileReference; lastKnownFileType = file; path = bigIcon2.psd; sourceTree = "<group>"; };
 		322F13201923E73200F2BE47 /* icon2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon2.png; sourceTree = "<group>"; };
 		322F13221923E8A600F2BE47 /* icon2singleresolution.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon2singleresolution.png; sourceTree = "<group>"; };
-		3293FF6C1A8BDF25003901A1 /* LinkSameViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LinkSameViewController.swift; sourceTree = "<group>"; };
+		3293FF6C1A8BDF25003901A1 /* LinkSameViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = LinkSameViewController.swift; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 		32A7D4551957CE700002210A /* Piece.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Piece.swift; sourceTree = "<group>"; };
 		32D59DA7195758A100E4A41C /* MyRightLabel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MyRightLabel.swift; sourceTree = "<group>"; };
 		32DAD06D1959FF8C005095C6 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
