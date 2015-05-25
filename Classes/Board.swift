@@ -64,11 +64,12 @@ final class Board : NSObject, NSCoding {
     var stage = 0
     var showingHint = false
     private var hilitedPieces = [Piece]()
-    private var _xct : Int { return self.grid.xct }
-    private var _yct : Int { return self.grid.yct }
+    private var xct : Int { return self.grid.xct }
+    private var yct : Int { return self.grid.yct }
     private var movenda = [Piece]()
     private var grid : Grid // can't live without a grid
     private var hintPath : Path?
+    private var deckAtStartOfStage = [String]()
     // utility for obtaining a reference to the view that holds the transparency layer
     // we need this so we can switch touch fall-thru on and off
     var pathView : UIView? {
@@ -81,11 +82,11 @@ final class Board : NSObject, NSCoding {
 
     private lazy var pieceSize : CGSize = {
         // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
-        assert((self._xct > 0 && self._yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
+        assert((self.xct > 0 && self.yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
         println("calculating piece size")
         // divide view bounds, allow 1 extra plus margins
-        let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self._xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
-        let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self._yct) + 2.0 + TOPMARGIN + BOTTOMMARGIN)
+        let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self.xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
+        let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self.yct) + 2.0 + TOPMARGIN + BOTTOMMARGIN)
         return CGSizeMake(pieceWidth, pieceHeight)
     }()
     
@@ -124,15 +125,15 @@ final class Board : NSObject, NSCoding {
         // but that's never going to work; there are nils in our grid!
         // flatten to single-dimensional array of strings
         var saveableGrid = [String]()
-        for i in 0 ..< self._xct {
-            for j in 0 ..< self._yct {
+        for i in 0 ..< self.xct {
+            for j in 0 ..< self.yct {
                 let piece = self.grid[i][j]
                 saveableGrid.append( piece?.picName ?? "" )
             }
         }
         coder.encodeObject(saveableGrid, forKey: Coder.grid)
-        coder.encodeInteger(self._xct, forKey: Coder.x)
-        coder.encodeInteger(self._yct, forKey: Coder.y)
+        coder.encodeInteger(self.xct, forKey: Coder.x)
+        coder.encodeInteger(self.yct, forKey: Coder.y)
         coder.encodeInteger(self.stage, forKey: Coder.stage)
         coder.encodeCGSize(self.pieceSize, forKey: Coder.size)
         coder.encodeCGRect(self.view.frame, forKey: Coder.frame)
@@ -151,8 +152,8 @@ final class Board : NSObject, NSCoding {
         self.pieceSize = coder.decodeCGSizeForKey( Coder.size )
         
         var flatGrid = coder.decodeObjectForKey( Coder.grid ) as! [String]
-        for i in 0 ..< self._xct {
-            for j in 0 ..< self._yct {
+        for i in 0 ..< self.xct {
+            for j in 0 ..< self.yct {
                 let picname = flatGrid.removeAtIndex(0)
                 if !picname.isEmpty {
                     self.addPieceAt((i,j), withPicture: picname)
@@ -173,7 +174,7 @@ final class Board : NSObject, NSCoding {
             }
         }
         // determine which additional pieces to use, finish deck of piece names
-        let (w,h) = Sizes.boardSize(ud.stringForKey(Default.Size)!)
+        let (w,h) = (self.xct, self.yct)
         let howmany : Int = ((w * h) / 4) - 9
         for ct in 0..<4 {
             for i in start2..<start2+howmany {
@@ -199,8 +200,8 @@ final class Board : NSObject, NSCoding {
             ui(false)
             // gather up all pieces (as names), shuffle them, deal them into their current slots
             var deck = [String]()
-            for i in 0 ..< self._xct {
-                for j in 0 ..< self._yct {
+            for i in 0 ..< self.xct {
+                for j in 0 ..< self.yct {
                     let piece = self.pieceAt((i,j))
                     if piece == nil {
                         continue
@@ -213,8 +214,8 @@ final class Board : NSObject, NSCoding {
             deck.shuffle()
             deck.shuffle()
             ui(true)
-            for i in 0 ..< self._xct {
-                for j in 0 ..< self._yct {
+            for i in 0 ..< self.xct {
+                for j in 0 ..< self.yct {
                     let piece = self.pieceAt((i,j))
                     if let piece = piece {
                         // very lightweight; we just assign the name, let the piece worry about the picture
@@ -290,11 +291,11 @@ final class Board : NSObject, NSCoding {
     private func pieceAt(p:Point) -> Piece? {
         let (i,j) = p
         // it is legal to ask for piece one slot outside boundaries, but not further
-        assert(i >= -1 && i <= self._xct, "Piece requested out of bounds (x)")
-        assert(j >= -1 && j <= self._yct, "Piece requested out of bounds (y)")
+        assert(i >= -1 && i <= self.xct, "Piece requested out of bounds (x)")
+        assert(j >= -1 && j <= self.yct, "Piece requested out of bounds (y)")
         // report slot outside boundaries as empty
-        if (i == -1 || i == self._xct) { return nil }
-        if (j == -1 || j == self._yct) { return nil }
+        if (i == -1 || i == self.xct) { return nil }
+        if (j == -1 || j == self.yct) { return nil }
         // report actual value within boundaries
         return self.grid[i][j]
     }
@@ -394,8 +395,8 @@ final class Board : NSObject, NSCoding {
     
     private func gameOver () -> Bool {
         // return true // testing game end
-        for x in 0..<self._xct {
-            for y in 0..<self._yct {
+        for x in 0..<self.xct {
+            for y in 0..<self.yct {
                 if self.pieceAt((x,y)) != nil {
                     return false
                 }
@@ -408,8 +409,8 @@ final class Board : NSObject, NSCoding {
     
     private func originOf(p:Point) -> CGPoint {
         let (i,j) = p
-        assert(i >= -1 && i <= self._xct, "Position requested out of bounds (x)")
-        assert(j >= -1 && j <= self._yct, "Position requested out of bounds (y)")
+        assert(i >= -1 && i <= self.xct, "Position requested out of bounds (x)")
+        assert(j >= -1 && j <= self.yct, "Position requested out of bounds (y)")
         // divide view bounds, allow 2 extra on all sides
         let pieceWidth = self.pieceSize.width
         let pieceHeight = self.pieceSize.height
@@ -477,8 +478,8 @@ final class Board : NSObject, NSCoding {
             // no gravity, do nothing
             break
         case 1: // gravity down
-            for (var x = 0; x < _xct; x++) {
-                for (var y = _yct - 1; y > 0; y--) {
+            for (var x = 0; x < self.xct; x++) {
+                for (var y = self.yct - 1; y > 0; y--) {
                     let piece = self.pieceAt((x,y))
                     if piece == nil {
                         for (var yt = y-1; yt >= 0; yt--) {
@@ -493,8 +494,8 @@ final class Board : NSObject, NSCoding {
                 }
             }
         case 2: // gravity left
-            for (var y = 0; y < _yct; y++) {
-                for (var x = _xct - 1; x > 0; x--) {
+            for (var y = 0; y < self.yct; y++) {
+                for (var x = self.xct - 1; x > 0; x--) {
                     let piece = self.pieceAt((x,y))
                     if piece == nil {
                         for (var xt = x-1; xt >= 0; xt--) {
@@ -509,9 +510,9 @@ final class Board : NSObject, NSCoding {
                 }
             }
         case 3: // gravity toward central horiz line
-            let center = _yct/2 // integer div, deliberate
+            let center = self.yct/2 // integer div, deliberate
             // exactly like 1 except we have to do it twice in two directions
-            for (var x = 0; x < _xct; x++) {
+            for (var x = 0; x < self.xct; x++) {
                 for (var y = center - 1; y > 0; y--) {
                     let piece = self.pieceAt((x,y))
                     if piece == nil {
@@ -525,10 +526,10 @@ final class Board : NSObject, NSCoding {
                         }
                     }
                 }
-                for (var y = center; y <= _yct - 1; y++) {
+                for (var y = center; y <= self.yct - 1; y++) {
                     let piece = self.pieceAt((x,y))
                     if piece == nil {
-                        for (var yt = y+1; yt < _yct; yt++) {
+                        for (var yt = y+1; yt < self.yct; yt++) {
                             let piece2 = self.pieceAt((x,yt))
                             if piece2 == nil {
                                 continue
@@ -541,8 +542,8 @@ final class Board : NSObject, NSCoding {
             }
         case 4: // gravity toward central vertical line
             // exactly like 3 except the other orientation
-            let center = _xct/2 // integer div, deliberate
-            for (var y = 0; y < _yct; y++) {
+            let center = self.xct/2 // integer div, deliberate
+            for (var y = 0; y < self.yct; y++) {
                 for (var x = center-1; x > 0; x--) {
                     let piece = self.pieceAt((x,y))
                     if piece == nil {
@@ -556,10 +557,10 @@ final class Board : NSObject, NSCoding {
                         }
                     }
                 }
-                for (var x = center; x <= _xct - 1; x++) {
+                for (var x = center; x <= self.xct - 1; x++) {
                     let piece = self.pieceAt((x,y))
                     if piece == nil {
-                        for (var xt = x+1; xt < _xct; xt++) {
+                        for (var xt = x+1; xt < self.xct; xt++) {
                             let piece2 = self.pieceAt((xt,y))
                             if piece2 == nil {
                                 continue
@@ -572,9 +573,9 @@ final class Board : NSObject, NSCoding {
             }
         case 5: // gravity away from central horiz line
             // exactly like 3 except we walk from the outside to the center
-            let center = _yct/2 // integer div, deliberate
-            for (var x = 0; x < _xct; x++) {
-                for (var y = _yct-1; y > center; y--) {
+            let center = self.yct/2 // integer div, deliberate
+            for (var x = 0; x < self.xct; x++) {
+                for (var y = self.yct-1; y > center; y--) {
                     let piece = self.pieceAt((x,y))
                     if piece == nil {
                         for (var yt = y-1; yt >= center; yt--) {
@@ -603,9 +604,9 @@ final class Board : NSObject, NSCoding {
             }
         case 6: // gravity away from central vertical line
             // exactly like 4 except we start at the outside
-            let center = _xct/2 // integer div, deliberate
-            for (var y = 0; y < _yct; y++) {
-                for (var x = _xct-1; x > center; x--) {
+            let center = self.xct/2 // integer div, deliberate
+            for (var y = 0; y < self.yct; y++) {
+                for (var x = self.xct-1; x > center; x--) {
                     let piece = self.pieceAt((x,y))
                     if piece == nil {
                         for (var xt = x-1; xt >= center; xt--) {
@@ -634,9 +635,9 @@ final class Board : NSObject, NSCoding {
             }
         case 7: // gravity down in one half, gravity up in the other half
             // like doing 1 in two pieces with the second piece in reverse direction
-            let center = _xct/2;
+            let center = self.xct/2;
             for (var x = 0; x < center; x++) {
-                for (var y = _yct - 1; y > 0; y--) {
+                for (var y = self.yct - 1; y > 0; y--) {
                     let piece = self.pieceAt((x,y))
                     if piece == nil {
                         for (var yt = y-1; yt >= 0; yt--) {
@@ -650,11 +651,11 @@ final class Board : NSObject, NSCoding {
                     }
                 }
             }
-            for (var x = center; x < _xct; x++) {
-                for (var y = 0; y < _yct-1; y++) {
+            for (var x = center; x < self.xct; x++) {
+                for (var y = 0; y < self.yct-1; y++) {
                     let piece = self.pieceAt((x,y))
                     if piece == nil {
-                        for (var yt = y+1; yt < _yct; yt++) {
+                        for (var yt = y+1; yt < self.yct; yt++) {
                             let piece2 = self.pieceAt((x,yt))
                             if piece2 == nil {
                                 continue
@@ -667,9 +668,9 @@ final class Board : NSObject, NSCoding {
             }
         case 8: // gravity left in one half, gravity right in other half
             // like doing 2 in two pieces with second in reverse direction
-            let center = _yct/2
+            let center = self.yct/2
             for (var y = 0; y < center; y++) {
-                for (var x = _xct - 1; x > 0; x--) {
+                for (var x = self.xct - 1; x > 0; x--) {
                     let piece = self.pieceAt((x,y))
                     if piece == nil {
                         for (var xt = x-1; xt >= 0; xt--) {
@@ -683,11 +684,11 @@ final class Board : NSObject, NSCoding {
                     }
                 }
             }
-            for (var y = center; y < _yct; y++) {
-                for (var x = 0; x < _xct-1; x++) {
+            for (var y = center; y < self.yct; y++) {
+                for (var x = 0; x < self.xct-1; x++) {
                     let piece = self.pieceAt((x,y))
                     if piece == nil {
-                        for (var xt = x+1; xt < _xct; xt++) {
+                        for (var xt = x+1; xt < self.xct; xt++) {
                             let piece2 = self.pieceAt((xt,y))
                             if piece2 == nil {
                                 continue
@@ -786,10 +787,10 @@ final class Board : NSObject, NSCoding {
                 }
             }
         }
-        for y in -1..._yct {
+        for y in -1...self.yct {
             addPathIfValid((pt1.x,y),(pt2.x,y))
         }
-        for x in -1..._xct {
+        for x in -1...self.xct {
             addPathIfValid((x,pt1.y),(x,pt2.y))
         }
         if marr.count > 0 { // got at least one! find the shortest and submit it
@@ -872,15 +873,15 @@ final class Board : NSObject, NSCoding {
     // the path is simply the path returned from checkPair
     
     private func legalPath () -> Path? {
-        for x in 0..<_xct {
-            for y in 0..<_yct {
+        for x in 0..<self.xct {
+            for y in 0..<self.yct {
                 let piece = self.pieceAt((x,y))
                 if piece == nil {
                     continue
                 }
                 let picName = piece!.picName
-                for xx in 0..<_xct {
-                    for yy in 0..<_yct {
+                for xx in 0..<self.xct {
+                    for yy in 0..<self.yct {
                         let piece2 = self.pieceAt((xx,yy))
                         if piece2 == nil {
                             continue
