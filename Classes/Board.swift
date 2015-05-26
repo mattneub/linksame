@@ -279,7 +279,7 @@ final class Board : NSObject, NSCoding {
         // whereas we are given piece *origins*, so calculate offsets
         let sz = self.pieceSize
         let offx = sz.width/2.0
-        let offy = sz.width/2.0
+        let offy = sz.height/2.0
         CGContextSetLineJoin(con, kCGLineJoinRound)
         CGContextSetRGBStrokeColor(con, 0.4, 0.4, 1.0, 1.0)
         CGContextSetLineWidth(con, 3.0)
