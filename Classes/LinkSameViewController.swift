@@ -229,6 +229,8 @@ class LinkSameViewController : UIViewController {
                 if self.score == 0 {
                     self.timer = nil
                 }
+                // show the board view, just in case it was hidden on suspension
+                self.boardView?.hidden = false
             }
             nc.addObserverForName(UIApplicationDidEnterBackgroundNotification, object: nil, queue: nil) {
                 _ in
@@ -237,6 +239,10 @@ class LinkSameViewController : UIViewController {
                 switch self.interfaceMode {
                 case .Timed: // timed, make sure there is no saved board data
                     ud.removeObjectForKey(Default.BoardData)
+                    // hide the game, stop the timer, kill the score; snapshot will capture blank background
+                    self.boardView.hidden = true
+                    self.initializeScores()
+                    self.timer = nil
                 case .Practice: // practice, save out board state
                     let boardData = NSKeyedArchiver.archivedDataWithRootObject(self.board)
                     ud.setObject(boardData, forKey:Default.BoardData)
