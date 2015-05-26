@@ -18,6 +18,7 @@
 		32DAD06E1959FF8C005095C6 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32DAD06D1959FF8C005095C6 /* AppDelegate.swift */; };
 		32E460EE1B138BAF00F9067B /* ImagesNew.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32E460ED1B138BAF00F9067B /* ImagesNew.xcassets */; };
 		32E460F01B138D7800F9067B /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 32E460EF1B138D7800F9067B /* LaunchScreen.xib */; };
+		32E9A9D81B14D3D4001ACA34 /* LinkSameViewControllerPhone.xib in Resources */ = {isa = PBXBuildFile; fileRef = 32E9A9D71B14D3D4001ACA34 /* LinkSameViewControllerPhone.xib */; };
 		32EEBEFC195A5C5B004E0823 /* Board.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32EEBEFB195A5C5B004E0823 /* Board.swift */; };
 		32FE1D80195790270068B6B0 /* NewGameController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32FE1D7F195790270068B6B0 /* NewGameController.swift */; };
 		A41D6EC91216F85E00638030 /* linkhelp.html in Resources */ = {isa = PBXBuildFile; fileRef = A41D6EC81216F85E00638030 /* linkhelp.html */; };
@@ -50,6 +51,7 @@
 		32DAD06D1959FF8C005095C6 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		32E460ED1B138BAF00F9067B /* ImagesNew.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = ImagesNew.xcassets; sourceTree = "<group>"; };
 		32E460EF1B138D7800F9067B /* LaunchScreen.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LaunchScreen.xib; sourceTree = "<group>"; };
+		32E9A9D71B14D3D4001ACA34 /* LinkSameViewControllerPhone.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LinkSameViewControllerPhone.xib; sourceTree = "<group>"; };
 		32EEBEFB195A5C5B004E0823 /* Board.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Board.swift; sourceTree = "<group>"; };
 		32FE1D7F195790270068B6B0 /* NewGameController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NewGameController.swift; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* LinkSame-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "LinkSame-Info.plist"; plistStructureDefinitionIdentifier = "com.apple.xcode.plist.structure-definition.iphone.info-plist"; sourceTree = "<group>"; };
@@ -97,6 +99,7 @@
 				32DAD06D1959FF8C005095C6 /* AppDelegate.swift */,
 				3293FF6C1A8BDF25003901A1 /* LinkSameViewController.swift */,
 				2899E5210DE3E06400AC0155 /* LinkSameViewController.xib */,
+				32E9A9D71B14D3D4001ACA34 /* LinkSameViewControllerPhone.xib */,
 				32A7D4551957CE700002210A /* Piece.swift */,
 				32EEBEFB195A5C5B004E0823 /* Board.swift */,
 				32FE1D7F195790270068B6B0 /* NewGameController.swift */,
@@ -244,6 +247,7 @@
 				A4B7B5E9121306DF008BEA15 /* foods in Resources */,
 				32E460F01B138D7800F9067B /* LaunchScreen.xib in Resources */,
 				A4B7B5EC121307AB008BEA15 /* background.jpg in Resources */,
+				32E9A9D81B14D3D4001ACA34 /* LinkSameViewControllerPhone.xib in Resources */,
 				A4439A8812158819003831A0 /* About these icons.rtf in Resources */,
 				A41D6EC91216F85E00638030 /* linkhelp.html in Resources */,
 			);
@@ -294,6 +298,7 @@
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_WHOLE_MODULE_OPTIMIZATION = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -318,6 +323,7 @@
 				PROVISIONING_PROFILE = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -360,6 +366,7 @@
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Distribution;

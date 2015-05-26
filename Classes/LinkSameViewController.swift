@@ -94,7 +94,11 @@ class LinkSameViewController : UIViewController {
     
     override var nibName : String {
         get {
-            return "LinkSameViewController"
+            if UIDevice.currentDevice().userInterfaceIdiom == .Pad {
+                return "LinkSameViewController"
+            } else {
+                return "LinkSameViewControllerPhone"
+            }
         }
     }
     
@@ -115,9 +119,9 @@ class LinkSameViewController : UIViewController {
             }
             self.scoreLabel.hidden = !timed
             self.prevLabel.hidden = !timed
-            self.timedPractice.selectedSegmentIndex = mode.rawValue
-            self.timedPractice.enabled = timed
-            self.restartStageButton.enabled = timed
+            self.timedPractice?.selectedSegmentIndex = mode.rawValue
+            self.timedPractice?.enabled = timed
+            self.restartStageButton?.enabled = timed
         }
     }
     
@@ -168,9 +172,9 @@ class LinkSameViewController : UIViewController {
         // one-time launch initializations of model and interface
         self.initializeScores()
         // fix width of hint button to accomodate new labels Show Hint and Hide Hint
-        self.hintButton.possibleTitles =
+        self.hintButton?.possibleTitles =
             Set([HintButtonTitle.Show, HintButtonTitle.Hide])
-        self.hintButton.title = HintButtonTitle.Show
+        self.hintButton?.title = HintButtonTitle.Show
         // return; // uncomment for launch image screen shot
         // have we a state saved from prior practice? (non-practice game is not saved as board data!)
         // if so, reconstruct practice game from board data
@@ -342,7 +346,10 @@ class LinkSameViewController : UIViewController {
         self.timer = nil
         
         // determine layout dimensions
-        let (w,h) = Sizes.boardSize(ud.stringForKey(Default.Size)!)
+        var (w,h) = Sizes.boardSize(ud.stringForKey(Default.Size)!)
+        if UIDevice.currentDevice().userInterfaceIdiom == .Phone {
+            (w,h) = (6,6)
+        }
         // create new board object and configure it
         self.board = Board(boardFrame:self.backgroundView.bounds, gridSize:(w,h))
         // put its `view` into the interface, replacing the one that may be there already

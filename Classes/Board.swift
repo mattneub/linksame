@@ -85,8 +85,9 @@ final class Board : NSObject, NSCoding {
         assert((self.xct > 0 && self.yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
         println("calculating piece size")
         // divide view bounds, allow 1 extra plus margins
-        let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self.xct) + 2.0 + LEFTMARGIN + RIGHTMARGIN)
-        let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self.yct) + 2.0 + TOPMARGIN + BOTTOMMARGIN)
+        let outer : CGFloat = UIDevice.currentDevice().userInterfaceIdiom == .Pad ? 2.0 : 1.0
+        let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self.xct) + outer + LEFTMARGIN + RIGHTMARGIN)
+        let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self.yct) + outer + TOPMARGIN + BOTTOMMARGIN)
         return CGSizeMake(pieceWidth, pieceHeight)
     }()
     
@@ -254,6 +255,7 @@ final class Board : NSObject, NSCoding {
     
     private func illuminate (arr: Path) {
         if let pathLayer = self.pathLayer {
+            println("about to draw path: \(arr)")
             pathLayer.delegate = self // tee-hee
             self.pathView?.userInteractionEnabled = true
             // transform path, which is an array of Point, into an NSArray of NSValue wrapping CGPoint
@@ -279,7 +281,7 @@ final class Board : NSObject, NSCoding {
         // whereas we are given piece *origins*, so calculate offsets
         let sz = self.pieceSize
         let offx = sz.width/2.0
-        let offy = sz.width/2.0
+        let offy = sz.height/2.0
         CGContextSetLineJoin(con, kCGLineJoinRound)
         CGContextSetRGBStrokeColor(con, 0.4, 0.4, 1.0, 1.0)
         CGContextSetLineWidth(con, 3.0)
@@ -434,8 +436,9 @@ final class Board : NSObject, NSCoding {
         // divide view bounds, allow 2 extra on all sides
         let pieceWidth = self.pieceSize.width
         let pieceHeight = self.pieceSize.height
-        let x = ((1.0 + LEFTMARGIN) * pieceWidth) + (CGFloat(i) * pieceWidth)
-        let y = ((1.0 + TOPMARGIN) * pieceHeight) + (CGFloat(j) * pieceHeight)
+        let outer : CGFloat = UIDevice.currentDevice().userInterfaceIdiom == .Pad ? 2.0 : 1.0
+        let x = ((outer/2.0 + LEFTMARGIN) * pieceWidth) + (CGFloat(i) * pieceWidth)
+        let y = ((outer/2.0 + TOPMARGIN) * pieceHeight) + (CGFloat(j) * pieceHeight)
         return CGPointMake(x,y)
 
     }

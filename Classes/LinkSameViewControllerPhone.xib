@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="7706" systemVersion="14D136" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="7703"/>
+        <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="LinkSameViewController" customModule="LinkSame" customModuleProvider="target">
+            <connections>
+                <outlet property="backgroundView" destination="NYp-Ld-1O6" id="5PI-L4-C7R"/>
+                <outlet property="prevLabel" destination="Olt-kE-dV4" id="zcA-6c-01G"/>
+                <outlet property="scoreLabel" destination="8BP-Em-5qp" id="T8w-u2-9GA"/>
+                <outlet property="stageLabel" destination="VU9-Zp-brR" id="S0v-Bk-sKi"/>
+                <outlet property="view" destination="iN0-l3-epB" id="3Y6-Zj-MDE"/>
+            </connections>
+        </placeholder>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="iN0-l3-epB">
+            <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <imageView opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" image="background.jpg" translatesAutoresizingMaskIntoConstraints="NO" id="NYp-Ld-1O6">
+                    <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
+                </imageView>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="VU9-Zp-brR">
+                    <rect key="frame" x="8" y="8" width="38" height="18"/>
+                    <fontDescription key="fontDescription" type="system" pointSize="15"/>
+                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
+                    <nil key="highlightedColor"/>
+                </label>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="8BP-Em-5qp" customClass="MyRightLabel" customModule="LinkSame" customModuleProvider="target">
+                    <rect key="frame" x="532" y="8" width="60" height="18"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="60" id="qlz-W8-zYg"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="system" pointSize="15"/>
+                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
+                    <nil key="highlightedColor"/>
+                </label>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Olt-kE-dV4">
+                    <rect key="frame" x="474" y="8" width="38" height="18"/>
+                    <fontDescription key="fontDescription" type="system" pointSize="15"/>
+                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
+                    <nil key="highlightedColor"/>
+                </label>
+            </subviews>
+            <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+            <constraints>
+                <constraint firstItem="NYp-Ld-1O6" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="top" id="4hY-J6-OcN"/>
+                <constraint firstItem="8BP-Em-5qp" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="topMargin" id="H31-IN-hzq"/>
+                <constraint firstAttribute="bottom" secondItem="NYp-Ld-1O6" secondAttribute="bottom" id="HOd-u1-aHC"/>
+                <constraint firstAttribute="trailing" secondItem="NYp-Ld-1O6" secondAttribute="trailing" id="O1g-V2-cbj"/>
+                <constraint firstItem="VU9-Zp-brR" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leadingMargin" id="Q2w-qi-a58"/>
+                <constraint firstItem="Olt-kE-dV4" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="topMargin" id="Vcg-VQ-ROY"/>
+                <constraint firstItem="8BP-Em-5qp" firstAttribute="leading" secondItem="Olt-kE-dV4" secondAttribute="trailing" constant="20" id="h0L-dw-SDd"/>
+                <constraint firstAttribute="trailingMargin" secondItem="8BP-Em-5qp" secondAttribute="trailing" id="h9e-e1-pEw"/>
+                <constraint firstItem="VU9-Zp-brR" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="topMargin" id="pf9-eb-PZZ"/>
+                <constraint firstItem="NYp-Ld-1O6" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leading" id="yDX-pa-oB8"/>
+            </constraints>
+            <point key="canvasLocation" x="436" y="372"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="background.jpg" width="720" height="538"/>
+    </resources>
+</document>
