@@ -38,15 +38,20 @@ class NewGameController : UIViewController {
             self.tableView = tv
         }
         
-        let pv = UIPickerView(frame:CGRectMake(0,0,320,160)) // on iPad, not really
-        
+        let pv = UIPickerView()
+        pv.setTranslatesAutoresizingMaskIntoConstraints(false)
         pv.dataSource = self
         pv.delegate = self
         pv.sizeToFit() // a picker view has its own natural size
-        if !onPhone {
-            pv.frame.origin.y = tv.frame.size.height
-        }
         v.addSubview(pv)
+        v.addConstraints(
+            NSLayoutConstraint.constraintsWithVisualFormat("H:|[pv]|", options: nil, metrics: nil, views: ["pv":pv])
+        )
+        v.addConstraints(
+            NSLayoutConstraint.constraintsWithVisualFormat("V:|-(y)-[pv]", options: nil,
+                metrics: ["y": (onPhone ? 0 : tv.frame.size.height)],
+                views: ["pv":pv])
+        )
         pv.showsSelectionIndicator = true
         pv.selectRow(ud.integerForKey(Default.LastStage), inComponent: 0, animated: false)
 
