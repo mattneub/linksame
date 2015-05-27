@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.iPad.XIB" version="3.0" toolsVersion="7706" systemVersion="14D136" targetRuntime="iOS.CocoaTouch.iPad" propertyAccessControl="none">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.iPad.XIB" version="3.0" toolsVersion="7706" systemVersion="14D136" targetRuntime="iOS.CocoaTouch.iPad" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="7703"/>
+        <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
     </dependencies>
     <objects>
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="LinkSameViewController">
@@ -22,14 +23,12 @@
             <rect key="frame" x="0.0" y="0.0" width="1024" height="768"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
-                <imageView contentMode="scaleToFill" image="background.jpg" id="4">
-                    <rect key="frame" x="0.0" y="44" width="1024" height="724"/>
-                    <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                <imageView contentMode="scaleToFill" image="background.jpg" translatesAutoresizingMaskIntoConstraints="NO" id="4">
+                    <rect key="frame" x="0.0" y="0.0" width="1024" height="768"/>
                     <color key="backgroundColor" red="0.88235300780000003" green="0.87058830259999997" blue="0.086274512110000007" alpha="1" colorSpace="deviceRGB"/>
                 </imageView>
-                <toolbar clearsContextBeforeDrawing="NO" contentMode="scaleToFill" id="5">
+                <toolbar clearsContextBeforeDrawing="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="5">
                     <rect key="frame" x="0.0" y="20" width="1024" height="44"/>
-                    <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
                     <items>
                         <barButtonItem title="Hint" id="6">
                             <connections>
@@ -79,30 +78,36 @@
                         <outlet property="delegate" destination="-1" id="TDP-Cu-d7Q"/>
                     </connections>
                 </toolbar>
-                <label opaque="NO" userInteractionEnabled="NO" alpha="0.85211265087127686" contentMode="left" text="" lineBreakMode="tailTruncation" minimumFontSize="10" adjustsFontSizeToFit="NO" id="17">
-                    <rect key="frame" x="15" y="64" width="251" height="29"/>
-                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                <label opaque="NO" userInteractionEnabled="NO" alpha="0.85211265087127686" contentMode="left" text=" " lineBreakMode="tailTruncation" minimumFontSize="10" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="17" userLabel="stageLabel">
+                    <rect key="frame" x="18" y="74" width="20" height="29"/>
                     <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                    <constraints>
+                        <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="20" id="5Qz-1O-tzM"/>
+                    </constraints>
                     <fontDescription key="fontDescription" name="Arial-BoldItalicMT" family="Arial" pointSize="24"/>
                     <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
                     <nil key="highlightedColor"/>
                     <color key="shadowColor" red="0.49803921579999999" green="0.49803921579999999" blue="0.49803921579999999" alpha="0.83999999999999997" colorSpace="calibratedRGB"/>
                     <size key="shadowOffset" width="2" height="2"/>
                 </label>
-                <label hidden="YES" opaque="NO" userInteractionEnabled="NO" alpha="0.8380281925201416" contentMode="left" text="" textAlignment="right" lineBreakMode="characterWrap" minimumFontSize="10" adjustsFontSizeToFit="NO" id="21" customClass="MyRightLabel" customModule="LinkSame" customModuleProvider="target">
-                    <rect key="frame" x="887" y="64" width="122" height="29"/>
-                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                <label hidden="YES" opaque="NO" userInteractionEnabled="NO" alpha="0.8380281925201416" contentMode="left" text=" " textAlignment="right" lineBreakMode="characterWrap" minimumFontSize="10" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="21" userLabel="scoreLabel" customClass="MyRightLabel" customModule="LinkSame" customModuleProvider="target">
+                    <rect key="frame" x="887" y="74" width="122" height="29"/>
                     <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="122" id="ehe-9y-GHo"/>
+                    </constraints>
                     <fontDescription key="fontDescription" name="Arial-BoldItalicMT" family="Arial" pointSize="24"/>
                     <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
                     <nil key="highlightedColor"/>
                     <color key="shadowColor" red="0.49803921579999999" green="0.49803921579999999" blue="0.49803921579999999" alpha="0.82999999999999996" colorSpace="calibratedRGB"/>
                     <size key="shadowOffset" width="2" height="2"/>
                 </label>
-                <label hidden="YES" opaque="NO" userInteractionEnabled="NO" alpha="0.8380281925201416" contentMode="left" text="" textAlignment="right" lineBreakMode="tailTruncation" minimumFontSize="10" adjustsFontSizeToFit="NO" id="23" customClass="MyRightLabel" customModule="LinkSame" customModuleProvider="target">
-                    <rect key="frame" x="576" y="64" width="304" height="29"/>
-                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                <label hidden="YES" opaque="NO" userInteractionEnabled="NO" alpha="0.8380281925201416" contentMode="left" text=" " textAlignment="right" lineBreakMode="tailTruncation" minimumFontSize="10" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="23" userLabel="highScoreLabel" customClass="MyRightLabel" customModule="LinkSame" customModuleProvider="target">
+                    <rect key="frame" x="576" y="74" width="304" height="29"/>
                     <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="304" id="1Ns-Za-lWF"/>
+                    </constraints>
                     <fontDescription key="fontDescription" name="Arial-BoldItalicMT" family="Arial" pointSize="24"/>
                     <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
                     <nil key="highlightedColor"/>
@@ -111,8 +116,24 @@
                 </label>
             </subviews>
             <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+            <constraints>
+                <constraint firstItem="23" firstAttribute="top" secondItem="5" secondAttribute="bottom" constant="10" id="4lc-KE-w0G"/>
+                <constraint firstAttribute="trailing" secondItem="5" secondAttribute="trailing" id="APk-jT-j7I"/>
+                <constraint firstItem="5" firstAttribute="leading" secondItem="2" secondAttribute="leading" id="LZj-cB-cYG"/>
+                <constraint firstItem="17" firstAttribute="top" secondItem="5" secondAttribute="bottom" constant="10" id="M5D-7a-UgJ"/>
+                <constraint firstItem="17" firstAttribute="leading" secondItem="2" secondAttribute="leadingMargin" constant="10" id="MMd-af-cSM"/>
+                <constraint firstAttribute="bottom" secondItem="4" secondAttribute="bottom" id="MWi-4n-Nn5"/>
+                <constraint firstAttribute="trailingMargin" secondItem="21" secondAttribute="trailing" constant="7" id="MwY-J4-0pb"/>
+                <constraint firstAttribute="trailing" secondItem="4" secondAttribute="trailing" id="NEz-3A-zhV"/>
+                <constraint firstItem="4" firstAttribute="leading" secondItem="2" secondAttribute="leading" id="Vpy-zF-ywW"/>
+                <constraint firstItem="21" firstAttribute="leading" secondItem="23" secondAttribute="trailing" constant="7" id="Zbx-S6-G0z"/>
+                <constraint firstItem="4" firstAttribute="top" secondItem="2" secondAttribute="top" id="mLo-v8-Wnv"/>
+                <constraint firstItem="21" firstAttribute="top" secondItem="5" secondAttribute="bottom" constant="10" id="p3h-Ib-BtH"/>
+                <constraint firstItem="5" firstAttribute="top" secondItem="2" secondAttribute="top" constant="20" id="v7H-IT-Jx8"/>
+            </constraints>
             <simulatedStatusBarMetrics key="simulatedStatusBarMetrics" statusBarStyle="blackOpaque"/>
             <simulatedOrientationMetrics key="simulatedOrientationMetrics" orientation="landscapeRight"/>
+            <simulatedScreenMetrics key="simulatedDestinationMetrics"/>
         </view>
     </objects>
     <resources>

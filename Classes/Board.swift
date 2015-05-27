@@ -9,10 +9,10 @@ func println(object: Any) {
 }
 
 var onPhone : Bool {
-    // horizontal size class regular? we're on iPad
-    // by using this approach, the iPhone 6 Plus counts as an iPad, which I think is right
-    // return UIScreen.mainScreen().traitCollection.horizontalSizeClass == .Compact
     return UIDevice.currentDevice().userInterfaceIdiom == .Phone
+    // horizontal size class regular? we're on iPad
+    // by using this approach, the iPhone 6 Plus counts as an iPad
+    // return UIScreen.mainScreen().traitCollection.horizontalSizeClass == .Compact
 }
 
 func removeObject<T:Equatable>(inout arr:Array<T>, object:T) -> T? {
@@ -445,7 +445,7 @@ final class Board : NSObject, NSCoding {
         let pieceWidth = self.pieceSize.width
         let pieceHeight = self.pieceSize.height
         let x = ((OUTER/2.0 + LEFTMARGIN) * pieceWidth) + (CGFloat(i) * pieceWidth)
-        let y = ((OUTER/2.0 + TOPMARGIN) * pieceHeight) + (CGFloat(j) * pieceHeight)
+        let y = ((OUTER/2.0 + TOPMARGIN) * pieceHeight) + (CGFloat(j) * pieceHeight) + (onPhone ? 0 : 64/2) // allow for toolbar
         return CGPointMake(x,y)
 
     }
