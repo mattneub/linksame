@@ -8,6 +8,10 @@ func println(object: Any) {
     #endif
 }
 
+var onPhone : Bool {
+    return UIDevice.currentDevice().userInterfaceIdiom == .Phone
+}
+
 func removeObject<T:Equatable>(inout arr:Array<T>, object:T) -> T? {
     if let found = find(arr,object) {
         return arr.removeAtIndex(found)
@@ -27,6 +31,8 @@ let TOPMARGIN : CGFloat = (1.0/8.0)
 let BOTTOMMARGIN : CGFloat = (1.0/8.0)
 let LEFTMARGIN : CGFloat = (1.0/8.0)
 let RIGHTMARGIN : CGFloat = (1.0/8.0)
+let OUTER : CGFloat = onPhone ? 1.0 : 2.0
+
 
 // I was hoping there would be no good reason to be an NSObject derivative
 // but it turned out that keyed archiving requires it
@@ -85,9 +91,8 @@ final class Board : NSObject, NSCoding {
         assert((self.xct > 0 && self.yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
         println("calculating piece size")
         // divide view bounds, allow 1 extra plus margins
-        let outer : CGFloat = UIDevice.currentDevice().userInterfaceIdiom == .Pad ? 2.0 : 1.0
-        let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self.xct) + outer + LEFTMARGIN + RIGHTMARGIN)
-        let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self.yct) + outer + TOPMARGIN + BOTTOMMARGIN)
+        let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self.xct) + OUTER + LEFTMARGIN + RIGHTMARGIN)
+        let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self.yct) + OUTER + TOPMARGIN + BOTTOMMARGIN)
         return CGSizeMake(pieceWidth, pieceHeight)
     }()
     
@@ -436,9 +441,8 @@ final class Board : NSObject, NSCoding {
         // divide view bounds, allow 2 extra on all sides
         let pieceWidth = self.pieceSize.width
         let pieceHeight = self.pieceSize.height
-        let outer : CGFloat = UIDevice.currentDevice().userInterfaceIdiom == .Pad ? 2.0 : 1.0
-        let x = ((outer/2.0 + LEFTMARGIN) * pieceWidth) + (CGFloat(i) * pieceWidth)
-        let y = ((outer/2.0 + TOPMARGIN) * pieceHeight) + (CGFloat(j) * pieceHeight)
+        let x = ((OUTER/2.0 + LEFTMARGIN) * pieceWidth) + (CGFloat(i) * pieceWidth)
+        let y = ((OUTER/2.0 + TOPMARGIN) * pieceHeight) + (CGFloat(j) * pieceHeight)
         return CGPointMake(x,y)
 
     }

@@ -22,13 +22,16 @@
                 <imageView opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" image="background.jpg" translatesAutoresizingMaskIntoConstraints="NO" id="NYp-Ld-1O6">
                     <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                 </imageView>
-                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="VU9-Zp-brR">
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text=" " lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="VU9-Zp-brR" userLabel="stageLabel">
                     <rect key="frame" x="8" y="8" width="38" height="18"/>
+                    <constraints>
+                        <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="38" id="beK-x7-Lgt"/>
+                    </constraints>
                     <fontDescription key="fontDescription" type="system" pointSize="15"/>
                     <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                     <nil key="highlightedColor"/>
                 </label>
-                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="8BP-Em-5qp" customClass="MyRightLabel" customModule="LinkSame" customModuleProvider="target">
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text=" " textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="8BP-Em-5qp" userLabel="scoreLabel" customClass="MyRightLabel" customModule="LinkSame" customModuleProvider="target">
                     <rect key="frame" x="532" y="8" width="60" height="18"/>
                     <constraints>
                         <constraint firstAttribute="width" constant="60" id="qlz-W8-zYg"/>
@@ -37,12 +40,24 @@
                     <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                     <nil key="highlightedColor"/>
                 </label>
-                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Olt-kE-dV4">
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text=" " textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Olt-kE-dV4" userLabel="highScoreLabel">
                     <rect key="frame" x="474" y="8" width="38" height="18"/>
+                    <constraints>
+                        <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="38" id="VEb-ap-UaO"/>
+                    </constraints>
                     <fontDescription key="fontDescription" type="system" pointSize="15"/>
                     <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                     <nil key="highlightedColor"/>
                 </label>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="hKC-mU-HxB">
+                    <rect key="frame" x="568" y="568" width="24" height="24"/>
+                    <state key="normal" image="hamburger.png">
+                        <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                    </state>
+                    <connections>
+                        <action selector="doHamburgerButton:" destination="-1" eventType="touchUpInside" id="uzK-tc-ozL"/>
+                    </connections>
+                </button>
             </subviews>
             <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
             <constraints>
@@ -52,6 +67,8 @@
                 <constraint firstAttribute="trailing" secondItem="NYp-Ld-1O6" secondAttribute="trailing" id="O1g-V2-cbj"/>
                 <constraint firstItem="VU9-Zp-brR" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leadingMargin" id="Q2w-qi-a58"/>
                 <constraint firstItem="Olt-kE-dV4" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="topMargin" id="Vcg-VQ-ROY"/>
+                <constraint firstAttribute="trailingMargin" secondItem="hKC-mU-HxB" secondAttribute="trailing" id="XNf-5g-Ity"/>
+                <constraint firstAttribute="bottomMargin" secondItem="hKC-mU-HxB" secondAttribute="bottom" id="csM-4a-V00"/>
                 <constraint firstItem="8BP-Em-5qp" firstAttribute="leading" secondItem="Olt-kE-dV4" secondAttribute="trailing" constant="20" id="h0L-dw-SDd"/>
                 <constraint firstAttribute="trailingMargin" secondItem="8BP-Em-5qp" secondAttribute="trailing" id="h9e-e1-pEw"/>
                 <constraint firstItem="VU9-Zp-brR" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="topMargin" id="pf9-eb-PZZ"/>
@@ -62,5 +79,6 @@
     </objects>
     <resources>
         <image name="background.jpg" width="720" height="538"/>
+        <image name="hamburger.png" width="24" height="24"/>
     </resources>
 </document>

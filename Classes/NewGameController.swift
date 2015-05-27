@@ -21,22 +21,31 @@ class NewGameController : UIViewController {
         
         super.viewDidLoad()
         let v = self.view
+        v.backgroundColor = UIColor.whiteColor()
+        
+        // on iPhone, no choice of size, so no table view
         
         let tv = UITableView(frame:CGRectMake(0,0,320,350), style:.Grouped)
-        // unfortunately I have not found any way except to size manually like this by experimentation
-        v.addSubview(tv)
-        tv.dataSource = self
-        tv.delegate = self
-        tv.bounces = false
-        tv.scrollEnabled = false
-        tv.registerClass(UITableViewCell.self, forCellReuseIdentifier: cellid)
-        self.tableView = tv
         
-        let pv = UIPickerView(frame:CGRectMake(0,0,320,160)) // not really
+        if !onPhone {
+            // unfortunately I have not found any way except to size manually like this by experimentation
+            v.addSubview(tv)
+            tv.dataSource = self
+            tv.delegate = self
+            tv.bounces = false
+            tv.scrollEnabled = false
+            tv.registerClass(UITableViewCell.self, forCellReuseIdentifier: cellid)
+            self.tableView = tv
+        }
+        
+        let pv = UIPickerView(frame:CGRectMake(0,0,320,160)) // on iPad, not really
+        
         pv.dataSource = self
         pv.delegate = self
         pv.sizeToFit() // a picker view has its own natural size
-        pv.frame.origin.y = tv.frame.size.height
+        if !onPhone {
+            pv.frame.origin.y = tv.frame.size.height
+        }
         v.addSubview(pv)
         pv.showsSelectionIndicator = true
         pv.selectRow(ud.integerForKey(Default.LastStage), inComponent: 0, animated: false)

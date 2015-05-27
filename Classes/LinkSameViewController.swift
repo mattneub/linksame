@@ -40,9 +40,10 @@ struct Sizes {
     static func sizes () -> [String] {
         return [Easy, Normal, Hard]
     }
+    private static let easySize = onPhone ? (10,6) : (12,7)
     static func boardSize (s:String) -> (Int,Int) {
         let d = [
-            Easy:(12,7),
+            Easy:self.easySize,
             Normal:(14,8),
             Hard:(16,9)
         ]
@@ -94,11 +95,7 @@ class LinkSameViewController : UIViewController {
     
     override var nibName : String {
         get {
-            if UIDevice.currentDevice().userInterfaceIdiom == .Pad {
-                return "LinkSameViewController"
-            } else {
-                return "LinkSameViewControllerPhone"
-            }
+            return onPhone ? "LinkSameViewControllerPhone" : "LinkSameViewController"
         }
     }
     
@@ -347,8 +344,8 @@ class LinkSameViewController : UIViewController {
         
         // determine layout dimensions
         var (w,h) = Sizes.boardSize(ud.stringForKey(Default.Size)!)
-        if UIDevice.currentDevice().userInterfaceIdiom == .Phone {
-            (w,h) = (6,6)
+        if onPhone {
+            (w,h) = Sizes.boardSize(Sizes.Easy)
         }
         // create new board object and configure it
         self.board = Board(boardFrame:self.backgroundView.bounds, gridSize:(w,h))
@@ -397,7 +394,7 @@ class LinkSameViewController : UIViewController {
                     let alert = UIAlertController(
                         title: "Congratulations!",
                         message: "You have finished the game with a score of \(self.score)." +
-                            (newHigh ? " This is a new high score for this level!" : ""),
+                            (newHigh ? " That is a new high score for this level!" : ""),
                         preferredStyle: .Alert)
                     alert.addAction(UIAlertAction(
                         title: "Cool!", style: .Cancel, handler:  {
@@ -423,7 +420,7 @@ class LinkSameViewController : UIViewController {
         self.board.unhilite()
         if let v = self.board.pathView {
             if !self.board.showingHint {
-                self.hintButton.title = HintButtonTitle.Hide
+                self.hintButton?.title = HintButtonTitle.Hide
                 self.incrementScore(-10, resetTimer:true, red:true)
                 self.board.hint()
                 // if user taps board now, this should have just the same effect as tapping button
@@ -431,7 +428,7 @@ class LinkSameViewController : UIViewController {
                 let t = UITapGestureRecognizer(target: self, action: "toggleHint:")
                 v.addGestureRecognizer(t)
             } else {
-                self.hintButton.title = HintButtonTitle.Show
+                self.hintButton?.title = HintButtonTitle.Show
                 self.board.unilluminate()
                 if let gs = v.gestureRecognizers as? [UIGestureRecognizer] {
                     for g in gs {
@@ -462,7 +459,8 @@ class LinkSameViewController : UIViewController {
             _ in
             self.board.restartStage()
             self.score = self.scoreAtStartOfStage
-            self.incrementScore(0, resetTimer: true) // cause new score to show, stop timer and wait
+            self.incrementScore(0, resetTimer: false) // cause new score to show
+            self.timer = nil // stop timer and wait
             self.animateBoardTransition(.Fade)
         }))
         self.presentViewController(alert, animated: true, completion: nil)
@@ -499,9 +497,9 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         // configure the popover _after_ presentation, even though, as Apple says, this may see counterintuitive
         // it isn't really there yet, so there is time
         // configuration is thru the implicitly created popover presentation controller
-        if let pop = nav.popoverPresentationController {
+        if let pop = nav.popoverPresentationController, sender = sender as? UIBarButtonItem {
             pop.permittedArrowDirections = .Any
-            pop.barButtonItem = sender as! UIBarButtonItem
+            pop.barButtonItem = sender
             delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
             pop.delegate = self // this is a whole new delegate protocol, of course
         }
@@ -564,13 +562,35 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         vc.view = wv
         vc.modalPresentationStyle = .Popover
         vc.preferredContentSize = CGSizeMake(600,800) // NB! setting ppc's popoverContentSize didn't work
-        self.presentViewController(vc, animated: true, completion: nil)
         if let pop = vc.popoverPresentationController {
+            pop.delegate = self // adapt! on iPhone, we need a way to dismiss
+        }
+        self.presentViewController(vc, animated: true, completion: nil)
+        if let pop = vc.popoverPresentationController, sender = sender as? UIBarButtonItem {
             pop.permittedArrowDirections = .Any
-            pop.barButtonItem = sender as! UIBarButtonItem
+            pop.barButtonItem = sender
             delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
         }
-        // no delegate needed, as it turns out
+    }
+    
+    func adaptivePresentationStyleForPresentationController(
+        controller: UIPresentationController) -> UIModalPresentationStyle {
+            return .FullScreen
+    }
+    func presentationController(controller: UIPresentationController,
+        viewControllerForAdaptivePresentationStyle style:
+        UIModalPresentationStyle) -> UIViewController? {
+            let vc = controller.presentedViewController
+            if vc.view is UIWebView {
+                let nav = UINavigationController(rootViewController: vc)
+                vc.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Done", style: .Plain, target: self, action: "dismissHelp:")
+                return nav
+            }
+            return nil
+    }
+    
+    @objc private func dismissHelp(_:AnyObject) {
+        self.dismissViewControllerAnimated(true, completion: nil)
     }
     
 }
@@ -579,6 +599,41 @@ extension LinkSameViewController : UIToolbarDelegate {
     func positionForBar(bar: UIBarPositioning) -> UIBarPosition {
         return .TopAttached
     }
+}
+
+extension LinkSameViewController { // hamburger button on phone
+    @IBAction func doHamburgerButton (sender:AnyObject!) {
+        if self.board.showingHint {
+            self.toggleHint(nil)
+        }
+        self.board.unhilite()
+
+        let action = UIAlertController(title: nil, message: nil, preferredStyle: .ActionSheet)
+        action.addAction(UIAlertAction(title: "Game", style: .Default, handler: {
+            _ in
+            self.doNew(nil)
+        }))
+        action.addAction(UIAlertAction(title: "Cancel", style: .Cancel, handler: nil))
+        action.addAction(UIAlertAction(title: "Hint", style: .Default, handler: {
+            _ in
+            self.toggleHint(nil)
+        }))
+        action.addAction(UIAlertAction(title: "Shuffle", style: .Default, handler: {
+            _ in
+            self.doShuffle(nil)
+        }))
+        action.addAction(UIAlertAction(title: "Restart Stage", style: .Default, handler: {
+            _ in
+            self.doRestartStage(nil)
+        }))
+        action.addAction(UIAlertAction(title: "Help", style: .Default, handler: {
+            _ in
+            self.doHelp(nil)
+        }))
+        self.presentViewController(action, animated: true, completion: nil)
+    }
+    
+
 }
 
 
