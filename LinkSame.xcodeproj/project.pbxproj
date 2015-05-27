@@ -48,6 +48,8 @@
 		322F13221923E8A600F2BE47 /* icon2singleresolution.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon2singleresolution.png; sourceTree = "<group>"; };
 		325317911B1600C9004EB8AB /* hamburger.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = hamburger.png; sourceTree = "<group>"; };
 		3293FF6C1A8BDF25003901A1 /* LinkSameViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = LinkSameViewController.swift; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		329A54DA1B16209B009897D7 /* icon2phone.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon2phone.png; sourceTree = "<group>"; };
+		329A54DB1B16215C009897D7 /* icon2phone6plus.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon2phone6plus.png; sourceTree = "<group>"; };
 		32A7D4551957CE700002210A /* Piece.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Piece.swift; sourceTree = "<group>"; };
 		32D59DA7195758A100E4A41C /* MyRightLabel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MyRightLabel.swift; sourceTree = "<group>"; };
 		32DAD06D1959FF8C005095C6 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -140,6 +142,8 @@
 				322F131F1923E72900F2BE47 /* bigIcon2.psd */,
 				A4C07EB51219EB6A005D1E53 /* icon.png */,
 				322F13201923E73200F2BE47 /* icon2.png */,
+				329A54DA1B16209B009897D7 /* icon2phone.png */,
+				329A54DB1B16215C009897D7 /* icon2phone6plus.png */,
 				322F13221923E8A600F2BE47 /* icon2singleresolution.png */,
 				A4C07EB61219EB6A005D1E53 /* icon.psd */,
 				A4C07EB71219EB6A005D1E53 /* sushi.psd */,

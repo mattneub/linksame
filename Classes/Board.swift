@@ -9,6 +9,9 @@ func println(object: Any) {
 }
 
 var onPhone : Bool {
+    // horizontal size class regular? we're on iPad
+    // by using this approach, the iPhone 6 Plus counts as an iPad, which I think is right
+    // return UIScreen.mainScreen().traitCollection.horizontalSizeClass == .Compact
     return UIDevice.currentDevice().userInterfaceIdiom == .Phone
 }
 
