@@ -566,9 +566,11 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
             pop.delegate = self // adapt! on iPhone, we need a way to dismiss
         }
         self.presentViewController(vc, animated: true, completion: nil)
-        if let pop = vc.popoverPresentationController, sender = sender as? UIBarButtonItem {
+        if let pop = vc.popoverPresentationController {
             pop.permittedArrowDirections = .Any
-            pop.barButtonItem = sender
+            if let sender = sender as? UIBarButtonItem {
+                pop.barButtonItem = sender
+            }
             delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
         }
     }
