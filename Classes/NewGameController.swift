@@ -23,34 +23,39 @@ class NewGameController : UIViewController {
         let v = self.view
         v.backgroundColor = UIColor.whiteColor()
         
-        // on iPhone, no choice of size, so no table view
+        // unfortunately I have not found any way except to size manually like this by experimentation
+        let tableHeight : CGFloat = (onPhone ? 150 : 350)
+        let tv = UITableView(frame:CGRectMake(0,0,320,tableHeight), style:.Grouped)
         
-        let tv = UITableView(frame:CGRectMake(0,0,320,350), style:.Grouped)
-        
-        if !onPhone {
-            // unfortunately I have not found any way except to size manually like this by experimentation
-            v.addSubview(tv)
-            tv.dataSource = self
-            tv.delegate = self
-            tv.bounces = false
-            tv.scrollEnabled = false
-            tv.registerClass(UITableViewCell.self, forCellReuseIdentifier: cellid)
-            self.tableView = tv
-        }
+        v.addSubview(tv)
+        tv.dataSource = self
+        tv.delegate = self
+        tv.bounces = false
+        tv.scrollEnabled = false
+        tv.registerClass(UITableViewCell.self, forCellReuseIdentifier: cellid)
+        self.tableView = tv
+        tv.setTranslatesAutoresizingMaskIntoConstraints(false)
+        v.addConstraints(
+            NSLayoutConstraint.constraintsWithVisualFormat("H:|[tv]|", options: nil, metrics: nil, views: ["tv":tv])
+        )
+        v.addConstraints(
+            NSLayoutConstraint.constraintsWithVisualFormat("V:|-(-20)-[tv(tableHeight)]", options: nil,
+                metrics: ["tableHeight":tableHeight],
+                views: ["tv":tv])
+        )
         
         let pv = UIPickerView()
         pv.setTranslatesAutoresizingMaskIntoConstraints(false)
         pv.dataSource = self
         pv.delegate = self
-        pv.sizeToFit() // a picker view has its own natural size
         v.addSubview(pv)
         v.addConstraints(
             NSLayoutConstraint.constraintsWithVisualFormat("H:|[pv]|", options: nil, metrics: nil, views: ["pv":pv])
         )
         v.addConstraints(
-            NSLayoutConstraint.constraintsWithVisualFormat("V:|-(y)-[pv]", options: nil,
-                metrics: ["y": (onPhone ? 0 : tv.frame.size.height)],
-                views: ["pv":pv])
+            NSLayoutConstraint.constraintsWithVisualFormat("V:[tv]-(0)-[pv]", options: nil,
+                metrics: nil,
+                views: ["tv":tv, "pv":pv])
         )
         pv.showsSelectionIndicator = true
         pv.selectRow(ud.integerForKey(Default.LastStage), inComponent: 0, animated: false)
@@ -61,15 +66,15 @@ class NewGameController : UIViewController {
 
 extension NewGameController : UITableViewDataSource, UITableViewDelegate {
     func numberOfSectionsInTableView(tableView: UITableView) -> Int {
-        return 2
+        return onPhone ? 1 : 2 // on iPhone, omit second (Size) section: there is just one size
     }
     
     func tableView(tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         switch section {
         case 0:
-            return Default.Size
-        case 1:
             return Default.Style
+        case 1:
+            return Default.Size
         default:
             return nil
         }
@@ -82,9 +87,9 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
         case 0:
-            return 3
-        case 1:
             return 2
+        case 1:
+            return 3
         default:
             return 0
         }
@@ -98,9 +103,9 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
         
         switch section {
         case 0:
-            cell.textLabel!.text = Sizes.sizes()[row]
-        case 1:
             cell.textLabel!.text = Styles.styles()[row]
+        case 1:
+            cell.textLabel!.text = Sizes.sizes()[row]
         default:
             cell.textLabel!.text = "" // throwaway
         }
