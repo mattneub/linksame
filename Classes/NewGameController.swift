@@ -5,7 +5,7 @@ import Swift
 
 private let cellid = "Cell"
 
-class NewGameController : UIViewController {
+class NewGameController : UIViewController, UITableViewDelegate, UITableViewDataSource {
     weak var tableView : UITableView!
     
     init () {
@@ -20,11 +20,12 @@ class NewGameController : UIViewController {
     override func viewDidLoad() {
         
         super.viewDidLoad()
+
         let v = self.view
         v.backgroundColor = UIColor.whiteColor()
         
         // unfortunately I have not found any way except to size manually like this by experimentation
-        let tableHeight : CGFloat = (onPhone ? 150 : 350)
+        let tableHeight : CGFloat = (onPhone ? 120 : 300)
         let tv = UITableView(frame:CGRectMake(0,0,320,tableHeight), style:.Grouped)
         
         v.addSubview(tv)
@@ -39,7 +40,7 @@ class NewGameController : UIViewController {
             NSLayoutConstraint.constraintsWithVisualFormat("H:|[tv]|", options: nil, metrics: nil, views: ["tv":tv])
         )
         v.addConstraints(
-            NSLayoutConstraint.constraintsWithVisualFormat("V:|-(-20)-[tv(tableHeight)]", options: nil,
+            NSLayoutConstraint.constraintsWithVisualFormat("V:|-(0)-[tv(tableHeight)]", options: nil,
                 metrics: ["tableHeight":tableHeight],
                 views: ["tv":tv])
         )
@@ -80,8 +81,8 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
         }
     }
     
-    func tableView(tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        return nil
+    func tableView(tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 30
     }
     
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
