@@ -40,7 +40,11 @@ struct Sizes {
     static func sizes () -> [String] {
         return [Easy, Normal, Hard]
     }
-    private static let easySize = onPhone ? (10,6) : (12,7)
+    private static var easySize : (Int,Int) {
+        var result : (Int,Int) = onPhone ? (10,6) : (12,7)
+        if on6plus { result = (12,7) }
+        return result
+    }
     static func boardSize (s:String) -> (Int,Int) {
         let d = [
             Easy:self.easySize,
@@ -166,6 +170,13 @@ class LinkSameViewController : UIViewController {
         }
         self.didSetUp = true
         ui(false)
+        // increase font size on 6 plus
+        if on6plus {
+            for lab in [self.scoreLabel, self.prevLabel, self.stageLabel] {
+                let f = lab.font
+                lab.font = f.fontWithSize(f.pointSize + 2)
+            }
+        }
         // one-time launch initializations of model and interface
         self.initializeScores()
         // fix width of hint button to accomodate new labels Show Hint and Hide Hint

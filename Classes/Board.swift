@@ -9,10 +9,11 @@ func println(object: Any) {
 }
 
 var onPhone : Bool {
-    return UIDevice.currentDevice().userInterfaceIdiom == .Phone
-    // horizontal size class regular? we're on iPad
-    // by using this approach, the iPhone 6 Plus counts as an iPad
-    // return UIScreen.mainScreen().traitCollection.horizontalSizeClass == .Compact
+    return UIScreen.mainScreen().traitCollection.userInterfaceIdiom == .Phone
+}
+
+var on6plus : Bool {
+    return UIScreen.mainScreen().traitCollection.displayScale > 2.5
 }
 
 func removeObject<T:Equatable>(inout arr:Array<T>, object:T) -> T? {
@@ -34,7 +35,11 @@ let TOPMARGIN : CGFloat = (1.0/8.0)
 let BOTTOMMARGIN : CGFloat = (1.0/8.0)
 let LEFTMARGIN : CGFloat = (1.0/8.0)
 let RIGHTMARGIN : CGFloat = (1.0/8.0)
-let OUTER : CGFloat = onPhone ? 1.0 : 2.0
+var OUTER : CGFloat {
+    var result : CGFloat = onPhone ? 1.0 : 2.0
+    if on6plus { result = 2.0 }
+    return result
+}
 
 
 // I was hoping there would be no good reason to be an NSObject derivative
