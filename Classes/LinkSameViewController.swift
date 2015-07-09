@@ -90,7 +90,7 @@ class LinkSameViewController : UIViewController {
     @IBOutlet private weak var toolbar : UIToolbar!
     private var boardView : UIView!
     private var popover : UIPopoverController!
-    private var oldDefs : [NSObject : AnyObject]!
+    private var oldDefs : [String : AnyObject]!
     private var timer : NSTimer! { // any time the timer is to be replaced, invalidate existing timer
         willSet {
             self.timer?.invalidate() // to stop timer, set it to nil, we invalidate
@@ -190,7 +190,7 @@ class LinkSameViewController : UIViewController {
             self.board = NSKeyedUnarchiver.unarchiveObjectWithData(boardData) as! Board
             self.boardView = self.board.view
             self.backgroundView.addSubview(self.boardView)
-            self.boardView.autoresizingMask = .FlexibleWidth | .FlexibleHeight
+            self.boardView.autoresizingMask = [.FlexibleWidth, .FlexibleHeight]
             // set interface up as practice and we're all set
             self.interfaceMode = .Practice
             self.animateBoardTransition(.Fade)
@@ -314,7 +314,7 @@ class LinkSameViewController : UIViewController {
     }
     
     // delegate from previous, called when animation ends
-    override func animationDidStop(anim: CAAnimation!, finished flag: Bool) {
+    override func animationDidStop(anim: CAAnimation, finished flag: Bool) {
         if anim.valueForKey("name") as? NSString == "boardReplacement" {
             // set and animated showing of "stage" label
             UIView.transitionWithView(self.stageLabel, duration: 0.4,
@@ -329,7 +329,7 @@ class LinkSameViewController : UIViewController {
     
     // utility used only by next method: show board containing new deal
     // if new game, also set up scores and mode
-    private func newBoard(# newGame:Bool) {
+    private func newBoard(newGame newGame:Bool) {
         
         let boardTransition : BoardTransition = newGame ? .Fade : .Slide
         if newGame {
@@ -364,7 +364,7 @@ class LinkSameViewController : UIViewController {
         self.boardView?.removeFromSuperview()
         self.boardView = self.board.view
         self.backgroundView.addSubview(self.boardView)
-        self.boardView.autoresizingMask = UIViewAutoresizing.FlexibleHeight | UIViewAutoresizing.FlexibleWidth
+        self.boardView.autoresizingMask = [.FlexibleHeight, .FlexibleWidth]
         // stage (current stage arrived in notification, or nil if we are just starting)
         self.board.stage = 0 // default
         // self.board.stage = 8 // testing, comment out!
@@ -390,7 +390,7 @@ class LinkSameViewController : UIViewController {
                     var newHigh = false
                     // get dict from defaults, or an empty dict
                     var scoresDict = [String:Int]()
-                    if var d = ud.dictionaryForKey(Default.Scores) as? [String:Int] {
+                    if let d = ud.dictionaryForKey(Default.Scores) as? [String:Int] {
                         scoresDict = d
                     }
                     // self.score is new high score if it is higher than corresponding previous dict entry...
@@ -441,7 +441,7 @@ class LinkSameViewController : UIViewController {
             } else {
                 self.hintButton?.title = HintButtonTitle.Show
                 self.board.unilluminate()
-                if let gs = v.gestureRecognizers as? [UIGestureRecognizer] {
+                if let gs = v.gestureRecognizers {
                     for g in gs {
                         v.removeGestureRecognizer(g)
                     }
@@ -546,7 +546,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         // we can identify which popover it is because it is our presentedViewController
         if pop.presentedViewController is UINavigationController {
             if (self.oldDefs != nil) {
-                println("counts as cancelled, restoring old prefs")
+                print("counts as cancelled, restoring old prefs")
                 ud.setValuesForKeysWithDictionary(self.oldDefs)
                 self.oldDefs = nil
             }
@@ -568,7 +568,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         let vc = UIViewController()
         let wv = UIWebView()
         let path = NSBundle.mainBundle().pathForResource("linkhelp", ofType: "html")!
-        let s = String(contentsOfFile:path, encoding:NSUTF8StringEncoding, error:nil)
+        let s = try! String(contentsOfFile:path, encoding:NSUTF8StringEncoding)
         wv.loadHTMLString(s, baseURL: nil)
         vc.view = wv
         vc.modalPresentationStyle = .Popover

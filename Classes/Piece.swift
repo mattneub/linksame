@@ -20,7 +20,7 @@ extension CGRect {
 import UIKit
 import AVFoundation
 
-class Piece : UIView, NSCoding, Equatable, Printable {
+class Piece : UIView {
     
     private var pic : UIImage!
     var picName : String = "" {
@@ -69,7 +69,7 @@ class Piece : UIView, NSCoding, Equatable, Printable {
         let perireal = CGRectMake(0, 0, self.bounds.width, self.bounds.height)
         let context = UIGraphicsGetCurrentContext()
         
-        CGContextSetLineCap(context, kCGLineCapSquare)
+        CGContextSetLineCap(context, .Square)
         
         // fill: according to highlight state
         let beige = UIColor(red:0.900, green:0.798, blue:0.499, alpha:1.000)

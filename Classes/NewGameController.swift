@@ -35,26 +35,26 @@ class NewGameController : UIViewController, UITableViewDelegate, UITableViewData
         tv.scrollEnabled = false
         tv.registerClass(UITableViewCell.self, forCellReuseIdentifier: cellid)
         self.tableView = tv
-        tv.setTranslatesAutoresizingMaskIntoConstraints(false)
+        tv.translatesAutoresizingMaskIntoConstraints = false
         v.addConstraints(
-            NSLayoutConstraint.constraintsWithVisualFormat("H:|[tv]|", options: nil, metrics: nil, views: ["tv":tv])
+            NSLayoutConstraint.constraintsWithVisualFormat("H:|[tv]|", options: [], metrics: nil, views: ["tv":tv])
         )
         v.addConstraints(
-            NSLayoutConstraint.constraintsWithVisualFormat("V:|-(0)-[tv(tableHeight)]", options: nil,
+            NSLayoutConstraint.constraintsWithVisualFormat("V:|-(0)-[tv(tableHeight)]", options: [],
                 metrics: ["tableHeight":tableHeight],
                 views: ["tv":tv])
         )
         
         let pv = UIPickerView()
-        pv.setTranslatesAutoresizingMaskIntoConstraints(false)
+        pv.translatesAutoresizingMaskIntoConstraints = false
         pv.dataSource = self
         pv.delegate = self
         v.addSubview(pv)
         v.addConstraints(
-            NSLayoutConstraint.constraintsWithVisualFormat("H:|[pv]|", options: nil, metrics: nil, views: ["pv":pv])
+            NSLayoutConstraint.constraintsWithVisualFormat("H:|[pv]|", options: [], metrics: nil, views: ["pv":pv])
         )
         v.addConstraints(
-            NSLayoutConstraint.constraintsWithVisualFormat("V:[tv]-(0)-[pv]", options: nil,
+            NSLayoutConstraint.constraintsWithVisualFormat("V:[tv]-(0)-[pv]", options: [],
                 metrics: nil,
                 views: ["tv":tv, "pv":pv])
         )
@@ -65,7 +65,7 @@ class NewGameController : UIViewController, UITableViewDelegate, UITableViewData
     }
 }
 
-extension NewGameController : UITableViewDataSource, UITableViewDelegate {
+extension NewGameController {
     func numberOfSectionsInTableView(tableView: UITableView) -> Int {
         return onPhone ? 1 : 2 // on iPhone, omit second (Size) section: there is just one size
     }
@@ -97,7 +97,7 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
     }
 
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCellWithIdentifier(cellid, forIndexPath:indexPath) as! UITableViewCell
+        let cell = tableView.dequeueReusableCellWithIdentifier(cellid, forIndexPath:indexPath)
         
         let section = indexPath.section
         let row = indexPath.row
@@ -112,7 +112,7 @@ extension NewGameController : UITableViewDataSource, UITableViewDelegate {
         }
         
         cell.accessoryType = .None
-        if contains([ud.stringForKey(Default.Style), ud.stringForKey(Default.Size)], {$0 == cell.textLabel!.text}) {
+        if [ud.stringForKey(Default.Style), ud.stringForKey(Default.Size)].contains({$0 == cell.textLabel!.text}) {
             cell.accessoryType = .Checkmark
         }
 

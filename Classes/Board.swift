@@ -2,9 +2,9 @@
 import UIKit
 import QuartzCore
 
-func println(object: Any) {
+func print(object: Any) {
     #if DEBUG
-        Swift.println(object)
+        Swift.print(object)
     #endif
 }
 
@@ -16,11 +16,26 @@ var on6plus : Bool {
     return UIScreen.mainScreen().traitCollection.displayScale > 2.5
 }
 
-func removeObject<T:Equatable>(inout arr:Array<T>, object:T) -> T? {
-    if let found = find(arr,object) {
+// this can become a protocol extension, I bet!
+// yep, here we go
+
+/*
+
+func removeObject<T:Equatable>(inout arr:Array<T>, _ object:T) -> T? {
+    if let found = arr.indexOf(object) {
         return arr.removeAtIndex(found)
     }
     return nil
+}
+
+*/
+
+extension RangeReplaceableCollectionType where Generator.Element : Equatable {
+    mutating func removeObject(object:Self.Generator.Element) {
+        if let found = self.indexOf(object) {
+            self.removeAtIndex(found)
+        }
+    }
 }
 
 func ui(yn:Bool) { // false means no user interaction, true means turn it back on
@@ -91,13 +106,13 @@ final class Board : NSObject, NSCoding {
     }
     // utility for obtaining a reference to the transparency layer
     private var pathLayer : CALayer? {
-        return (self.pathView?.layer.sublayers as? [CALayer])?.last
+        return self.pathView?.layer.sublayers?.last
     }
 
     private lazy var pieceSize : CGSize = {
         // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
         assert((self.xct > 0 && self.yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
-        println("calculating piece size")
+        print("calculating piece size")
         // divide view bounds, allow 1 extra plus margins
         let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self.xct) + OUTER + LEFTMARGIN + RIGHTMARGIN)
         let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self.yct) + OUTER + TOPMARGIN + BOTTOMMARGIN)
@@ -182,7 +197,7 @@ final class Board : NSObject, NSCoding {
         let (start1,start2) = Styles.pieces(ud.stringForKey(Default.Style)!)
         // create deck of piece names
         var deck = [String]()
-        for ct in 0..<4 {
+        for _ in 0..<4 {
             for i in start1..<start1+9 {
                 deck += [String(i)]
             }
@@ -190,12 +205,12 @@ final class Board : NSObject, NSCoding {
         // determine which additional pieces to use, finish deck of piece names
         let (w,h) = (self.xct, self.yct)
         let howmany : Int = ((w * h) / 4) - 9
-        for ct in 0..<4 {
+        for _ in 0..<4 {
             for i in start2..<start2+howmany {
                 deck += [String(i)]
             }
         }
-        for ct in 0..<4 {
+        for _ in 0..<4 {
             deck.shuffle()
         }
         
@@ -228,7 +243,7 @@ final class Board : NSObject, NSCoding {
 
 
     func redeal () {
-        do {
+        repeat {
             ui(false)
             // gather up all pieces (as names), shuffle them, deal them into their current slots
             var deck = [String]()
@@ -268,7 +283,7 @@ final class Board : NSObject, NSCoding {
     
     private func illuminate (arr: Path) {
         if let pathLayer = self.pathLayer {
-            println("about to draw path: \(arr)")
+            print("about to draw path: \(arr)")
             pathLayer.delegate = self // tee-hee
             self.pathView?.userInteractionEnabled = true
             // transform path, which is an array of Point, into an NSArray of NSValue wrapping CGPoint
@@ -286,7 +301,7 @@ final class Board : NSObject, NSCoding {
     // thus we are handed a context and we can just draw directly into it
     // the layer is holding an array of NSValues wrapping CGPoints that tells us what path to draw!
     
-    override func drawLayer(layer: CALayer!, inContext con: CGContext!) {
+    override func drawLayer(layer: CALayer, inContext con: CGContext) {
         let arr = layer.valueForKey("arr") as! [NSValue]
         // unwrap arr to CGPoints, unwrap to a pair of integers
         let arr2 : Path = arr.map {let pt = $0.CGPointValue(); return (Int(pt.x),Int(pt.y))}
@@ -295,7 +310,7 @@ final class Board : NSObject, NSCoding {
         let sz = self.pieceSize
         let offx = sz.width/2.0
         let offy = sz.height/2.0
-        CGContextSetLineJoin(con, kCGLineJoinRound)
+        CGContextSetLineJoin(con, .Round)
         CGContextSetRGBStrokeColor(con, 0.4, 0.4, 1.0, 1.0)
         CGContextSetLineWidth(con, 3.0)
         CGContextBeginPath(con)
@@ -350,7 +365,7 @@ final class Board : NSObject, NSCoding {
         let (i,j) = p
         self.grid[i][j] = piece
         (piece.x, piece.y) = (i,j)
-        println("Point was \(p), pic was \(picTitle)\nCreated \(piece)")
+        print("Point was \(p), pic was \(picTitle)\nCreated \(piece)")
         // set up tap detection
         let t = UITapGestureRecognizer(target: self, action: "handleTap:")
         piece.addGestureRecognizer(t)
@@ -757,9 +772,9 @@ final class Board : NSObject, NSCoding {
                 let p = self.movenda.removeLast()
                 var f = p.frame
                 f.origin = self.originOf((p.x, p.y))
-                println("Will change frame of piece \(p)")
-                println("From \(p.frame)")
-                println("To \(f)")
+                print("Will change frame of piece \(p)")
+                print("From \(p.frame)")
+                print("To \(f)")
                 p.frame = f // this is the move that will be animated
             }
             }, completion: {
@@ -785,7 +800,7 @@ final class Board : NSObject, NSCoding {
         if self.lineIsClearFrom(pt1, to:pt2) {
             return [pt1,pt2]
         }
-        println("failed straight line test")
+        print("failed straight line test")
         // 2. second check: are they at the corners of a rectangle with nothing on one pair of sides between them?
         let midpt1 = (p1.x, p2.y)
         let midpt2 = (p2.x, p1.y)
@@ -799,7 +814,7 @@ final class Board : NSObject, NSCoding {
                 return [pt1, midpt2, pt2]
             }
         }
-        println("failed two-segment test")
+        print("failed two-segment test")
         // 3. third check: The Way of the Moving Line
         // (this was the algorithmic insight that makes the whole thing possible)
         // connect the x or y coordinates of the pieces by a vertical or horizontal line;
@@ -809,9 +824,9 @@ final class Board : NSObject, NSCoding {
         // we may find a longer one before we find a shorter one, which is counter-intuitive
         // so, accumulate all found paths and submit only the shortest
         var marr = [Path]()
-        println("=======")
-        func addPathIfValid(midpt1:Point,midpt2:Point) {
-            println("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
+        print("=======")
+        func addPathIfValid(midpt1:Point, _ midpt2:Point) {
+            print("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
             // new in swift, reject if same midpoint
             if midpt1.0 == midpt2.0 && midpt1.1 == midpt2.1 {return}
             if self.pieceAt(midpt1) == nil && self.pieceAt(midpt2) == nil {
@@ -829,7 +844,7 @@ final class Board : NSObject, NSCoding {
             addPathIfValid((x,pt1.y),(x,pt2.y))
         }
         if marr.count > 0 { // got at least one! find the shortest and submit it
-            func distance(pt1:Point, pt2:Point) -> Double {
+            func distance(pt1:Point, _ pt2:Point) -> Double {
                 // utility to learn physical distance between two points (thank you, M. Descartes)
                 let deltax = pt1.0 - pt2.0
                 let deltay = pt1.1 - pt2.1
@@ -839,7 +854,10 @@ final class Board : NSObject, NSCoding {
             var shortestPath = Path()
             for thisPath in marr {
                 var thisLength = 0.0
-                for ix in 0..<(thisPath.count-1) {
+                // swifty way to express "index one less than full length"
+                var r = thisPath.indices
+                r.endIndex--
+                for ix in r {
                     thisLength += distance(thisPath[ix],thisPath[ix+1])
                 }
                 if shortestLength < 0 || thisLength < shortestLength {
@@ -875,7 +893,7 @@ final class Board : NSObject, NSCoding {
         ui(true)
     }
     
-    // tab gesture recognizer action handler
+    // tap gesture recognizer action handler
     // maintain an ivar pointing to hilited pieces
     // when that list has two items, check them for validity
 
@@ -890,12 +908,12 @@ final class Board : NSObject, NSCoding {
             }
             self.hilitedPieces += [p]
         } else {
-            removeObject(&self.hilitedPieces, p) // see utility at top
+            self.hilitedPieces.removeObject(p) // see utility at top
         }
         p.toggleHilite()
         if self.hilitedPieces.count == 2 {
-            println("========")
-            println("about to check hilited pair \(self.hilitedPieces)")
+            print("========")
+            print("about to check hilited pair \(self.hilitedPieces)")
             self.checkHilitedPair()
         }
         ui(true)
@@ -928,8 +946,8 @@ final class Board : NSObject, NSCoding {
                         if picName2 != picName {
                             continue
                         }
-                        println("========")
-                        println("About to check \(piece!) vs. \(piece2!)")
+                        print("========")
+                        print("About to check \(piece!) vs. \(piece2!)")
                         let path = self.checkPair(piece!, and:piece2!)
                         if path == nil {
                             continue
