@@ -96,7 +96,7 @@ class Piece : UIView {
         // draw centered
         // grapple with what would happen if rect were smaller than pic.size
         let inset : CGFloat = 4
-        let maxrect = rect.rectByInsetting(dx: inset, dy: inset)
+        let maxrect = rect.insetBy(dx: inset, dy: inset)
         var drawrect = maxrect.centeredRectOfSize(pic.size)
         if pic.size.width > maxrect.width || pic.size.height > maxrect.height {
             let smallerrect = AVMakeRectWithAspectRatioInsideRect(pic.size, maxrect)

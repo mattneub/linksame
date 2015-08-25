@@ -567,12 +567,13 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         // create help from scratch
         let vc = UIViewController()
         let wv = UIWebView()
+        wv.backgroundColor = UIColor.whiteColor() // new, fix background
         let path = NSBundle.mainBundle().pathForResource("linkhelp", ofType: "html")!
         let s = try! String(contentsOfFile:path, encoding:NSUTF8StringEncoding)
         wv.loadHTMLString(s, baseURL: nil)
         vc.view = wv
         vc.modalPresentationStyle = .Popover
-        vc.preferredContentSize = CGSizeMake(600,800) // NB! setting ppc's popoverContentSize didn't work
+        vc.preferredContentSize = CGSizeMake(450,800) // NB! setting ppc's popoverContentSize didn't work
         if let pop = vc.popoverPresentationController {
             pop.delegate = self // adapt! on iPhone, we need a way to dismiss
         }
@@ -582,7 +583,8 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
             if let sender = sender as? UIBarButtonItem {
                 pop.barButtonItem = sender
             }
-            delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
+            pop.backgroundColor = UIColor.whiteColor() // new - fix arrow
+            delay (0.01) { pop.passthroughViews = nil} // must be delayed to work
         }
     }
     
