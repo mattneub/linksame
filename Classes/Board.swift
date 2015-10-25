@@ -2,9 +2,9 @@
 import UIKit
 import QuartzCore
 
-func print(object: Any) {
+func print(items: Any..., separator: String = " ", terminator: String = "\n") {
     #if DEBUG
-        Swift.print(object)
+        Swift.print(items[0], separator:separator, terminator: terminator)
     #endif
 }
 
