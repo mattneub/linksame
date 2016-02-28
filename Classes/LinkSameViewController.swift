@@ -15,9 +15,30 @@ let ud = NSUserDefaults.standardUserDefaults()
 
 let nc = NSNotificationCenter.defaultCenter()
 
+infix operator <<< {
+associativity none
+precedence 135
+}
+
+func <<<<Pos : ForwardIndexType where Pos : Comparable>(start: Pos, end: Pos)
+    -> Range<Pos> {
+        return start..<end
+}
+
+infix operator >>> {
+associativity none
+precedence 135
+}
+
+func >>> <Pos : ForwardIndexType where Pos : Comparable>(end:Pos, start:Pos)
+    -> ReverseRandomAccessCollection<(Range<Pos>)> {
+        return (start..<end).reverse()
+}
+
 extension Array {
     mutating func shuffle () {
-        for var i = self.count - 1; i != 0; i-- {
+        // for var i = self.count - 1; i != 0; i-- {
+        for i in self.count >>> 0 {
             let ix1 = i
             let ix2 = Int(arc4random_uniform(UInt32(i+1)))
             (self[ix1], self[ix2]) = (self[ix2], self[ix1])
@@ -276,7 +297,7 @@ class LinkSameViewController : UIViewController {
             return // don't bother making a new timer, we were doing that (harmlessly) but why bother?
         }
         self.timer = NSTimer.scheduledTimerWithTimeInterval(
-            10, target: self, selector: "decrementScore", userInfo: nil, repeats: true
+            10, target: self, selector: #selector(decrementScore), userInfo: nil, repeats: true
         )
         self.timer?.tolerance = 0.2
     }
@@ -427,7 +448,7 @@ class LinkSameViewController : UIViewController {
     
     // ============================ toolbar buttons =================================
     
-    @IBAction private func toggleHint(_:AnyObject?) { // hintButton
+    @IBAction @objc private func toggleHint(_:AnyObject?) { // hintButton
         self.board.unhilite()
         if let v = self.board.pathView {
             if !self.board.showingHint {
@@ -436,7 +457,7 @@ class LinkSameViewController : UIViewController {
                 self.board.hint()
                 // if user taps board now, this should have just the same effect as tapping button
                 // so, attach gesture rec
-                let t = UITapGestureRecognizer(target: self, action: "toggleHint:")
+                let t = UITapGestureRecognizer(target: self, action: #selector(toggleHint))
                 v.addGestureRecognizer(t)
             } else {
                 self.hintButton?.title = HintButtonTitle.Show
@@ -498,9 +519,9 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         // create dialog from scratch (see NewGameController for rest of interface)
         let dlg = NewGameController()
         dlg.modalInPopover = true // must be before presentation to work
-        let b1 = UIBarButtonItem(barButtonSystemItem: .Cancel, target: self, action: "cancelNewGame")
+        let b1 = UIBarButtonItem(barButtonSystemItem: .Cancel, target: self, action: #selector(cancelNewGame))
         dlg.navigationItem.rightBarButtonItem = b1
-        let b2 = UIBarButtonItem(barButtonSystemItem: .Done, target: self, action: "startNewGame")
+        let b2 = UIBarButtonItem(barButtonSystemItem: .Done, target: self, action: #selector(startNewGame))
         dlg.navigationItem.leftBarButtonItem = b2
         let nav = UINavigationController(rootViewController: dlg)
         nav.modalPresentationStyle = .Popover // *
@@ -598,7 +619,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
             let vc = controller.presentedViewController
             if vc.view is UIWebView {
                 let nav = UINavigationController(rootViewController: vc)
-                vc.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Done", style: .Plain, target: self, action: "dismissHelp:")
+                vc.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Done", style: .Plain, target: self, action: #selector(dismissHelp))
                 return nav
             }
             return nil
