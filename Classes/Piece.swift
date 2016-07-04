@@ -7,13 +7,13 @@ func == (lhs:Piece, rhs:Piece) -> Bool {
 
 extension CGRect {
     var center : CGPoint {
-        return CGPointMake(CGRectGetMidX(self), CGRectGetMidY(self))
+        return CGPoint(x: self.midX, y: self.midY)
     }
-    func centeredRectOfSize(sz:CGSize) -> CGRect {
+    func centeredRectOfSize(_ sz:CGSize) -> CGRect {
         let c = self.center
         let x = c.x - sz.width/2.0
         let y = c.y - sz.height/2.0
-        return CGRect(origin:CGPointMake(x,y), size:sz)
+        return CGRect(origin:CGPoint(x: x,y: y), size:sz)
     }
 }
 
@@ -29,7 +29,7 @@ class Piece : UIView {
             // that way, we don't have to fetch picture each time we draw ourself
             // perhaps this is no savings of time and a waste of memory, I've no idea
             // but hey, the pictures are tiny
-            let path = NSBundle.mainBundle().pathForResource(self.picName, ofType: "png", inDirectory:"foods")
+            let path = Bundle.main().pathForResource(self.picName, ofType: "png", inDirectory:"foods")
             self.pic = UIImage(contentsOfFile:path!)
         }
     }
@@ -52,46 +52,46 @@ class Piece : UIView {
         super.init(frame:frame)
     }
     
-    override func encodeWithCoder(coder: NSCoder) {
-        coder.encodeInteger(self.x, forKey:"x")
-        coder.encodeInteger(self.y, forKey:"y")
-        coder.encodeObject(self.picName, forKey:"picName")
+    override func encode(with coder: NSCoder) {
+        coder.encode(self.x, forKey:"x")
+        coder.encode(self.y, forKey:"y")
+        coder.encode(self.picName, forKey:"picName")
     }
     
     required init(coder: NSCoder) {
-        self.x = coder.decodeIntegerForKey("x")
-        self.y = coder.decodeIntegerForKey("y")
-        self.picName = coder.decodeObjectForKey("picName") as! String
-        super.init(frame:CGRectMake(0,0,0,0)) // dummy value
+        self.x = coder.decodeInteger(forKey: "x")
+        self.y = coder.decodeInteger(forKey: "y")
+        self.picName = coder.decodeObject(forKey: "picName") as! String
+        super.init(frame:CGRect(x: 0,y: 0,width: 0,height: 0)) // dummy value
     }
     
-    override func drawRect(rect: CGRect) {
-        let perireal = CGRectMake(0, 0, self.bounds.width, self.bounds.height)
+    override func draw(_ rect: CGRect) {
+        let perireal = CGRect(x: 0, y: 0, width: self.bounds.width, height: self.bounds.height)
         let context = UIGraphicsGetCurrentContext()
         
-        CGContextSetLineCap(context, .Square)
+        context?.setLineCap(.square)
         
         // fill: according to highlight state
         let beige = UIColor(red:0.900, green:0.798, blue:0.499, alpha:1.000)
         let purple = UIColor(red:0.898, green:0.502, blue:0.901, alpha:1.000)
-        CGContextSetFillColorWithColor(context, self.isHilited ? purple.CGColor : beige.CGColor)
-        CGContextFillRect(context, CGRectInset(perireal, -1, -1)) // outset to ensure full coverage
+        context?.setFillColor(self.isHilited ? purple.cgColor : beige.cgColor)
+        context?.fill(perireal.insetBy(dx: -1, dy: -1)) // outset to ensure full coverage
         
         // frame: draw shade all the way round, then light round two sides
         let shadow = UIColor(red:0.670, green:0.537, blue:0.270, alpha:1.000)
-        CGContextSetStrokeColorWithColor(context, shadow.CGColor)
-        let peri = CGRectInset(perireal, 1, 1)
-        CGContextSetLineWidth(context, 1.5)
-        CGContextStrokeRect(context, peri)
+        context?.setStrokeColor(shadow.cgColor)
+        let peri = perireal.insetBy(dx: 1, dy: 1)
+        context?.setLineWidth(1.5)
+        context?.stroke(peri)
         let lite = UIColor(red:1.000, green:0.999, blue:0.999, alpha:1.000)
-        CGContextSetStrokeColorWithColor(context, lite.CGColor)
+        context?.setStrokeColor(lite.cgColor)
         let points = [
-            CGPointMake(peri.minX, peri.maxY),
-            CGPointMake(peri.minX, peri.minY),
-            CGPointMake(peri.minX, peri.minY),
-            CGPointMake(peri.maxX, peri.minY)
+            CGPoint(x: peri.minX, y: peri.maxY),
+            CGPoint(x: peri.minX, y: peri.minY),
+            CGPoint(x: peri.minX, y: peri.minY),
+            CGPoint(x: peri.maxX, y: peri.minY)
         ]
-        CGContextStrokeLineSegments(context, points, 4)
+        context?.strokeLineSegments(between: points, count: 4)
         
         // draw centered
         // grapple with what would happen if rect were smaller than pic.size
@@ -99,10 +99,10 @@ class Piece : UIView {
         let maxrect = rect.insetBy(dx: inset, dy: inset)
         var drawrect = maxrect.centeredRectOfSize(pic.size)
         if pic.size.width > maxrect.width || pic.size.height > maxrect.height {
-            let smallerrect = AVMakeRectWithAspectRatioInsideRect(pic.size, maxrect)
+            let smallerrect = AVMakeRect(aspectRatio: pic.size, insideRect: maxrect)
             drawrect = maxrect.centeredRectOfSize(smallerrect.size)
         }
-        self.pic.drawInRect(drawrect)
+        self.pic.draw(in: drawrect)
     }
     
     func toggleHilite () {
