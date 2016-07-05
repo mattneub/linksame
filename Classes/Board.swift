@@ -905,10 +905,7 @@ final class Board : NSObject, NSCoding {
             var shortestPath = Path()
             for thisPath in marr {
                 var thisLength = 0.0
-                // swifty way to express "index one less than full length"
-                let r = thisPath.indices
-                //r.endIndex -= 1
-                for ix in r.startIndex..<r.index(before:r.endIndex) {
+                for ix in 0..<(thisPath.count-1) {
                     thisLength += distance(thisPath[ix],thisPath[ix+1])
                 }
                 if shortestLength < 0 || thisLength < shortestLength {
