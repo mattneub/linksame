@@ -29,7 +29,7 @@ class Piece : UIView {
             // that way, we don't have to fetch picture each time we draw ourself
             // perhaps this is no savings of time and a waste of memory, I've no idea
             // but hey, the pictures are tiny
-            let path = Bundle.main().pathForResource(self.picName, ofType: "png", inDirectory:"foods")
+            let path = Bundle.main.pathForResource(self.picName, ofType: "png", inDirectory:"foods")
             self.pic = UIImage(contentsOfFile:path!)
         }
     }

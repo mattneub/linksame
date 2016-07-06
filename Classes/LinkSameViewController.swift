@@ -7,9 +7,9 @@ func delay(_ delay:Double, closure:()->()) {
     DispatchQueue.main.after(when: when, execute: closure)
 }
 
-let ud = UserDefaults.standard()
+let ud = UserDefaults.standard
 
-let nc = NotificationCenter.default()
+let nc = NotificationCenter.default
 
 infix operator <<< {
 associativity none
@@ -91,7 +91,7 @@ struct Styles {
 
 
 
-class LinkSameViewController : UIViewController {
+class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
     private var score = 0
     private var scoreAtStartOfStage = 0
@@ -333,7 +333,7 @@ class LinkSameViewController : UIViewController {
     }
     
     // delegate from previous, called when animation ends
-    override func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
         if anim.value(forKey: "name") as? NSString == "boardReplacement" {
             // set and animated showing of "stage" label
             UIView.transition(with: self.stageLabel, duration: 0.4,
@@ -587,7 +587,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         let vc = UIViewController()
         let wv = UIWebView()
         wv.backgroundColor = UIColor.white() // new, fix background
-        let path = Bundle.main().pathForResource("linkhelp", ofType: "html")!
+        let path = Bundle.main.pathForResource("linkhelp", ofType: "html")!
         let s = try! String(contentsOfFile:path, encoding:.utf8)
         wv.loadHTMLString(s, baseURL: nil)
         vc.view = wv

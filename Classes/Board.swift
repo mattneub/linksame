@@ -89,7 +89,7 @@ struct Grid {
     }
 }
 
-final class Board : NSObject, NSCoding {
+final class Board : NSObject, NSCoding, CALayerDelegate {
     
     typealias Point = (Int,Int)
     typealias Path = [Point]
@@ -237,7 +237,7 @@ final class Board : NSObject, NSCoding {
         var deck = self.deckAtStartOfStage
         for i in 0..<self.xct {
             for j in 0..<self.yct {
-                if let oldPiece = self.pieceAt(i,j) {
+                if let oldPiece = self.piece(at:(i,j)) {
                     self.removePiece(oldPiece)
                 }
                 self.addPieceAt((i,j), withPicture: deck.removeLast()) // heh heh, pops and returns
@@ -254,7 +254,7 @@ final class Board : NSObject, NSCoding {
             var deck = [String]()
             for i in 0 ..< self.xct {
                 for j in 0 ..< self.yct {
-                    let piece = self.pieceAt((i,j))
+                    let piece = self.piece(at:(i,j))
                     if piece == nil {
                         continue
                     }
@@ -268,7 +268,7 @@ final class Board : NSObject, NSCoding {
             ui(true)
             for i in 0 ..< self.xct {
                 for j in 0 ..< self.yct {
-                    let piece = self.pieceAt((i,j))
+                    let piece = self.piece(at:(i,j))
                     if let piece = piece {
                         // very lightweight; we just assign the name, let the piece worry about the picture
                         UIView.transition(with: piece, duration: 0.7, options: .transitionFlipFromLeft, animations: {
@@ -306,7 +306,7 @@ final class Board : NSObject, NSCoding {
     // thus we are handed a context and we can just draw directly into it
     // the layer is holding an array of NSValues wrapping CGPoints that tells us what path to draw!
     
-    override func draw(_ layer: CALayer, in con: CGContext) {
+    func draw(_ layer: CALayer, in con: CGContext) {
         let arr = layer.value(forKey: "arr") as! [NSValue]
         // unwrap arr to CGPoints, unwrap to a pair of integers
         let arr2 : Path = arr.map {let pt = $0.cgPointValue(); return (Int(pt.x),Int(pt.y))}
@@ -342,7 +342,7 @@ final class Board : NSObject, NSCoding {
         }
     }
     
-    private func pieceAt(_ p:Point) -> Piece? {
+    private func piece(at p:Point) -> Piece? {
         let (i,j) = p
         // it is legal to ask for piece one slot outside boundaries, but not further
         assert(i >= -1 && i <= self.xct, "Piece requested out of bounds (x)")
@@ -420,7 +420,7 @@ final class Board : NSObject, NSCoding {
                 (start,end) = (p2,p1)
             }
             for i in start.1+1 ..< end.1 {
-                if self.pieceAt((p1.x,i)) != nil {
+                if self.piece(at:(p1.x,i)) != nil {
                     return false
                 }
             }
@@ -431,7 +431,7 @@ final class Board : NSObject, NSCoding {
                 (start,end) = (p2,p1)
             }
             for i in start.0+1 ..< end.0 {
-                if self.pieceAt((i,p1.y)) != nil {
+                if self.piece(at:(i,p1.y)) != nil {
                     return false
                 }
             }
@@ -453,7 +453,7 @@ final class Board : NSObject, NSCoding {
         // return true // testing game end
         for x in 0..<self.xct {
             for y in 0..<self.yct {
-                if self.pieceAt((x,y)) != nil {
+                if self.piece(at:(x,y)) != nil {
                     return false
                 }
             }
@@ -488,7 +488,7 @@ final class Board : NSObject, NSCoding {
     // TODO: look into it
     
     private func movePiece(_ p:Piece, to newPoint:(Int,Int)) {
-        assert(self.pieceAt(newPoint) == nil, "Slot to move piece to must be empty")
+        assert(self.piece(at:newPoint) == nil, "Slot to move piece to must be empty")
         // move the piece within the *grid*
         let s = p.picName
         let oldFrame = p.frame
@@ -497,7 +497,7 @@ final class Board : NSObject, NSCoding {
         // however, we are not yet redrawn, so now...
         // return piece to its previous position! but add to movenda
         // later call to moveMovenda will thus animate it into correct position
-        let pnew = self.pieceAt(newPoint)!
+        let pnew = self.piece(at:newPoint)!
         pnew.frame = oldFrame
         self.movenda += [pnew]
     }
@@ -539,11 +539,11 @@ final class Board : NSObject, NSCoding {
             for x in 0..<self.xct {
                 // for (var y = self.yct - 1; y > 0; y--) {
                 for y in self.yct>>>0 { // not an exact match for my original C version, but simpler
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var yt = y-1; yt >= 0; yt--) {
                         for yt in y>>>0 {
-                            let piece2 = self.pieceAt((x,yt))
+                            let piece2 = self.piece(at:(x,yt))
                             if piece2 == nil {
                                 continue
                             }
@@ -559,11 +559,11 @@ final class Board : NSObject, NSCoding {
             for y in 0..<self.yct {
                 // for (var x = self.xct - 1; x > 0; x--) {
                 for x in self.xct>>>0 {
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var xt = x-1; xt >= 0; xt--) {
                         for xt in x>>>0 {
-                            let piece2 = self.pieceAt((xt,y))
+                            let piece2 = self.piece(at:(xt,y))
                             if piece2 == nil {
                                 continue
                             }
@@ -581,11 +581,11 @@ final class Board : NSObject, NSCoding {
             for x in 0..<self.xct {
                 // for (var y = center - 1; y > 0; y--) {
                 for y in center>>>0 {
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var yt = y-1; yt >= 0; yt--) {
                         for yt in y>>>0 {
-                            let piece2 = self.pieceAt((x,yt))
+                            let piece2 = self.piece(at:(x,yt))
                             if piece2 == nil {
                                 continue
                             }
@@ -596,11 +596,11 @@ final class Board : NSObject, NSCoding {
                 }
                 // for (var y = center; y <= self.yct - 1; y++) {
                 for y in center..<self.yct {
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var yt = y+1; yt < self.yct; yt++) {
                         for yt in y+1..<self.yct {
-                            let piece2 = self.pieceAt((x,yt))
+                            let piece2 = self.piece(at:(x,yt))
                             if piece2 == nil {
                                 continue
                             }
@@ -618,11 +618,11 @@ final class Board : NSObject, NSCoding {
             for y in 0..<self.yct {
                 // for (var x = center-1; x > 0; x--) {
                 for x in center>>>0 {
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var xt = x-1; xt >= 0; xt--) {
                         for xt in x>>>0 {
-                            let piece2 = self.pieceAt((xt,y))
+                            let piece2 = self.piece(at:(xt,y))
                             if piece2 == nil {
                                 continue
                             }
@@ -633,11 +633,11 @@ final class Board : NSObject, NSCoding {
                 }
                 // for (var x = center; x <= self.xct - 1; x++) {
                 for x in center..<self.xct {
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var xt = x+1; xt < self.xct; xt++) {
                         for xt in x+1..<self.xct {
-                            let piece2 = self.pieceAt((xt,y))
+                            let piece2 = self.piece(at:(xt,y))
                             if piece2 == nil {
                                 continue
                             }
@@ -655,11 +655,11 @@ final class Board : NSObject, NSCoding {
             for x in 0..<self.xct {
                 // for (var y = self.yct-1; y > center; y--) {
                 for y in self.yct>>>center { // not identical to C loop, moved pivot
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var yt = y-1; yt >= center; yt--) {
                         for yt in y>>>center {
-                            let piece2 = self.pieceAt((x,yt))
+                            let piece2 = self.piece(at:(x,yt))
                             if piece2 == nil {
                                 continue
                             }
@@ -670,11 +670,11 @@ final class Board : NSObject, NSCoding {
                 }
                 // for (var y = 0; y < center-1; y++) {
                 for y in 0..<center {
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var yt = y+1; yt < center; yt++) {
                         for yt in y+1..<center {
-                            let piece2 = self.pieceAt((x,yt))
+                            let piece2 = self.piece(at:(x,yt))
                             if piece2 == nil {
                                 continue
                             }
@@ -692,11 +692,11 @@ final class Board : NSObject, NSCoding {
             for y in 0..<self.yct {
                 // for (var x = self.xct-1; x > center; x--) {
                 for x in self.xct>>>center {
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var xt = x-1; xt >= center; xt--) {
                         for xt in x>>>center {
-                            let piece2 = self.pieceAt((xt,y))
+                            let piece2 = self.piece(at:(xt,y))
                             if piece2 == nil {
                                 continue
                             }
@@ -707,11 +707,11 @@ final class Board : NSObject, NSCoding {
                 }
                 // for (var x = 0; x < center-1; x++) {
                 for x in 0..<center {
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var xt = x+1; xt < center; xt++) {
                         for xt in x..<center { // not identical
-                            let piece2 = self.pieceAt((xt,y))
+                            let piece2 = self.piece(at:(xt,y))
                             if piece2 == nil {
                                 continue
                             }
@@ -729,11 +729,11 @@ final class Board : NSObject, NSCoding {
             for x in 0..<center {
                 // for (var y = self.yct - 1; y > 0; y--) {
                 for y in self.yct>>>0 {
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var yt = y-1; yt >= 0; yt--) {
                         for yt in y>>>0 {
-                            let piece2 = self.pieceAt((x,yt))
+                            let piece2 = self.piece(at:(x,yt))
                             if piece2 == nil {
                                 continue
                             }
@@ -747,11 +747,11 @@ final class Board : NSObject, NSCoding {
             for x in center..<self.xct {
                 // for (var y = 0; y < self.yct-1; y++) {
                 for y in 0..<self.yct {
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var yt = y+1; yt < self.yct; yt++) {
                         for yt in y..<self.yct {
-                            let piece2 = self.pieceAt((x,yt))
+                            let piece2 = self.piece(at:(x,yt))
                             if piece2 == nil {
                                 continue
                             }
@@ -768,11 +768,11 @@ final class Board : NSObject, NSCoding {
             for y in 0..<center {
                 // for (var x = self.xct - 1; x > 0; x--) {
                 for x in self.xct>>>0 {
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var xt = x-1; xt >= 0; xt--) {
                         for xt in x>>>0 {
-                            let piece2 = self.pieceAt((xt,y))
+                            let piece2 = self.piece(at:(xt,y))
                             if piece2 == nil {
                                 continue
                             }
@@ -786,11 +786,11 @@ final class Board : NSObject, NSCoding {
             for y in center..<self.yct {
                 // for (var x = 0; x < self.xct-1; x++) {
                 for x in 0..<self.xct {
-                    let piece = self.pieceAt((x,y))
+                    let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var xt = x+1; xt < self.xct; xt++) {
                         for xt in x..<self.xct {
-                            let piece2 = self.pieceAt((xt,y))
+                            let piece2 = self.piece(at:(xt,y))
                             if piece2 == nil {
                                 continue
                             }
@@ -855,12 +855,12 @@ final class Board : NSObject, NSCoding {
         // 2. second check: are they at the corners of a rectangle with nothing on one pair of sides between them?
         let midpt1 = (p1.x, p2.y)
         let midpt2 = (p2.x, p1.y)
-        if self.pieceAt(midpt1) == nil {
+        if self.piece(at:midpt1) == nil {
             if self.lineIsClearFrom(pt1, to:midpt1) && self.lineIsClearFrom(midpt1, to:pt2) {
                 return [pt1, midpt1, pt2]
             }
         }
-        if self.pieceAt(midpt2) == nil {
+        if self.piece(at:midpt2) == nil {
             if self.lineIsClearFrom(pt1, to:midpt2) && self.lineIsClearFrom(midpt2, to:pt2) {
                 return [pt1, midpt2, pt2]
             }
@@ -880,7 +880,7 @@ final class Board : NSObject, NSCoding {
             print("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
             // new in swift, reject if same midpoint
             if midpt1.0 == midpt2.0 && midpt1.1 == midpt2.1 {return}
-            if self.pieceAt(midpt1) == nil && self.pieceAt(midpt2) == nil {
+            if self.piece(at:midpt1) == nil && self.piece(at:midpt2) == nil {
                 if self.lineIsClearFrom(pt1, to:midpt1) &&
                     self.lineIsClearFrom(midpt1, to:midpt2) &&
                     self.lineIsClearFrom(midpt2, to:pt2) {
@@ -905,7 +905,7 @@ final class Board : NSObject, NSCoding {
             var shortestPath = Path()
             for thisPath in marr {
                 var thisLength = 0.0
-                for ix in 0..<(thisPath.count-1) {
+                for ix in thisPath.indices.dropLast() {
                     thisLength += distance(thisPath[ix],thisPath[ix+1])
                 }
                 if shortestLength < 0 || thisLength < shortestLength {
@@ -977,14 +977,14 @@ final class Board : NSObject, NSCoding {
     private func legalPath () -> Path? {
         for x in 0..<self.xct {
             for y in 0..<self.yct {
-                let piece = self.pieceAt((x,y))
+                let piece = self.piece(at:(x,y))
                 if piece == nil {
                     continue
                 }
                 let picName = piece!.picName
                 for xx in 0..<self.xct {
                     for yy in 0..<self.yct {
-                        let piece2 = self.pieceAt((xx,yy))
+                        let piece2 = self.piece(at:(xx,yy))
                         if piece2 == nil {
                             continue
                         }
