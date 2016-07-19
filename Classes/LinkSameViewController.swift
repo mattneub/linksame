@@ -527,7 +527,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         // configure the popover _after_ presentation, even though, as Apple says, this may see counterintuitive
         // it isn't really there yet, so there is time
         // configuration is thru the implicitly created popover presentation controller
-        if let pop = nav.popoverPresentationController, sender = sender as? UIBarButtonItem {
+        if let pop = nav.popoverPresentationController, let sender = sender as? UIBarButtonItem {
             pop.permittedArrowDirections = .any
             pop.barButtonItem = sender
             delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
