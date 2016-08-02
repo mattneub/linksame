@@ -4,7 +4,7 @@ import UIKit
 
 func delay(_ delay:Double, closure:()->()) {
     let when = DispatchTime.now() + delay
-    DispatchQueue.main.after(when: when, execute: closure)
+    DispatchQueue.main.asyncAfter(deadline: when, execute: closure)
 }
 
 let ud = UserDefaults.standard
@@ -309,7 +309,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     private func incrementScore (_ n:Int, resetTimer:Bool, red:Bool = false) {
         self.score += n
         self.scoreLabel.text = String(self.score)
-        self.scoreLabel.textColor = red ? UIColor.red() : UIColor.black()
+        self.scoreLabel.textColor = red ? UIColor.red : UIColor.black
         if resetTimer {
             self.resetTimer()
         }
@@ -586,8 +586,8 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         // create help from scratch
         let vc = UIViewController()
         let wv = UIWebView()
-        wv.backgroundColor = UIColor.white() // new, fix background
-        let path = Bundle.main.pathForResource("linkhelp", ofType: "html")!
+        wv.backgroundColor = UIColor.white // new, fix background
+        let path = Bundle.main.path(forResource: "linkhelp", ofType: "html")!
         let s = try! String(contentsOfFile:path, encoding:.utf8)
         wv.loadHTMLString(s, baseURL: nil)
         vc.view = wv
@@ -602,7 +602,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
             if let sender = sender as? UIBarButtonItem {
                 pop.barButtonItem = sender
             }
-            pop.backgroundColor = UIColor.white() // new - fix arrow
+            pop.backgroundColor = UIColor.white // new - fix arrow
             delay (0.01) { pop.passthroughViews = nil} // must be delayed to work
         }
     }

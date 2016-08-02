@@ -14,11 +14,11 @@ func print(_ items: Any..., separator: String = " ", terminator: String = "\n") 
 }
 
 var onPhone : Bool {
-    return UIScreen.main().traitCollection.userInterfaceIdiom == .phone
+    return UIScreen.main.traitCollection.userInterfaceIdiom == .phone
 }
 
 var on6plus : Bool {
-    return UIScreen.main().traitCollection.displayScale > 2.5
+    return UIScreen.main.traitCollection.displayScale > 2.5
 }
 
 // this can become a protocol extension, I bet!
@@ -45,9 +45,9 @@ extension RangeReplaceableCollection where Iterator.Element : Equatable {
 
 func ui(_ yn:Bool) { // false means no user interaction, true means turn it back on
     if !yn {
-        UIApplication.shared().beginIgnoringInteractionEvents()
+        UIApplication.shared.beginIgnoringInteractionEvents()
     } else {
-        UIApplication.shared().endIgnoringInteractionEvents()
+        UIApplication.shared.endIgnoringInteractionEvents()
     }
 }
 
@@ -91,7 +91,7 @@ struct Grid {
 
 final class Board : NSObject, NSCoding, CALayerDelegate {
     
-    typealias Point = (Int,Int)
+    typealias Point = (x:Int, y:Int)
     typealias Path = [Point]
     
     var view: UIView
@@ -309,7 +309,10 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     func draw(_ layer: CALayer, in con: CGContext) {
         let arr = layer.value(forKey: "arr") as! [NSValue]
         // unwrap arr to CGPoints, unwrap to a pair of integers
-        let arr2 : Path = arr.map {let pt = $0.cgPointValue(); return (Int(pt.x),Int(pt.y))}
+        let arr2 : Path = arr.map {
+            let pt = $0.cgPointValue
+            return (Int(pt.x),Int(pt.y))
+        }
         // connect the dots; however, the dots we want to connect are the *centers* of the pieces...
         // whereas we are given piece *origins*, so calculate offsets
         let sz = self.pieceSize
@@ -845,16 +848,16 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     private func checkPair(_ p1:Piece, and p2:Piece) -> Path? {
         // if not a pair, return nil
         // if a pair, return an array of successive xy positions showing the legal path
-        let pt1 = (x:p1.x, y:p1.y)
-        let pt2 = (x:p2.x, y:p2.y)
+        let pt1 : Point = (x:p1.x, y:p1.y)
+        let pt2 : Point = (x:p2.x, y:p2.y)
         // 1. first check: are they on the same line with nothing between them?
         if self.lineIsClearFrom(pt1, to:pt2) {
             return [pt1,pt2]
         }
         print("failed straight line test")
         // 2. second check: are they at the corners of a rectangle with nothing on one pair of sides between them?
-        let midpt1 = (p1.x, p2.y)
-        let midpt2 = (p2.x, p1.y)
+        let midpt1 : Point = (p1.x, p2.y)
+        let midpt2 : Point = (p2.x, p1.y)
         if self.piece(at:midpt1) == nil {
             if self.lineIsClearFrom(pt1, to:midpt1) && self.lineIsClearFrom(midpt1, to:pt2) {
                 return [pt1, midpt1, pt2]

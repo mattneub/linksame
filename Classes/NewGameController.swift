@@ -22,7 +22,7 @@ class NewGameController : UIViewController, UITableViewDelegate, UITableViewData
         super.viewDidLoad()
 
         let v = self.view
-        v?.backgroundColor = UIColor.white()
+        v?.backgroundColor = UIColor.white
         
         // unfortunately I have not found any way except to size manually like this by experimentation
         let tableHeight : CGFloat = (onPhone ? 120 : 300)
@@ -114,7 +114,7 @@ extension NewGameController {
         }
         
         cell.accessoryType = .none
-        if [ud.string(forKey: Default.style), ud.string(forKey: Default.size)].contains({$0 == cell.textLabel!.text}) {
+        if [ud.string(forKey: Default.style), ud.string(forKey: Default.size)].contains(where: {$0 == cell.textLabel!.text}) {
             cell.accessoryType = .checkmark
         }
 
