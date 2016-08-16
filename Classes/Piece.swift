@@ -22,7 +22,7 @@ import AVFoundation
 
 class Piece : UIView {
     
-    private var pic : UIImage!
+    fileprivate var pic : UIImage!
     var picName : String = "" {
         didSet {
             // when name is set, we also fetch picture and set it
@@ -36,7 +36,7 @@ class Piece : UIView {
     
     var x : Int = 0, y : Int = 0 // where we are slotted
     
-    private var hilite : Bool = false
+    fileprivate var hilite : Bool = false
     var isHilited : Bool {
         return self.hilite
     }
@@ -91,7 +91,7 @@ class Piece : UIView {
             CGPoint(x: peri.minX, y: peri.minY),
             CGPoint(x: peri.maxX, y: peri.minY)
         ]
-        context?.strokeLineSegments(between: points, count: 4)
+        context?.strokeLineSegments(between: points)
         
         // draw centered
         // grapple with what would happen if rect were smaller than pic.size

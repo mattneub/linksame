@@ -1,8 +1,9 @@
 
 
 import UIKit
+import Swift
 
-func delay(_ delay:Double, closure:()->()) {
+func delay(_ delay:Double, closure:@escaping ()->()) {
     let when = DispatchTime.now() + delay
     DispatchQueue.main.asyncAfter(deadline: when, execute: closure)
 }
@@ -11,25 +12,17 @@ let ud = UserDefaults.standard
 
 let nc = NotificationCenter.default
 
-infix operator <<< {
-associativity none
-precedence 135
-}
-
-func <<<<Bound where Bound : Comparable, Bound.Stride : Integer>
+infix operator <<< : RangeFormationPrecedence
+func <<<<Bound>
     (minimum: Bound, maximum: Bound) ->
-    CountableRange<Bound> {
+    CountableRange<Bound> where Bound : Comparable, Bound.Stride : Integer {
         return (minimum..<maximum)
 }
 
-infix operator >>> {
-associativity none
-precedence 135
-}
-
-func >>><Bound where Bound : Comparable, Bound.Stride : Integer>
+infix operator >>> : RangeFormationPrecedence
+func >>><Bound>
     (maximum: Bound, minimum: Bound) ->
-    ReversedRandomAccessCollection<CountableRange<Bound>> {
+    ReversedRandomAccessCollection<CountableRange<Bound>> where Bound : Comparable, Bound.Stride : Integer {
         return (minimum..<maximum).reversed()
 }
 
@@ -59,7 +52,7 @@ struct Sizes {
     static func sizes () -> [String] {
         return [easy, normal, hard]
     }
-    private static var easySize : (Int,Int) {
+    fileprivate static var easySize : (Int,Int) {
         var result : (Int,Int) = onPhone ? (10,6) : (12,7)
         if on6plus { result = (12,7) }
         return result
@@ -93,24 +86,24 @@ struct Styles {
 
 class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
-    private var score = 0
-    private var scoreAtStartOfStage = 0
-    private var lastTime : TimeInterval = 0
-    private var didSetUp = false
+    fileprivate var score = 0
+    fileprivate var scoreAtStartOfStage = 0
+    fileprivate var lastTime : TimeInterval = 0
+    fileprivate var didSetUp = false
     
-    private var board : Board!
-    @IBOutlet private weak var backgroundView : UIView!
-    @IBOutlet private weak var stageLabel : UILabel!
-    @IBOutlet private weak var scoreLabel : UILabel!
-    @IBOutlet private weak var prevLabel : UILabel!
-    @IBOutlet private weak var hintButton : UIBarButtonItem!
-    @IBOutlet private weak var timedPractice : UISegmentedControl!
-    @IBOutlet private weak var restartStageButton : UIBarButtonItem!
-    @IBOutlet private weak var toolbar : UIToolbar!
-    private var boardView : UIView!
-    private var popover : UIPopoverController!
-    private var oldDefs : [String : AnyObject]!
-    private var timer : Timer! { // any time the timer is to be replaced, invalidate existing timer
+    fileprivate var board : Board!
+    @IBOutlet fileprivate weak var backgroundView : UIView!
+    @IBOutlet fileprivate weak var stageLabel : UILabel!
+    @IBOutlet fileprivate weak var scoreLabel : UILabel!
+    @IBOutlet fileprivate weak var prevLabel : UILabel!
+    @IBOutlet fileprivate weak var hintButton : UIBarButtonItem!
+    @IBOutlet fileprivate weak var timedPractice : UISegmentedControl!
+    @IBOutlet fileprivate weak var restartStageButton : UIBarButtonItem!
+    @IBOutlet fileprivate weak var toolbar : UIToolbar!
+    fileprivate var boardView : UIView!
+    fileprivate var popover : UIPopoverController!
+    fileprivate var oldDefs : [String : Any]!
+    fileprivate var timer : Timer! { // any time the timer is to be replaced, invalidate existing timer
         willSet {
             self.timer?.invalidate() // to stop timer, set it to nil, we invalidate
         }
@@ -122,13 +115,13 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         }
     }
     
-    private enum InterfaceMode : Int {
+    fileprivate enum InterfaceMode : Int {
         case timed = 0
         case practice = 1
         // and these are also the indexes of the timedPractice segmented control, heh heh
     }
     
-    private var interfaceMode : InterfaceMode = .timed {
+    fileprivate var interfaceMode : InterfaceMode = .timed {
         willSet (mode) {
             let timed : Bool
             switch mode {
@@ -145,12 +138,12 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         }
     }
     
-    private struct HintButtonTitle {
+    fileprivate struct HintButtonTitle {
         static let Show = "Show Hint"
         static let Hide = "Hide Hint"
     }
     
-    private enum BoardTransition {
+    fileprivate enum BoardTransition {
         case slide
         case fade
     }
@@ -163,14 +156,14 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         fatalError("NSCoding not supported")
     }
     
-    private var scoresKey : String {
+    fileprivate var scoresKey : String {
         let size = ud.string(forKey: Default.size)
         let stages = ud.integer(forKey: Default.lastStage)
         let key = "\(size)\(stages)"
         return key
     }
     
-    private func initializeScores () {
+    fileprivate func initializeScores () {
         // current score
         self.score = 0
         self.incrementScore(0, resetTimer:false)
@@ -221,7 +214,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             // I have filed a bug on this; it's the same issue I had in 99 Bottles
             nc.addObserver(forName: .gameOver, object: nil, queue: nil) {
                 n in
-                self.prepareNewStage(n)
+                self.prepareNewStage(n as AnyObject?)
             }
             nc.addObserver(forName: .userMoved, object: nil, queue: nil) {
                 // the board notifies us that the user removed a pair of pieces
@@ -289,7 +282,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         }
     }
     
-    private func resetTimer() {
+    fileprivate func resetTimer() {
         self.timer = nil
         if self.interfaceMode == .practice {
             return // don't bother making a new timer, we were doing that (harmlessly) but why bother?
@@ -301,12 +294,12 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     }
     
     // called by timer
-    @objc private func decrementScore () {
+    @objc fileprivate func decrementScore () {
         self.incrementScore(-1, resetTimer:false, red:true)
     }
     
     // very good use case for default param; no need for most callers even to know there's a choice
-    private func incrementScore (_ n:Int, resetTimer:Bool, red:Bool = false) {
+    fileprivate func incrementScore (_ n:Int, resetTimer:Bool, red:Bool = false) {
         self.score += n
         self.scoreLabel.text = String(self.score)
         self.scoreLabel.textColor = red ? UIColor.red : UIColor.black
@@ -315,7 +308,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         }
     }
     
-    private func animateBoardTransition (_ transition: BoardTransition) {
+    fileprivate func animateBoardTransition (_ transition: BoardTransition) {
         ui(false)
         // about to animate, turn off interaction; will turn back on in delegate
         let t = CATransition()
@@ -348,7 +341,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
     // utility used only by next method: show board containing new deal
     // if new game, also set up scores and mode
-    private func newBoard(newGame:Bool) {
+    fileprivate func newBoard(newGame:Bool) {
         
         let boardTransition : BoardTransition = newGame ? .fade : .slide
         if newGame {
@@ -364,7 +357,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     // called at startup
     // called when user asks for a new game
     // called via notification when user completes a stage
-    @objc private func prepareNewStage (_ n : AnyObject?) {
+    @objc fileprivate func prepareNewStage (_ n : AnyObject?) {
         ui(false)
         // stop timer!
         // initialize time
@@ -446,7 +439,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
     // ============================ toolbar buttons =================================
     
-    @IBAction @objc private func toggleHint(_:AnyObject?) { // hintButton
+    @IBAction @objc fileprivate func toggleHint(_:AnyObject?) { // hintButton
         self.board.unhilite()
         if let v = self.board.pathView {
             if !self.board.showingHint {
@@ -469,7 +462,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         }
     }
     
-    @IBAction private func doShuffle(_:AnyObject?) {
+    @IBAction fileprivate func doShuffle(_:AnyObject?) {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
@@ -478,7 +471,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         self.incrementScore(-20, resetTimer:true, red:true)
     }
     
-    @IBAction private func doRestartStage(_:AnyObject?) {
+    @IBAction fileprivate func doRestartStage(_:AnyObject?) {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
@@ -509,7 +502,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
     Let's see...
     */
     
-    @IBAction private func doNew(_ sender:AnyObject?) {
+    @IBAction fileprivate func doNew(_ sender:AnyObject?) {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
@@ -537,7 +530,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         self.oldDefs = ud.dictionaryWithValues(forKeys: [Default.style, Default.size, Default.lastStage])
     }
     
-    @objc private func cancelNewGame() { // cancel button in new game popover
+    @objc fileprivate func cancelNewGame() { // cancel button in new game popover
         ui(false)
         self.dismiss(animated: true, completion: {_ in ui(true)})
         if (self.oldDefs != nil) {
@@ -546,7 +539,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         }
     }
     
-    @objc private func startNewGame() { // save button in new game popover; can also be called manually at launch
+    @objc fileprivate func startNewGame() { // save button in new game popover; can also be called manually at launch
         func whatToDo() {
             self.initializeScores()
             self.interfaceMode = .timed
@@ -573,7 +566,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         return true
     }
     
-    @IBAction private func doTimedPractice(_ : AnyObject?) {
+    @IBAction fileprivate func doTimedPractice(_ : AnyObject?) {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
@@ -582,7 +575,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         // and changing the interface mode changes the interface accordingly
     }
     
-    @IBAction private func doHelp(_ sender : AnyObject?) {
+    @IBAction fileprivate func doHelp(_ sender : AnyObject?) {
         // create help from scratch
         let vc = UIViewController()
         let wv = UIWebView()
@@ -623,7 +616,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
             return nil
     }
     
-    @objc private func dismissHelp(_:AnyObject) {
+    @objc fileprivate func dismissHelp(_:AnyObject) {
         self.dismiss(animated: true, completion: nil)
     }
     
