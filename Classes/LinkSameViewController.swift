@@ -579,7 +579,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         // create help from scratch
         let vc = UIViewController()
         let wv = UIWebView()
-        wv.backgroundColor = UIColor.white // new, fix background
+        wv.backgroundColor = .white // new, fix background
         let path = Bundle.main.path(forResource: "linkhelp", ofType: "html")!
         let s = try! String(contentsOfFile:path, encoding:.utf8)
         wv.loadHTMLString(s, baseURL: nil)
@@ -589,7 +589,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         if let pop = vc.popoverPresentationController {
             pop.delegate = self // adapt! on iPhone, we need a way to dismiss
         }
-        self.present(vc, animated: true, completion: nil)
+        self.present(vc, animated: true)
         if let pop = vc.popoverPresentationController {
             pop.permittedArrowDirections = .any
             if let sender = sender as? UIBarButtonItem {
