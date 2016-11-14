@@ -274,7 +274,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                         UIView.transition(with: piece, duration: 0.7, options: .transitionFlipFromLeft, animations: {
                             piece.picName = deck.removeLast()
                             piece.setNeedsDisplay()
-                            }, completion: nil)
+                            })
                     }
                 }
             }

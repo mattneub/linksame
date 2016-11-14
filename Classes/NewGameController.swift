@@ -36,28 +36,24 @@ class NewGameController : UIViewController, UITableViewDelegate, UITableViewData
         tv.register(UITableViewCell.self, forCellReuseIdentifier: cellid)
         self.tableView = tv
         tv.translatesAutoresizingMaskIntoConstraints = false
-        v?.addConstraints(
-            NSLayoutConstraint.constraints(withVisualFormat: "H:|[tv]|", options: [], metrics: nil, views: ["tv":tv])
-        )
-        v?.addConstraints(
+        NSLayoutConstraint.activate([
+            NSLayoutConstraint.constraints(withVisualFormat: "H:|[tv]|", options: [], metrics: nil, views: ["tv":tv]),
             NSLayoutConstraint.constraints(withVisualFormat: "V:|-(0)-[tv(tableHeight)]", options: [],
                 metrics: ["tableHeight":tableHeight],
                 views: ["tv":tv])
-        )
+            ].flatMap{$0})
         
         let pv = UIPickerView()
         pv.translatesAutoresizingMaskIntoConstraints = false
         pv.dataSource = self
         pv.delegate = self
         v?.addSubview(pv)
-        v?.addConstraints(
-            NSLayoutConstraint.constraints(withVisualFormat: "H:|[pv]|", options: [], metrics: nil, views: ["pv":pv])
-        )
-        v?.addConstraints(
+        NSLayoutConstraint.activate([
+            NSLayoutConstraint.constraints(withVisualFormat: "H:|[pv]|", options: [], metrics: nil, views: ["pv":pv]),
             NSLayoutConstraint.constraints(withVisualFormat: "V:[tv]-(0)-[pv]", options: [],
                 metrics: nil,
                 views: ["tv":tv, "pv":pv])
-        )
+            ].flatMap{$0})
         pv.showsSelectionIndicator = true
         pv.selectRow(ud.integer(forKey: Default.lastStage), inComponent: 0, animated: false)
 

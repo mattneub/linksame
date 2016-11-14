@@ -15,7 +15,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             Default.lastStage: 8, // meaning 0-thru-8, so there will be nine
             ])
         
-        self.window = UIWindow(frame:UIScreen.main.bounds)
+        self.window = self.window ?? UIWindow()
         self.window!.rootViewController = LinkSameViewController()
         self.window!.backgroundColor = .white
         self.window!.makeKeyAndVisible()

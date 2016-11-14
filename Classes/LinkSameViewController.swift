@@ -2,6 +2,7 @@
 
 import UIKit
 import Swift
+import WebKit
 
 func delay(_ delay:Double, closure:@escaping ()->()) {
     let when = DispatchTime.now() + delay
@@ -101,7 +102,6 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     @IBOutlet fileprivate weak var restartStageButton : UIBarButtonItem!
     @IBOutlet fileprivate weak var toolbar : UIToolbar!
     fileprivate var boardView : UIView!
-    fileprivate var popover : UIPopoverController!
     fileprivate var oldDefs : [String : Any]!
     fileprivate var timer : Timer! { // any time the timer is to be replaced, invalidate existing timer
         willSet {
@@ -177,10 +177,9 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     }
     
     override func viewDidLayoutSubviews() {
-        if self.didSetUp {
-            return
-        }
+        guard !self.didSetUp else { return }
         self.didSetUp = true
+        
         ui(false)
         // increase font size on 6 plus
         if on6plus {
@@ -192,8 +191,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         // one-time launch initializations of model and interface
         self.initializeScores()
         // fix width of hint button to accomodate new labels Show Hint and Hide Hint
-        self.hintButton?.possibleTitles =
-            Set([HintButtonTitle.Show, HintButtonTitle.Hide])
+        self.hintButton?.possibleTitles = [HintButtonTitle.Show, HintButtonTitle.Hide]
         self.hintButton?.title = HintButtonTitle.Show
         // return; // uncomment for launch image screen shot
         // have we a state saved from prior practice? (non-practice game is not saved as board data!)
@@ -210,74 +208,71 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             self.startNewGame()
         }
         ui(true)
-        delay(2) { // delay to prevent didBecomeActive being called immediately
-            // I have filed a bug on this; it's the same issue I had in 99 Bottles
-            nc.addObserver(forName: .gameOver, object: nil, queue: nil) {
-                n in
-                self.prepareNewStage(n as AnyObject?)
+        
+        // delay(2) { // delay to prevent didBecomeActive being called immediately
+        // removed the delay: we no longer run on iOS 8, so we no longer have to worry about this bug
+
+        nc.addObserver(forName: .gameOver, object: nil, queue: nil) { n in
+            self.prepareNewStage(n as AnyObject?)
+        }
+        nc.addObserver(forName: .userMoved, object: nil, queue: nil) { _ in
+            // the board notifies us that the user removed a pair of pieces
+            // track time between moves, award points (and remember, points mean prizes)
+            let now = Date.timeIntervalSinceReferenceDate
+            let diff = now - self.lastTime
+            self.lastTime = now
+            var bonus = 0
+            if diff < 10 {
+                bonus = Int((10.0/diff).rounded(.up))
             }
-            nc.addObserver(forName: .userMoved, object: nil, queue: nil) {
-                // the board notifies us that the user removed a pair of pieces
-                // track time between moves, award points (and remember, points mean prizes)
-                _ in
-                let now = Date.timeIntervalSinceReferenceDate
-                let diff = now - self.lastTime
-                self.lastTime = now
-                var bonus = 0
-                if diff < 10 {
-                    bonus = Int(ceil(10.0/diff))
-                }
-                self.incrementScore(1 + bonus, resetTimer:true)
+            self.incrementScore(1 + bonus, resetTimer:true)
+        }
+        nc.addObserver(forName: .UIApplicationWillResignActive, object: nil, queue: nil) { _ in
+            // remove hint
+            if self.board.showingHint {
+                self.toggleHint(nil)
             }
-            nc.addObserver(forName: .UIApplicationWillResignActive, object: nil, queue: nil) {
-                _ in
-                // remove hint
-                if self.board.showingHint {
-                    self.toggleHint(nil)
-                }
-                // stop timer
+            // stop timer
+            self.timer = nil
+            // dismiss popover if any; counts as cancelling, so restore defaults if needed
+            self.dismiss(animated: false)
+            if (self.oldDefs != nil) {
+                ud.setValuesForKeys(self.oldDefs)
+                self.oldDefs = nil
+            }
+        }
+        nc.addObserver(forName: .UIApplicationDidBecomeActive, object: nil, queue: nil) {
+            _ in
+            // if we are coming back from mere deactivation, just restart the timer
+            self.resetTimer()
+            // but if we are coming back from suspension, and if we are in timed mode...
+            // ... we have created a whole new game; in that case, don't start the timer
+            if self.score == 0 {
                 self.timer = nil
-                // dismiss popover if any; counts as cancelling, so restore defaults if needed
-                self.dismiss(animated: false, completion: nil)
-                if (self.oldDefs != nil) {
-                    ud.setValuesForKeys(self.oldDefs)
-                    self.oldDefs = nil
-                }
             }
-            nc.addObserver(forName: .UIApplicationDidBecomeActive, object: nil, queue: nil) {
-                _ in
-                // if we are coming back from mere deactivation, just restart the timer
-                self.resetTimer()
-                // but if we are coming back from suspension, and if we are in timed mode...
-                // ... we have created a whole new game; in that case, don't start the timer
-                if self.score == 0 {
-                    self.timer = nil
-                }
-                // show the board view, just in case it was hidden on suspension
-                self.boardView?.isHidden = false
+            // show the board view, just in case it was hidden on suspension
+            self.boardView?.isHidden = false
+        }
+        nc.addObserver(forName: .UIApplicationDidEnterBackground, object: nil, queue: nil) { _ in
+            // set up board data defaults
+            // user cannot escape the timer by suspending the app; the game just ends if we background
+            switch self.interfaceMode {
+            case .timed: // timed, make sure there is no saved board data
+                ud.removeObject(forKey: Default.boardData)
+                // hide the game, stop the timer, kill the score; snapshot will capture blank background
+                self.boardView.isHidden = true
+                self.initializeScores()
+                self.timer = nil
+            case .practice: // practice, save out board state
+                let boardData = NSKeyedArchiver.archivedData(withRootObject: self.board)
+                ud.set(boardData, forKey:Default.boardData)
             }
-            nc.addObserver(forName: .UIApplicationDidEnterBackground, object: nil, queue: nil) {
-                _ in
-                // set up board data defaults
-                // user cannot escape the timer by suspending the app; the game just ends if we background
-                switch self.interfaceMode {
-                case .timed: // timed, make sure there is no saved board data
-                    ud.removeObject(forKey: Default.boardData)
-                    // hide the game, stop the timer, kill the score; snapshot will capture blank background
-                    self.boardView.isHidden = true
-                    self.initializeScores()
-                    self.timer = nil
-                case .practice: // practice, save out board state
-                    let boardData = NSKeyedArchiver.archivedData(withRootObject: self.board)
-                    ud.set(boardData, forKey:Default.boardData)
-                }
-            }
-            nc.addObserver(forName: .UIApplicationWillEnterForeground, object: nil, queue: nil) {
-                // if there is no saved board, start the whole game over
-                _ in
-                if ud.object(forKey: Default.boardData) == nil {
-                    self.startNewGame()
-                }
+        }
+        nc.addObserver(forName: .UIApplicationWillEnterForeground, object: nil, queue: nil) {
+            // if there is no saved board, start the whole game over
+            _ in
+            if ud.object(forKey: Default.boardData) == nil {
+                self.startNewGame()
             }
         }
     }
@@ -342,7 +337,6 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     // utility used only by next method: show board containing new deal
     // if new game, also set up scores and mode
     fileprivate func newBoard(newGame:Bool) {
-        
         let boardTransition : BoardTransition = newGame ? .fade : .slide
         if newGame {
             self.initializeScores()
@@ -423,7 +417,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
                         title: "Cool!", style: .cancel, handler:  {
                             _ in self.newBoard(newGame:true)
                     }))
-                    self.present(alert, animated: true, completion:nil)
+                    self.present(alert, animated: true)
                 } else {
                     // user was doing a practice game
                     self.newBoard(newGame:true)
@@ -486,21 +480,13 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             self.timer = nil // stop timer and wait
             self.animateBoardTransition(.fade)
         }))
-        self.present(alert, animated: true, completion: nil)
+        self.present(alert, animated: true)
     }
     
     
 }
 
 extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
-    
-    // === popovers ===
-    
-    /*
-    So in iOS 8 Apple has tried to solve the popover problem at last!
-    A popover is just a style of presented view controller. No need to retain a reference to it, therefore.
-    Let's see...
-    */
     
     @IBAction fileprivate func doNew(_ sender:AnyObject?) {
         if self.board.showingHint {
@@ -516,15 +502,12 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         dlg.navigationItem.leftBarButtonItem = b2
         let nav = UINavigationController(rootViewController: dlg)
         nav.modalPresentationStyle = .popover // *
-        self.present(nav, animated: true, completion: nil)
-        // configure the popover _after_ presentation, even though, as Apple says, this may see counterintuitive
-        // it isn't really there yet, so there is time
-        // configuration is thru the implicitly created popover presentation controller
+        self.present(nav, animated: true)
         if let pop = nav.popoverPresentationController, let sender = sender as? UIBarButtonItem {
             pop.permittedArrowDirections = .any
             pop.barButtonItem = sender
             delay (0.01) { pop.passthroughViews = nil } // must be delayed to work
-            pop.delegate = self // this is a whole new delegate protocol, of course
+            pop.delegate = self
         }
         // save defaults so we can restore them later if user cancels
         self.oldDefs = ud.dictionaryWithValues(forKeys: [Default.style, Default.size, Default.lastStage])
@@ -555,6 +538,8 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
     
     // this should now never happen, because I've made this popover modal
     func popoverPresentationControllerShouldDismissPopover(_ pop: UIPopoverPresentationController) -> Bool {
+        fatalError("this code isn't supposed to be called")
+        /*
         // we can identify which popover it is because it is our presentedViewController
         if pop.presentedViewController is UINavigationController {
             if (self.oldDefs != nil) {
@@ -564,6 +549,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
             }
         }
         return true
+ */
     }
     
     @IBAction fileprivate func doTimedPractice(_ : AnyObject?) {
@@ -578,7 +564,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
     @IBAction fileprivate func doHelp(_ sender : AnyObject?) {
         // create help from scratch
         let vc = UIViewController()
-        let wv = UIWebView()
+        let wv = WKWebView()
         wv.backgroundColor = .white // new, fix background
         let path = Bundle.main.path(forResource: "linkhelp", ofType: "html")!
         let s = try! String(contentsOfFile:path, encoding:.utf8)
@@ -604,11 +590,12 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         for controller: UIPresentationController) -> UIModalPresentationStyle {
             return .fullScreen
     }
+    
     func presentationController(_ controller: UIPresentationController,
         viewControllerForAdaptivePresentationStyle style:
         UIModalPresentationStyle) -> UIViewController? {
             let vc = controller.presentedViewController
-            if vc.view is UIWebView {
+            if vc.view is WKWebView {
                 let nav = UINavigationController(rootViewController: vc)
                 vc.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Done", style: .plain, target: self, action: #selector(dismissHelp))
                 return nav
@@ -617,7 +604,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
     }
     
     @objc fileprivate func dismissHelp(_:AnyObject) {
-        self.dismiss(animated: true, completion: nil)
+        self.dismiss(animated: true)
     }
     
 }
@@ -657,7 +644,7 @@ extension LinkSameViewController { // hamburger button on phone
             _ in
             self.doHelp(nil)
         }))
-        self.present(action, animated: true, completion: nil)
+        self.present(action, animated: true)
     }
     
 
