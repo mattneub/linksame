@@ -536,10 +536,11 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         }
     }
     
-    // this should now never happen, because I've made this popover modal
+    // no longer needed: we only care if it is the New Game popover, and it won't be
+    // because the New Game popover is now modal
+    
+    /*
     func popoverPresentationControllerShouldDismissPopover(_ pop: UIPopoverPresentationController) -> Bool {
-        fatalError("this code isn't supposed to be called")
-        /*
         // we can identify which popover it is because it is our presentedViewController
         if pop.presentedViewController is UINavigationController {
             if (self.oldDefs != nil) {
@@ -549,8 +550,8 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
             }
         }
         return true
- */
     }
+ */
     
     @IBAction fileprivate func doTimedPractice(_ : AnyObject?) {
         if self.board.showingHint {
@@ -565,13 +566,16 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
         // create help from scratch
         let vc = UIViewController()
         let wv = WKWebView()
+        
         wv.backgroundColor = .white // new, fix background
         let path = Bundle.main.path(forResource: "linkhelp", ofType: "html")!
-        let s = try! String(contentsOfFile:path, encoding:.utf8)
+        var s = try! String.init(contentsOfFile: path)
+        s = s.replacingOccurrences(of: "FIXME", with: (!onPhone || on6plus) ? "12" : "9") // fix text size issue
         wv.loadHTMLString(s, baseURL: nil)
+        print(s)
         vc.view = wv
         vc.modalPresentationStyle = .popover
-        vc.preferredContentSize = CGSize(width: 450,height: 800) // NB! setting ppc's popoverContentSize didn't work
+        vc.preferredContentSize = CGSize(width: 450, height: 800) // setting ppc's popoverContentSize failed
         if let pop = vc.popoverPresentationController {
             pop.delegate = self // adapt! on iPhone, we need a way to dismiss
         }
