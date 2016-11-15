@@ -22,17 +22,7 @@ import AVFoundation
 
 class Piece : UIView {
     
-    fileprivate var pic : UIImage!
-    var picName : String = "" {
-        didSet {
-            // when name is set, we also fetch picture and set it
-            // that way, we don't have to fetch picture each time we draw ourself
-            // perhaps this is no savings of time and a waste of memory, I've no idea
-            // but hey, the pictures are tiny
-            let path = Bundle.main.path(forResource: self.picName, ofType: "png", inDirectory:"foods")
-            self.pic = UIImage(contentsOfFile:path!)
-        }
-    }
+    var picName : String
     
     var x : Int = 0, y : Int = 0 // where we are slotted
     
@@ -44,24 +34,28 @@ class Piece : UIView {
     override var description : String {
         return "picname: \(picName); x: \(x); y: \(y)"
     }
-    
-    // interestingly, we MUST implement initWithFrame, even though we do nothing
-    // we cannot merely inherit it
-    
-    override init(frame:CGRect) {
+        
+    init(picName:String, frame:CGRect) {
+        self.picName = picName
         super.init(frame:frame)
     }
     
+    struct CoderKey {
+        static let x = "x"
+        static let y = "y"
+        static let picName = "picName"
+    }
+    
     override func encode(with coder: NSCoder) {
-        coder.encode(self.x, forKey:"x")
-        coder.encode(self.y, forKey:"y")
-        coder.encode(self.picName, forKey:"picName")
+        coder.encode(self.x, forKey:CoderKey.x)
+        coder.encode(self.y, forKey:CoderKey.y)
+        coder.encode(self.picName, forKey:CoderKey.picName)
     }
     
     required init(coder: NSCoder) {
-        self.x = coder.decodeInteger(forKey: "x")
-        self.y = coder.decodeInteger(forKey: "y")
-        self.picName = coder.decodeObject(forKey: "picName") as! String
+        self.x = coder.decodeInteger(forKey:CoderKey.x)
+        self.y = coder.decodeInteger(forKey:CoderKey.y)
+        self.picName = coder.decodeObject(forKey:CoderKey.picName) as! String
         super.init(frame:CGRect(x: 0,y: 0,width: 0,height: 0)) // dummy value
     }
     
@@ -93,6 +87,10 @@ class Piece : UIView {
         ]
         context?.strokeLineSegments(between: points)
         
+//        let path = Bundle.main.path(forResource: self.picName, ofType: "png", inDirectory:"foods")!
+//        let pic = UIImage(contentsOfFile:path)!
+        // get picture; little-known fact, we can have the caching of UIImage(named:) for folder-contained image
+        let pic = UIImage(named:"foods/\(self.picName)")!
         // draw centered
         // grapple with what would happen if rect were smaller than pic.size
         let inset : CGFloat = 4
@@ -102,7 +100,7 @@ class Piece : UIView {
             let smallerrect = AVMakeRect(aspectRatio: pic.size, insideRect: maxrect)
             drawrect = maxrect.centeredRectOfSize(smallerrect.size)
         }
-        self.pic.draw(in: drawrect)
+        pic.draw(in: drawrect)
     }
     
     func toggleHilite () {

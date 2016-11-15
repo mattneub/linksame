@@ -5,7 +5,7 @@ import Swift
 
 fileprivate let cellid = "Cell"
 
-class NewGameController : UIViewController, UITableViewDelegate, UITableViewDataSource {
+class NewGameController : UIViewController {
     weak var tableView : UITableView!
     
     init () {
@@ -61,8 +61,7 @@ class NewGameController : UIViewController, UITableViewDelegate, UITableViewData
     }
 }
 
-extension NewGameController {
-    @objc(numberOfSectionsInTableView:)
+extension NewGameController : UITableViewDelegate, UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
         return onPhone ? 1 : 2 // on iPhone, omit second (Size) section: there is just one size
     }
@@ -93,7 +92,6 @@ extension NewGameController {
         }
     }
 
-    @objc(tableView:cellForRowAtIndexPath:)
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: cellid, for:indexPath)
         
@@ -110,14 +108,14 @@ extension NewGameController {
         }
         
         cell.accessoryType = .none
-        if [ud.string(forKey: Default.style), ud.string(forKey: Default.size)].contains(where: {$0 == cell.textLabel!.text}) {
+        let currentDefaults = [ud.string(forKey: Default.style), ud.string(forKey: Default.size)]
+        if currentDefaults.contains(where: {$0 == cell.textLabel!.text}) {
             cell.accessoryType = .checkmark
         }
 
         return cell
     }
 
-    @objc(tableView:didSelectRowAtIndexPath:)
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         if let setting = tableView.cellForRow(at: indexPath)?.textLabel?.text {
             ud.set(setting, forKey: self.tableView(tableView, titleForHeaderInSection:indexPath.section)!)

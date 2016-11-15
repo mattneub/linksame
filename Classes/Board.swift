@@ -21,22 +21,8 @@ var on6plus : Bool {
     return UIScreen.main.traitCollection.displayScale > 2.5
 }
 
-// this can become a protocol extension, I bet!
-// yep, here we go
-
-/*
-
-func removeObject<T:Equatable>(inout arr:Array<T>, _ object:T) -> T? {
-    if let found = arr.indexOf(object) {
-        return arr.removeAtIndex(found)
-    }
-    return nil
-}
-
-*/
-
 extension RangeReplaceableCollection where Iterator.Element : Equatable {
-    mutating func removeObject(_ object:Self.Iterator.Element) {
+    mutating func remove(object:Self.Iterator.Element) {
         if let found = self.index(of: object) {
             self.remove(at: found)
         }
@@ -128,19 +114,8 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         self.view = UIView(frame:boardFrame)
         self.grid = Grid(gridSize.0, gridSize.1) // used to have Grid(gridSize) but now deprecated! :(
         super.init()
-        self.createPathView()
-    }
-    
-    fileprivate struct Coder {
-        static let grid = "gridsw"
-        static let x = "xctsw"
-        static let y = "yctsw"
-        static let stage = "stagesw"
-        static let size = "piecesizesw"
-        static let frame = "framesw"
-    }
-    
-    fileprivate func createPathView() {
+
+        // create the path view
         // board is now completely empty
         // place invisible view on top of it; this is where paths will be drawn
         // board will draw directly into its layer using layer delegate's drawLayer:inContext:
@@ -152,6 +127,16 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         v.layer.addSublayer(lay)
         lay.frame = v.layer.bounds
         self.view.addSubview(v)
+
+    }
+    
+    fileprivate struct CoderKey {
+        static let grid = "gridsw"
+        static let x = "xctsw"
+        static let y = "yctsw"
+        static let stage = "stagesw"
+        static let size = "piecesizesw"
+        static let frame = "framesw"
     }
     
     func encode(with coder: NSCoder) {
@@ -165,27 +150,27 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                 saveableGrid.append( piece?.picName ?? "" )
             }
         }
-        coder.encode(saveableGrid, forKey: Coder.grid)
-        coder.encode(self.xct, forKey: Coder.x)
-        coder.encode(self.yct, forKey: Coder.y)
-        coder.encode(self.stage, forKey: Coder.stage)
-        coder.encode(self.pieceSize, forKey: Coder.size)
-        coder.encode(self.view.frame, forKey: Coder.frame)
+        coder.encode(saveableGrid, forKey: CoderKey.grid)
+        coder.encode(self.xct, forKey: CoderKey.x)
+        coder.encode(self.yct, forKey: CoderKey.y)
+        coder.encode(self.stage, forKey: CoderKey.stage)
+        coder.encode(self.pieceSize, forKey: CoderKey.size)
+        coder.encode(self.view.frame, forKey: CoderKey.frame)
     }
     
     // little-known fact: you have to implement init(coder:), but no law says it cannot be a convenience initializer!
     // thus we can eliminate repetition by calling the other initializer
     
     required convenience init(coder: NSCoder) {
-        let xct = coder.decodeInteger( forKey: Coder.x )
-        let yct = coder.decodeInteger( forKey: Coder.y )
-        let frame = coder.decodeCGRect( forKey: Coder.frame )
+        let xct = coder.decodeInteger( forKey: CoderKey.x )
+        let yct = coder.decodeInteger( forKey: CoderKey.y )
+        let frame = coder.decodeCGRect( forKey: CoderKey.frame )
         self.init(boardFrame:frame, gridSize:(xct,yct))
         
-        self.stage = coder.decodeInteger( forKey: Coder.stage )
-        self.pieceSize = coder.decodeCGSize( forKey: Coder.size )
+        self.stage = coder.decodeInteger( forKey: CoderKey.stage )
+        self.pieceSize = coder.decodeCGSize( forKey: CoderKey.size )
         
-        var flatGrid = coder.decodeObject( forKey: Coder.grid ) as! [String]
+        var flatGrid = coder.decodeObject( forKey: CoderKey.grid ) as! [String]
         for i in 0 ..< self.xct {
             for j in 0 ..< self.yct {
                 let picname = flatGrid.remove(at: 0)
@@ -363,8 +348,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         let sz = self.pieceSize
         let orig = self.originOf(p)
         let f = CGRect(origin: orig, size: sz)
-        let piece = Piece(frame:f)
-        piece.picName = picTitle
+        let piece = Piece(picName:picTitle, frame:f)
         // place the Piece in the interface
         // we are conscious that we must not accidentally draw on top of the transparency view
         if let pathView = self.pathView {
@@ -959,7 +943,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
             }
             self.hilitedPieces += [p]
         } else {
-            self.hilitedPieces.removeObject(p) // see utility at top
+            self.hilitedPieces.remove(object:p) // see utility at top
         }
         p.toggleHilite()
         if self.hilitedPieces.count == 2 {
