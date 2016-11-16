@@ -435,22 +435,21 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
     @IBAction @objc fileprivate func toggleHint(_:AnyObject?) { // hintButton
         self.board.unhilite()
-        if let v = self.board.pathView {
-            if !self.board.showingHint {
-                self.hintButton?.title = HintButtonTitle.Hide
-                self.incrementScore(-10, resetTimer:true, red:true)
-                self.board.hint()
-                // if user taps board now, this should have just the same effect as tapping button
-                // so, attach gesture rec
-                let t = UITapGestureRecognizer(target: self, action: #selector(toggleHint))
-                v.addGestureRecognizer(t)
-            } else {
-                self.hintButton?.title = HintButtonTitle.Show
-                self.board.unilluminate()
-                if let gs = v.gestureRecognizers {
-                    for g in gs {
-                        v.removeGestureRecognizer(g)
-                    }
+        let v = self.board.pathView
+        if !self.board.showingHint {
+            self.hintButton?.title = HintButtonTitle.Hide
+            self.incrementScore(-10, resetTimer:true, red:true)
+            self.board.hint()
+            // if user taps board now, this should have just the same effect as tapping button
+            // so, attach gesture rec
+            let t = UITapGestureRecognizer(target: self, action: #selector(toggleHint))
+            v.addGestureRecognizer(t)
+        } else {
+            self.hintButton?.title = HintButtonTitle.Show
+            self.board.unilluminate()
+            if let gs = v.gestureRecognizers {
+                for g in gs {
+                    v.removeGestureRecognizer(g)
                 }
             }
         }

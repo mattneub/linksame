@@ -80,25 +80,22 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     typealias Point = (x:Int, y:Int)
     typealias Path = [Point]
     
-    var view: UIView
+    let view: UIView
     var stage = 0
-    var showingHint = false
+    var showingHint : Bool { return self.illuminationStateMachine.isIlluminating }
     fileprivate var hilitedPieces = [Piece]()
     fileprivate var xct : Int { return self.grid.xct }
     fileprivate var yct : Int { return self.grid.yct }
     fileprivate var movenda = [Piece]()
-    fileprivate var grid : Grid // can't live without a grid
+    fileprivate var grid : Grid // can't live without a grid, but it is mutable
     fileprivate var hintPath : Path?
     fileprivate var deckAtStartOfStage = [String]()
-    // utility for obtaining a reference to the view that holds the transparency layer
+    
+    // reference to the view that holds the transparency layer
     // we need this so we can switch touch fall-thru on and off
-    var pathView : UIView? {
-        return self.view.viewWithTag(999)
-    }
-    // utility for obtaining a reference to the transparency layer
-    fileprivate var pathLayer : CALayer? {
-        return self.pathView?.layer.sublayers?.last
-    }
+    let pathView : UIView
+    // reference to the transparency layer
+    fileprivate lazy var pathLayer : CALayer = self.pathView.layer.sublayers!.last!
 
     fileprivate lazy var pieceSize : CGSize = {
         // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
@@ -113,20 +110,19 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     init (boardFrame:CGRect, gridSize:(Int,Int)) {
         self.view = UIView(frame:boardFrame)
         self.grid = Grid(gridSize.0, gridSize.1) // used to have Grid(gridSize) but now deprecated! :(
-        super.init()
 
-        // create the path view
-        // board is now completely empty
-        // place invisible view on top of it; this is where paths will be drawn
+        // create the path view; this is where paths will be drawn
         // board will draw directly into its layer using layer delegate's drawLayer:inContext:
         // but we must not set a view's layer's delegate, so we create a sublayer
         let v = UIView(frame: self.view.bounds)
-        v.tag = 999
         v.isUserInteractionEnabled = false // clicks just fall right thru
         let lay = CALayer()
         v.layer.addSublayer(lay)
         lay.frame = v.layer.bounds
         self.view.addSubview(v)
+        self.pathView = v
+        
+        super.init()
 
     }
     
@@ -207,7 +203,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         // store a copy so we can restart the stage if we have to
         self.deckAtStartOfStage = deck
         
-        // deal out the pieces and we're all set! Pieces themselves and Board object take over interactions from here
+        // create actual pieces and we're all set!
         for i in 0..<w {
             for j in 0..<h {
                 self.addPieceAt((i,j), withPicture: deck.removeLast()) // heh heh, pops and returns
@@ -256,48 +252,75 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                     let piece = self.piece(at:(i,j))
                     if let piece = piece {
                         // very lightweight; we just assign the name, let the piece worry about the picture
-                        UIView.transition(with: piece, duration: 0.7, options: .transitionFlipFromLeft, animations: {
-                            piece.picName = deck.removeLast()
-                            piece.setNeedsDisplay()
-                            })
+                        UIView.transition(
+                            with: piece, duration: 0.7, options: .transitionFlipFromLeft, animations: {
+                                piece.picName = deck.removeLast()
+                                piece.setNeedsDisplay()
+                        })
                     }
                 }
             }
         } while self.legalPath() == nil
     }
     
-    // given a series of CGPoints (wrapped up as NSValue), connect the dots
-    // we used to draw this ourselves and flash a view
-    // now, however, the view is already there
-    // all we do is store the array in the transparency layer and tell the layer it needs drawing
+    
+    // okay, so previously I had this functionality spread over two methods
+    // board illuminate() and unilluminate(), plus remembering to set the state property
+    // plus I was skankily handing the path to draw into the layer itself
+    // that is just the kind of thing I wanted to clean up
+    // so I put it all into a little state machine struct
+    // the board is still the layer delegate and does the drawing
+    // and it provides front-end methods for this state machine
+    struct IlluminationStateMachine {
+        unowned let board : Board
+        init(board:Board) {self.board = board}
+        var pathToIlluminate : Path?
+        var isIlluminating = false {
+            didSet {
+                switch self.isIlluminating {
+                case false:
+                    pathToIlluminate = nil
+                    board.pathView.isUserInteractionEnabled = false // make touches just fall thru once again
+                    board.pathLayer.setNeedsDisplay()
+                case true:
+                    board.pathLayer.delegate = board // tee-hee
+                    board.pathView.isUserInteractionEnabled = true // block touches
+                    board.pathLayer.setNeedsDisplay()
+                }
+            }
+        }
+        mutating func illuminate(path:Path) {
+            pathToIlluminate = path
+            self.isIlluminating = true
+        }
+        mutating func unilluminate() {
+            self.isIlluminating = false
+        }
+    }
+    
+    lazy var illuminationStateMachine : IlluminationStateMachine = IlluminationStateMachine(board:self)
+    
+    // given a Path of Points, connect the dots
     
     fileprivate func illuminate (_ arr: Path) {
-        if let pathLayer = self.pathLayer {
-            print("about to draw path: \(arr)")
-            pathLayer.delegate = self // tee-hee
-            self.pathView?.isUserInteractionEnabled = true
-            // transform path, which is an array of Point, into an NSArray of NSValue wrapping CGPoint
-            // so we can store it in the layer
-            let arrCGPoints : [CGPoint] = arr.map { CGPoint(x: CGFloat($0.0),y: CGFloat($0.1)) }
-            let arrNSValues = arrCGPoints.map { NSValue(cgPoint:$0) }
-            pathLayer.setValue(arrNSValues, forKey:"arr")
-            pathLayer.setNeedsDisplay()
-            self.showingHint = true
-        }
+        print("about to draw path: \(arr)")
+        self.illuminationStateMachine.illuminate(path:arr)
+    }
+    
+    // erase the path by clearing the transparency layer
+    func unilluminate () {
+        self.illuminationStateMachine.unilluminate()
     }
     
     // this is the actual path drawing code
     // we are the delegate of the transparency layer so we are called when the layer is told it needs redrawing
     // thus we are handed a context and we can just draw directly into it
-    // the layer is holding an array of NSValues wrapping CGPoints that tells us what path to draw!
+    // the state machine tells us what path to draw!
     
     func draw(_ layer: CALayer, in con: CGContext) {
-        let arr = layer.value(forKey: "arr") as! [NSValue]
-        // unwrap arr to CGPoints, unwrap to a pair of integers
-        let arr2 : Path = arr.map {
-            let pt = $0.cgPointValue
-            return (Int(pt.x),Int(pt.y))
-        }
+        // if no path, do nothing, thus causing the layer to become empty
+        guard let arr = self.illuminationStateMachine.pathToIlluminate else {return}
+        // okay, we have a path
         // connect the dots; however, the dots we want to connect are the *centers* of the pieces...
         // whereas we are given piece *origins*, so calculate offsets
         let sz = self.pieceSize
@@ -308,9 +331,9 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         con.setLineWidth(3.0)
         con.beginPath()
         // for (var i = 0; i < arr2.count - 1; i++) {
-        for i in 0..<arr2.count-1 {
-            let p1 = arr2[i]
-            let p2 = arr2[i+1]
+        for i in 0..<arr.count-1 {
+            let p1 = arr[i]
+            let p2 = arr[i+1]
             let orig1 = self.originOf(p1)
             let orig2 = self.originOf(p2)
             con.move(to: CGPoint(x: orig1.x + offx, y: orig1.y + offy))
@@ -319,16 +342,6 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         con.strokePath()
     }
     
-    // erase the path by clearing the transparency layer (nil contents)
-    
-    func unilluminate () {
-        if let pathLayer = self.pathLayer {
-            pathLayer.delegate = nil
-            pathLayer.contents = nil
-            self.pathView?.isUserInteractionEnabled = false // make touches just fall thru once again
-            self.showingHint = false
-        }
-    }
     
     fileprivate func piece(at p:Point) -> Piece? {
         let (i,j) = p
@@ -351,9 +364,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         let piece = Piece(picName:picTitle, frame:f)
         // place the Piece in the interface
         // we are conscious that we must not accidentally draw on top of the transparency view
-        if let pathView = self.pathView {
-            self.view.insertSubview(piece, belowSubview: pathView)
-        }
+        self.view.insertSubview(piece, belowSubview: self.pathView)
         // also place the Piece in the grid, and tell it where it is
         let (i,j) = p
         self.grid[i][j] = piece
