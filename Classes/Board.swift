@@ -86,7 +86,6 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     fileprivate var hilitedPieces = [Piece]()
     fileprivate var xct : Int { return self.grid.xct }
     fileprivate var yct : Int { return self.grid.yct }
-    fileprivate var movenda = [Piece]()
     fileprivate var grid : Grid // can't live without a grid, but it is mutable
     fileprivate var hintPath : Path?
     fileprivate var deckAtStartOfStage = [String]()
@@ -272,36 +271,60 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     // the board is still the layer delegate and does the drawing
     // and it provides front-end methods for this state machine
     struct IlluminationStateMachine {
-        unowned let board : Board
+        weak private var board : Board?
         init(board:Board) {self.board = board}
-        var pathToIlluminate : Path?
-        var isIlluminating = false {
+        private var pathToIlluminate : Path?
+        private(set) var isIlluminating = false {
             didSet {
                 switch self.isIlluminating {
                 case false:
-                    pathToIlluminate = nil
-                    board.pathView.isUserInteractionEnabled = false // make touches just fall thru once again
-                    board.pathLayer.setNeedsDisplay()
+                    self.pathToIlluminate = nil
+                    self.board?.pathView.isUserInteractionEnabled = false // make touches just fall thru once again
+                    self.board?.pathLayer.setNeedsDisplay()
                 case true:
-                    board.pathLayer.delegate = board // tee-hee
-                    board.pathView.isUserInteractionEnabled = true // block touches
-                    board.pathLayer.setNeedsDisplay()
+                    self.board?.pathLayer.delegate = board // tee-hee
+                    self.board?.pathView.isUserInteractionEnabled = true // block touches
+                    self.board?.pathLayer.setNeedsDisplay()
                 }
             }
         }
         mutating func illuminate(path:Path) {
-            pathToIlluminate = path
+            self.pathToIlluminate = path
             self.isIlluminating = true
         }
         mutating func unilluminate() {
             self.isIlluminating = false
+        }
+        func draw(intoIlluminationContext con: CGContext) {
+            // if no path, do nothing, thus causing the layer to become empty
+            guard let arr = self.pathToIlluminate else {return}
+            guard let theBoard = self.board else {return}
+            // okay, we have a path
+            // connect the dots; however, the dots we want to connect are the *centers* of the pieces...
+            // whereas we are given piece *origins*, so calculate offsets
+            let sz = theBoard.pieceSize
+            let offx = sz.width/2.0
+            let offy = sz.height/2.0
+            con.setLineJoin(.round)
+            con.setStrokeColor(red: 0.4, green: 0.4, blue: 1.0, alpha: 1.0)
+            con.setLineWidth(3.0)
+            con.beginPath()
+            // for (var i = 0; i < arr2.count - 1; i++) {
+            for i in 0..<arr.count-1 {
+                let p1 = arr[i]
+                let p2 = arr[i+1]
+                let orig1 = theBoard.originOf(p1)
+                let orig2 = theBoard.originOf(p2)
+                con.move(to: CGPoint(x: orig1.x + offx, y: orig1.y + offy))
+                con.addLine(to: CGPoint(x: orig2.x + offx, y: orig2.y + offy))
+            }
+            con.strokePath()
         }
     }
     
     lazy var illuminationStateMachine : IlluminationStateMachine = IlluminationStateMachine(board:self)
     
     // given a Path of Points, connect the dots
-    
     fileprivate func illuminate (_ arr: Path) {
         print("about to draw path: \(arr)")
         self.illuminationStateMachine.illuminate(path:arr)
@@ -312,34 +335,14 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         self.illuminationStateMachine.unilluminate()
     }
     
-    // this is the actual path drawing code
-    // we are the delegate of the transparency layer so we are called when the layer is told it needs redrawing
-    // thus we are handed a context and we can just draw directly into it
-    // the state machine tells us what path to draw!
+    // we are the delegate of the transparency layer,
+    // so we are called when the layer is told it needs redrawing
+    // the state machine does the actual drawing
+    // would be great if the state machine could be the delegate, 
+    // but then it would have to an NSObject visible to Objective-C
     
     func draw(_ layer: CALayer, in con: CGContext) {
-        // if no path, do nothing, thus causing the layer to become empty
-        guard let arr = self.illuminationStateMachine.pathToIlluminate else {return}
-        // okay, we have a path
-        // connect the dots; however, the dots we want to connect are the *centers* of the pieces...
-        // whereas we are given piece *origins*, so calculate offsets
-        let sz = self.pieceSize
-        let offx = sz.width/2.0
-        let offy = sz.height/2.0
-        con.setLineJoin(.round)
-        con.setStrokeColor(red: 0.4, green: 0.4, blue: 1.0, alpha: 1.0)
-        con.setLineWidth(3.0)
-        con.beginPath()
-        // for (var i = 0; i < arr2.count - 1; i++) {
-        for i in 0..<arr.count-1 {
-            let p1 = arr[i]
-            let p2 = arr[i+1]
-            let orig1 = self.originOf(p1)
-            let orig2 = self.originOf(p2)
-            con.move(to: CGPoint(x: orig1.x + offx, y: orig1.y + offy))
-            con.addLine(to: CGPoint(x: orig2.x + offx, y: orig2.y + offy))
-        }
-        con.strokePath()
+        self.illuminationStateMachine.draw(intoIlluminationContext: con)
     }
     
     
@@ -397,8 +400,8 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         delay(0.2) {
             self.unilluminate()
             delay(0.1) {
-                ui(true)
                 self.reallyRemovePair()
+                ui(true)
             }
         }
     }
@@ -473,32 +476,6 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         return CGPoint(x: x,y: y)
 
     }
-    
-    // my finest hour!
-    // utility to slide piece to a new position
-    // the problem is that we must do this for many pieces at once
-    // the solution is that caller calls this utility repeatedly
-    // this utility *prepares* the pieces to be moved but does not physically move them
-    // it also puts the pieces in movenda
-    // the caller then calls moveMovenda and the slide actually happens
- 
-    // yeah, very clever, but you gotta wonder whether I could do better now that I understand how animation works
-    // TODO: look into it
-    
-    fileprivate func movePiece(_ p:Piece, to newPoint:(Int,Int)) {
-        assert(self.piece(at:newPoint) == nil, "Slot to move piece to must be empty")
-        // move the piece within the *grid*
-        let s = p.picName
-        let oldFrame = p.frame
-        self.removePiece(p)
-        self.addPieceAt(newPoint, withPicture:s)
-        // however, we are not yet redrawn, so now...
-        // return piece to its previous position! but add to movenda
-        // later call to moveMovenda will thus animate it into correct position
-        let pnew = self.piece(at:newPoint)!
-        pnew.frame = oldFrame
-        self.movenda += [pnew]
-    }
 
     fileprivate func checkStuck() {
         let path = self.legalPath()
@@ -508,6 +485,26 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     }
     
     fileprivate func reallyRemovePair () {
+        var movenda = [Piece]() // we will maintain a list of all pieces that need to animate a position change
+        // utility to prepare pieces for position change
+        // configure the piece internally and grid-wise for its new position, 
+        // but keep it physically in the old position
+        // store it in movenda so we can animate it into its new position at the end of this method
+        func movePiece(_ p:Piece, to newPoint:(Int,Int)) {
+            assert(self.piece(at:newPoint) == nil, "Slot to move piece to must be empty")
+            // move the piece within the *grid*
+            let s = p.picName
+            let oldFrame = p.frame
+            self.removePiece(p)
+            self.addPieceAt(newPoint, withPicture:s)
+            // however, we are not yet redrawn, so now...
+            // return piece to its previous position! but add to movenda
+            // later we will animate it into correct position
+            let pnew = self.piece(at:newPoint)!
+            pnew.frame = oldFrame
+            movenda += [pnew]
+        }
+
         ui(false)
         // notify (so score can be incremented)
         nc.post(name: .userMoved, object: self)
@@ -545,7 +542,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -565,7 +562,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -587,7 +584,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -602,7 +599,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -624,7 +621,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -639,7 +636,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -661,7 +658,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -676,7 +673,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -698,7 +695,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -713,7 +710,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -735,7 +732,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -753,7 +750,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -774,7 +771,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -792,7 +789,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             if piece2 == nil {
                                 continue
                             }
-                            self.movePiece(piece2!, to:(x,y))
+                            movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -802,23 +799,24 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         default:
             break
         }
+        
         // animate!
-        // and then check for stuck, in the delegate handler for moveMovenda
+        // and then check for stuck
     
         // slide pieces into their correct place
         // okay, so all the pieces in movenda have the following odd feature:
         // they are internally consistent (they are in the right place in the grid, and they know that place)
         // but they are *physically* in the wrong place
-        // thus all we have to do is move them into the right place
+        // thus all we have to do is move them visibly into the right place
         // the big lesson here is that animations run in another thread...
         // so as an animation begins, the interface is refreshed first
         // thus it doesn't matter that we moved the piece into its right place;
-        // we also moved the piece back into its wrong place, and that is what the user will see when the animation starts
-        // looking at it another way, it is up to us to configure the interface to be right before the start of the animation
+        // we also moved the piece back into its wrong place, 
+        // and that is what the user will see when the animation starts
         
         UIView.animate(withDuration: 0.15, delay: 0.1, options: .curveLinear, animations: {
-            while self.movenda.count > 0 {
-                let p = self.movenda.removeLast()
+            while movenda.count > 0 {
+                let p = movenda.removeLast()
                 var f = p.frame
                 f.origin = self.originOf((p.x, p.y))
                 print("Will change frame of piece \(p)")
@@ -826,12 +824,12 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                 print("To \(f)")
                 p.frame = f // this is the move that will be animated
             }
-            }, completion: {
-                _ in
-                self.checkStuck()
-                ui(true)
-                // we do this after the slide animation is over, so we can get two animations in row, cool
-            })
+        }, completion: {
+            _ in
+            self.checkStuck()
+            ui(true)
+            // we do this after the slide animation is over, so we can get two animations in row, cool
+        })
     }
     
 
@@ -1023,6 +1021,11 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
             }
             self.redeal() // should never happen at this point
         }
+    }
+    
+    deinit {
+        self.pathLayer.delegate = nil // crucial; if not, can crash when we are released and layer still exists
+        print("farewell from board")
     }
     
 
