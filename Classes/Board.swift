@@ -271,7 +271,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     // the board is still the layer delegate and does the drawing
     // and it provides front-end methods for this state machine
     struct IlluminationStateMachine {
-        weak private var board : Board?
+        unowned private var board : Board
         init(board:Board) {self.board = board}
         private var pathToIlluminate : Path?
         private(set) var isIlluminating = false {
@@ -279,12 +279,12 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                 switch self.isIlluminating {
                 case false:
                     self.pathToIlluminate = nil
-                    self.board?.pathView.isUserInteractionEnabled = false // make touches just fall thru once again
-                    self.board?.pathLayer.setNeedsDisplay()
+                    self.board.pathView.isUserInteractionEnabled = false // make touches just fall thru once again
+                    self.board.pathLayer.setNeedsDisplay()
                 case true:
-                    self.board?.pathLayer.delegate = board // tee-hee
-                    self.board?.pathView.isUserInteractionEnabled = true // block touches
-                    self.board?.pathLayer.setNeedsDisplay()
+                    self.board.pathLayer.delegate = board // tee-hee
+                    self.board.pathView.isUserInteractionEnabled = true // block touches
+                    self.board.pathLayer.setNeedsDisplay()
                 }
             }
         }
@@ -298,11 +298,10 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         func draw(intoIlluminationContext con: CGContext) {
             // if no path, do nothing, thus causing the layer to become empty
             guard let arr = self.pathToIlluminate else {return}
-            guard let theBoard = self.board else {return}
             // okay, we have a path
             // connect the dots; however, the dots we want to connect are the *centers* of the pieces...
             // whereas we are given piece *origins*, so calculate offsets
-            let sz = theBoard.pieceSize
+            let sz = self.board.pieceSize
             let offx = sz.width/2.0
             let offy = sz.height/2.0
             con.setLineJoin(.round)
@@ -313,8 +312,8 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
             for i in 0..<arr.count-1 {
                 let p1 = arr[i]
                 let p2 = arr[i+1]
-                let orig1 = theBoard.originOf(p1)
-                let orig2 = theBoard.originOf(p2)
+                let orig1 = self.board.originOf(p1)
+                let orig2 = self.board.originOf(p2)
                 con.move(to: CGPoint(x: orig1.x + offx, y: orig1.y + offy))
                 con.addLine(to: CGPoint(x: orig2.x + offx, y: orig2.y + offy))
             }
