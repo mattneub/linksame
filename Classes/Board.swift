@@ -2,46 +2,12 @@
 import UIKit
 import QuartzCore
 
-extension Notification.Name {
-    static let gameOver = Notification.Name("gameOver")
-    static let userMoved = Notification.Name("userMoved")
-}
 
-func print(_ items: Any..., separator: String = " ", terminator: String = "\n") {
-    #if DEBUG
-        Swift.print(items[0], separator:separator, terminator: terminator)
-    #endif
-}
-
-var onPhone : Bool {
-    return UIScreen.main.traitCollection.userInterfaceIdiom == .phone
-}
-
-var on6plus : Bool {
-    return UIScreen.main.traitCollection.displayScale > 2.5
-}
-
-extension RangeReplaceableCollection where Iterator.Element : Equatable {
-    mutating func remove(object:Self.Iterator.Element) {
-        if let found = self.index(of: object) {
-            self.remove(at: found)
-        }
-    }
-}
-
-func ui(_ yn:Bool) { // false means no user interaction, true means turn it back on
-    if !yn {
-        UIApplication.shared.beginIgnoringInteractionEvents()
-    } else {
-        UIApplication.shared.endIgnoringInteractionEvents()
-    }
-}
-
-let TOPMARGIN : CGFloat = (1.0/8.0)
-let BOTTOMMARGIN : CGFloat = (1.0/8.0)
-let LEFTMARGIN : CGFloat = (1.0/8.0)
-let RIGHTMARGIN : CGFloat = (1.0/8.0)
-var OUTER : CGFloat {
+fileprivate let TOPMARGIN : CGFloat = (1.0/8.0)
+fileprivate let BOTTOMMARGIN : CGFloat = (1.0/8.0)
+fileprivate let LEFTMARGIN : CGFloat = (1.0/8.0)
+fileprivate let RIGHTMARGIN : CGFloat = (1.0/8.0)
+fileprivate var OUTER : CGFloat {
     var result : CGFloat = onPhone ? 1.0 : 2.0
     if on6plus { result = 2.0 }
     return result
