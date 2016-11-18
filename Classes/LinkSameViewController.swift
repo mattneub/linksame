@@ -7,9 +7,9 @@ import WebKit
 
 class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
-    fileprivate var score = 0
+    // fileprivate var score = 0
     fileprivate var scoreAtStartOfStage = 0
-    fileprivate var lastTime : TimeInterval = 0
+    // fileprivate var lastTime : TimeInterval = 0
     fileprivate var didSetUp = false
     
     fileprivate var board : Board!
@@ -23,11 +23,11 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     @IBOutlet fileprivate weak var toolbar : UIToolbar!
     fileprivate var boardView : UIView!
     fileprivate var oldDefs : [String : Any]!
-    fileprivate var timer : Timer! { // any time the timer is to be replaced, invalidate existing timer
-        willSet {
-            self.timer?.invalidate() // to stop timer, set it to nil, we invalidate
-        }
-    }
+//    fileprivate var timer : Timer! { // any time the timer is to be replaced, invalidate existing timer
+//        willSet {
+//            self.timer?.invalidate() // to stop timer, set it to nil, we invalidate
+//        }
+//    }
     
     override var nibName : String {
         get {
@@ -68,6 +68,8 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         case fade
     }
     
+    fileprivate var stage : Stage!
+    
     init() {
         super.init(nibName: nil, bundle: nil)
     }
@@ -83,16 +85,101 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         return key
     }
     
-    fileprivate func initializeScores () {
-        // current score
-        self.score = 0
-        self.incrementScore(0, resetTimer:false)
-        // prev score, look up in user defaults
-        self.prevLabel.text = ""
-        if let scoresDict = ud.dictionary(forKey: Default.scores) as? [String:Int] {
-            if let prev = scoresDict[self.scoresKey] {
-                self.prevLabel.text = "High score: \(prev)"
+    // no longer called by anyone; this job is moved into the Game object
+//    fileprivate func initializeScores () {
+//        // current score
+//        self.score = 0
+//        self.incrementScore(0, resetTimer:false)
+//        // prev score, look up in user defaults
+//        self.prevLabel.text = ""
+//        if let scoresDict = ud.dictionary(forKey: Default.scores) as? [String:Int] {
+//            if let prev = scoresDict[self.scoresKey] {
+//                self.prevLabel.text = "High score: \(prev)"
+//            }
+//        }
+//    }
+    
+    // very good use case for default param; no need for most callers even to know there's a choice
+//    fileprivate func incrementScore (_ n:Int, resetTimer:Bool, red:Bool = false) {
+//        self.score += n
+//        self.scoreLabel.text = String(self.score)
+//        self.scoreLabel.textColor = red ? UIColor.red : UIColor.black
+//        if resetTimer {
+//            self.resetTimer()
+//        }
+//    }
+    
+    // bring together the score, the timer, and control over the score display part of the interface
+    // the idea is to make a new one every time a new stage begins
+    final class Stage : NSObject { // has to be a class so we can invalidate timer on deinit (maybe fix this later)
+        private(set) var score : Int // when a keeper comes into existence, its score is zero
+        private var timer : Timer! // when a keeper comes into existence, there is no timer (user has not moved yet)
+        private var lastTime : Date = Date.distantPast
+        private unowned let lsvc : LinkSameViewController
+        init(lsvc:LinkSameViewController, score:Int = 0) {
+            print("new game!")
+            self.lsvc = lsvc
+            self.score = score
+            super.init()
+            self.lsvc.scoreLabel.text = String(self.score)
+            self.lsvc.scoreLabel.textColor = .black
+            self.lsvc.prevLabel.text = ""
+            if let scoresDict = ud.dictionary(forKey: Default.scores) as? [String:Int] {
+                if let prev = scoresDict[self.lsvc.scoresKey] {
+                    self.lsvc.prevLabel.text = "High score: \(prev)"
+                }
             }
+            nc.addObserver(self, selector: #selector(resigningActive), name: .UIApplicationWillResignActive, object: nil)
+            nc.addObserver(self, selector: #selector(becomingActive), name: .UIApplicationDidBecomeActive, object: nil)
+            nc.addObserver(self, selector: #selector(userMadeLegalMove), name: .userMoved, object: nil)
+        }
+        deinit {
+            print("farewell from game")
+            self.timer?.invalidate()
+            nc.removeObserver(self)
+//            self.lsvc.scoreLabel.text = ""
+//            self.lsvc.scoreLabel.textColor = .black
+//            self.lsvc.prevLabel.text = ""
+        }
+        func resigningActive() {
+            self.timer?.invalidate()
+        }
+        private func restartTimer() {
+            self.timer?.invalidate()
+            self.timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [unowned self] _ in
+                self.score -= 1
+                self.lsvc.scoreLabel.text = String(self.score)
+                self.lsvc.scoreLabel.textColor = .red
+            }
+        }
+        func becomingActive() {
+            self.restartTimer()
+        }
+        func userAskedForHint() {
+            self.restartTimer()
+            self.score -= 10
+            self.lsvc.scoreLabel.text = String(self.score)
+            self.lsvc.scoreLabel.textColor = .red
+        }
+        func userAskedForShuffle() {
+            self.restartTimer()
+            self.score -= 20
+            self.lsvc.scoreLabel.text = String(self.score)
+            self.lsvc.scoreLabel.textColor = .red
+        }
+        func userMadeLegalMove() {
+            self.restartTimer()
+            // track time between moves, award points (and remember, points mean prizes)
+            let now = Date()
+            let diff = now.timeIntervalSinceReferenceDate - self.lastTime.timeIntervalSinceReferenceDate
+            self.lastTime = now
+            var bonus = 0
+            if diff < 10 {
+                bonus = Int((10.0/diff).rounded(.up))
+            }
+            self.score += 1 + bonus
+            self.lsvc.scoreLabel.text = String(self.score)
+            self.lsvc.scoreLabel.textColor = .black
         }
     }
     
@@ -109,7 +196,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             }
         }
         // one-time launch initializations of model and interface
-        self.initializeScores()
+        // self.initializeScores()
         // fix width of hint button to accomodate new labels Show Hint and Hide Hint
         self.hintButton?.possibleTitles = [HintButtonTitle.Show, HintButtonTitle.Hide]
         self.hintButton?.title = HintButtonTitle.Show
@@ -135,25 +222,13 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         nc.addObserver(forName: .gameOver, object: nil, queue: nil) { n in
             self.prepareNewStage(n as AnyObject?)
         }
-        nc.addObserver(forName: .userMoved, object: nil, queue: nil) { _ in
-            // the board notifies us that the user removed a pair of pieces
-            // track time between moves, award points (and remember, points mean prizes)
-            let now = Date.timeIntervalSinceReferenceDate
-            let diff = now - self.lastTime
-            self.lastTime = now
-            var bonus = 0
-            if diff < 10 {
-                bonus = Int((10.0/diff).rounded(.up))
-            }
-            self.incrementScore(1 + bonus, resetTimer:true)
-        }
         nc.addObserver(forName: .UIApplicationWillResignActive, object: nil, queue: nil) { _ in
             // remove hint
             if self.board.showingHint {
                 self.toggleHint(nil)
             }
             // stop timer
-            self.timer = nil
+            // self.timer = nil
             // dismiss popover if any; counts as cancelling, so restore defaults if needed
             self.dismiss(animated: false)
             if (self.oldDefs != nil) {
@@ -164,14 +239,17 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         nc.addObserver(forName: .UIApplicationDidBecomeActive, object: nil, queue: nil) {
             _ in
             // if we are coming back from mere deactivation, just restart the timer
-            self.resetTimer()
+            // self.resetTimer()
             // but if we are coming back from suspension, and if we are in timed mode...
             // ... we have created a whole new game; in that case, don't start the timer
-            if self.score == 0 {
-                self.timer = nil
-            }
+//            if self.score == 0 {
+//                self.timer = nil
+//            }
             // show the board view, just in case it was hidden on suspension
             self.boardView?.isHidden = false
+            if self.stage == nil {
+                self.startNewGame()
+            }
         }
         nc.addObserver(forName: .UIApplicationDidEnterBackground, object: nil, queue: nil) { _ in
             // set up board data defaults
@@ -181,8 +259,9 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 ud.removeObject(forKey: Default.boardData)
                 // hide the game, stop the timer, kill the score; snapshot will capture blank background
                 self.boardView.isHidden = true
-                self.initializeScores()
-                self.timer = nil
+                // self.initializeScores()
+                self.stage = nil // throw away the game!
+            // self.timer = nil
             case .practice: // practice, save out board state
                 let boardData = NSKeyedArchiver.archivedData(withRootObject: self.board)
                 ud.set(boardData, forKey:Default.boardData)
@@ -192,36 +271,26 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             // if there is no saved board, start the whole game over
             _ in
             if ud.object(forKey: Default.boardData) == nil {
-                self.startNewGame()
+                self.stage = nil
             }
         }
     }
     
-    fileprivate func resetTimer() {
-        self.timer = nil
-        if self.interfaceMode == .practice {
-            return // don't bother making a new timer, we were doing that (harmlessly) but why bother?
-        }
-        self.timer = Timer.scheduledTimer(
-            timeInterval: 10, target: self, selector: #selector(decrementScore), userInfo: nil, repeats: true
-        )
-        self.timer?.tolerance = 0.2
-    }
-    
-    // called by timer
-    @objc fileprivate func decrementScore () {
-        self.incrementScore(-1, resetTimer:false, red:true)
-    }
-    
-    // very good use case for default param; no need for most callers even to know there's a choice
-    fileprivate func incrementScore (_ n:Int, resetTimer:Bool, red:Bool = false) {
-        self.score += n
-        self.scoreLabel.text = String(self.score)
-        self.scoreLabel.textColor = red ? UIColor.red : UIColor.black
-        if resetTimer {
-            self.resetTimer()
-        }
-    }
+//    fileprivate func resetTimer() {
+//        self.timer = nil
+//        if self.interfaceMode == .practice {
+//            return // don't bother making a new timer, we were doing that (harmlessly) but why bother?
+//        }
+//        self.timer = Timer.scheduledTimer(
+//            timeInterval: 10, target: self, selector: #selector(decrementScore), userInfo: nil, repeats: true
+//        )
+//        self.timer?.tolerance = 0.2
+//    }
+//    
+//    // called by timer
+//    @objc fileprivate func decrementScore () {
+//        self.incrementScore(-1, resetTimer:false, red:true)
+//    }
     
     fileprivate func animateBoardTransition (_ transition: BoardTransition) {
         ui(false)
@@ -258,12 +327,13 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     // if new game, also set up scores and mode
     fileprivate func newBoard(newGame:Bool) {
         let boardTransition : BoardTransition = newGame ? .fade : .slide
+        self.scoreAtStartOfStage = self.stage!.score // in case we have to restart this stage
         if newGame {
-            self.initializeScores()
+            // self.initializeScores()
+            // self.game = Game(lsvc:self)
             self.interfaceMode = .timed // every new game is a timed game
         }
         board.createAndDealDeck()
-        self.scoreAtStartOfStage = self.score // in case we have to restart this stage
         self.animateBoardTransition(boardTransition)
     }
 
@@ -273,11 +343,6 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     // called via notification when user completes a stage
     @objc fileprivate func prepareNewStage (_ n : AnyObject?) {
         ui(false)
-        // stop timer!
-        // initialize time
-        self.lastTime = Date.timeIntervalSinceReferenceDate
-        // remove existing timer; timing will start when user moves
-        self.timer = nil
         
         // determine layout dimensions
         var (w,h) = Sizes.boardSize(ud.string(forKey: Default.size)!)
@@ -305,6 +370,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         if let stage = (n as? Notification)?.userInfo?["stage"] as? Int {
             if stage < ud.integer(forKey: Default.lastStage) {
                 // * notification, on to next stage
+                self.stage = Stage(lsvc: self, score: self.stage.score) // score carries over
                 self.board.stage = stage + 1
                 self.newBoard(newGame:false)
             }
@@ -322,29 +388,32 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
                     // self.score is new high score if it is higher than corresponding previous dict entry...
                     // ...or if there was no corresponding previous dict entry
                     let prev = scoresDict[key]
-                    if prev == nil || prev! < self.score {
+                    if prev == nil || prev! < self.stage!.score {
                         newHigh = true
-                        scoresDict[key] = self.score
+                        scoresDict[key] = self.stage!.score
                         ud.set(scoresDict, forKey:Default.scores)
                     }
                     // notify user
                     let alert = UIAlertController(
                         title: "Congratulations!",
-                        message: "You have finished the game with a score of \(self.score)." +
+                        message: "You have finished the game with a score of \(self.stage!.score)." +
                             (newHigh ? " That is a new high score for this level!" : ""),
                         preferredStyle: .alert)
                     alert.addAction(UIAlertAction(
-                        title: "Cool!", style: .cancel, handler:  {
-                            _ in self.newBoard(newGame:true)
+                        title: "Cool!", style: .cancel, handler:  { _ in
+                            self.stage = Stage(lsvc:self)
+                            self.newBoard(newGame:true)
                     }))
                     self.present(alert, animated: true)
                 } else {
                     // user was doing a practice game
+                    self.stage = Stage(lsvc:self)
                     self.newBoard(newGame:true)
                 }
             }
         } else {
             // * startup, or user asked for new game
+            self.stage = Stage(lsvc: self)
             self.newBoard(newGame:true)
         }
         ui(true)
@@ -358,7 +427,8 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         let v = self.board.pathView
         if !self.board.showingHint {
             self.hintButton?.title = HintButtonTitle.Hide
-            self.incrementScore(-10, resetTimer:true, red:true)
+            // self.incrementScore(-10, resetTimer:true, red:true)
+            self.stage?.userAskedForHint()
             self.board.hint()
             // if user taps board now, this should have just the same effect as tapping button
             // so, attach gesture rec
@@ -379,9 +449,10 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
+        self.stage.userAskedForShuffle()
         self.board.unhilite()
         self.board.redeal()
-        self.incrementScore(-20, resetTimer:true, red:true)
+        // self.incrementScore(-20, resetTimer:true, red:true)
     }
     
     @IBAction fileprivate func doRestartStage(_:AnyObject?) {
@@ -394,9 +465,9 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: {
             _ in
             self.board.restartStage()
-            self.score = self.scoreAtStartOfStage
-            self.incrementScore(0, resetTimer: false) // cause new score to show
-            self.timer = nil // stop timer and wait
+//            self.incrementScore(0, resetTimer: false) // cause new score to show
+//            self.timer = nil // stop timer and wait
+            self.stage = Stage(lsvc: self, score: self.scoreAtStartOfStage)
             self.animateBoardTransition(.fade)
         }))
         self.present(alert, animated: true)
@@ -443,7 +514,8 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
     
     @objc fileprivate func startNewGame() { // save button in new game popover; can also be called manually at launch
         func whatToDo() {
-            self.initializeScores()
+            // self.initializeScores()
+            self.stage = Stage(lsvc: self)
             self.interfaceMode = .timed
             self.oldDefs = nil // crucial or we'll fall one behind
             self.prepareNewStage(nil)
