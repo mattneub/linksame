@@ -65,7 +65,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     fileprivate lazy var pieceSize : CGSize = {
         // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
         assert((self.xct > 0 && self.yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
-        print("calculating piece size")
+        // print("calculating piece size")
         // divide view bounds, allow 1 extra plus margins
         let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self.xct) + OUTER + LEFTMARGIN + RIGHTMARGIN)
         let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self.yct) + OUTER + TOPMARGIN + BOTTOMMARGIN)
@@ -291,7 +291,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     
     // given a Path of Points, connect the dots
     fileprivate func illuminate (_ arr: Path) {
-        print("about to draw path: \(arr)")
+        // print("about to draw path: \(arr)")
         self.illuminationStateMachine.illuminate(path:arr)
     }
     
@@ -337,7 +337,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         let (i,j) = p
         self.grid[i][j] = piece
         (piece.x, piece.y) = (i,j)
-        print("Point was \(p), pic was \(picTitle)\nCreated \(piece)")
+        // print("Point was \(p), pic was \(picTitle)\nCreated \(piece)")
         // set up tap detection
         let t = UITapGestureRecognizer(target: self, action: #selector(handleTap))
         piece.addGestureRecognizer(t)
@@ -784,9 +784,9 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                 let p = movenda.removeLast()
                 var f = p.frame
                 f.origin = self.originOf((p.x, p.y))
-                print("Will change frame of piece \(p)")
-                print("From \(p.frame)")
-                print("To \(f)")
+                // print("Will change frame of piece \(p)")
+                // print("From \(p.frame)")
+                // print("To \(f)")
                 p.frame = f // this is the move that will be animated
             }
         }, completion: {
@@ -812,7 +812,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         if self.lineIsClearFrom(pt1, to:pt2) {
             return [pt1,pt2]
         }
-        print("failed straight line test")
+        // print("failed straight line test")
         // 2. second check: are they at the corners of a rectangle with nothing on one pair of sides between them?
         let midpt1 : Point = (p1.x, p2.y)
         let midpt2 : Point = (p2.x, p1.y)
@@ -826,7 +826,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                 return [pt1, midpt2, pt2]
             }
         }
-        print("failed two-segment test")
+        // print("failed two-segment test")
         // 3. third check: The Way of the Moving Line
         // (this was the algorithmic insight that makes the whole thing possible)
         // connect the x or y coordinates of the pieces by a vertical or horizontal line;
@@ -836,9 +836,9 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         // we may find a longer one before we find a shorter one, which is counter-intuitive
         // so, accumulate all found paths and submit only the shortest
         var marr = [Path]()
-        print("=======")
+        // print("=======")
         func addPathIfValid(_ midpt1:Point, _ midpt2:Point) {
-            print("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
+            // print("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
             // new in swift, reject if same midpoint
             if midpt1.0 == midpt2.0 && midpt1.1 == midpt2.1 {return}
             if self.piece(at:midpt1) == nil && self.piece(at:midpt2) == nil {
@@ -921,8 +921,8 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         }
         p.toggleHilite()
         if self.hilitedPieces.count == 2 {
-            print("========")
-            print("about to check hilited pair \(self.hilitedPieces)")
+            // print("========")
+            // print("about to check hilited pair \(self.hilitedPieces)")
             self.checkHilitedPair()
         }
         ui(true)
@@ -956,8 +956,8 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                         if picName2 != picName {
                             continue
                         }
-                        print("========")
-                        print("About to check \(piece!) vs. \(piece2!)")
+                        // print("========")
+                        // print("About to check \(piece!) vs. \(piece2!)")
                         let path = self.checkPair(piece!, and:piece2!)
                         if path == nil {
                             continue
