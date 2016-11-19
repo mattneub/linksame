@@ -60,7 +60,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         case fade
     }
     
-    fileprivate var stage : Stage!
+    fileprivate var stage : Stage?
     
     init() {
         super.init(nibName: nil, bundle: nil)
@@ -114,6 +114,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             self.timer?.invalidate()
         }
         private func restartTimer() { // private utility
+            print("restartTimer")
             self.timer?.invalidate()
             self.timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [unowned self] _ in
                 self.score -= 1
@@ -187,16 +188,17 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         nc.addObserver(forName: .gameOver, object: nil, queue: nil) { n in
             self.prepareNewStage(n as AnyObject?)
         }
-        nc.addObserver(forName: .UIApplicationWillEnterForeground, object: nil, queue: nil) { _ in
-            // if there is no saved board, start the whole game over
-            if ud.object(forKey: Default.boardData) == nil {
-                self.stage = nil
-            }
-        }
+//        nc.addObserver(forName: .UIApplicationWillEnterForeground, object: nil, queue: nil) { _ in
+//            // if there is no saved board, start the whole game over
+//            if ud.object(forKey: Default.boardData) == nil {
+//                self.startNewGame()
+//            }
+//        }
         nc.addObserver(forName: .UIApplicationDidBecomeActive, object: nil, queue: nil) { _ in
             // show the board view, just in case it was hidden on suspension
             self.boardView?.isHidden = false
-            if self.stage == nil {
+            print(self.stage)
+            if self.stage == nil && ud.object(forKey: Default.boardData) == nil {
                 self.startNewGame()
             }
         }
@@ -294,7 +296,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 self.stage = Stage(lsvc: self)
                 self.interfaceMode = .timed // every new game is a timed game
             } else {
-                self.stage = Stage(lsvc: self, score: self.stage.score) // score carries over
+                self.stage = Stage(lsvc: self, score: self.stage!.score) // score carries over
             }
             let boardTransition : BoardTransition = newGame ? .fade : .slide
             board.createAndDealDeck()
@@ -378,7 +380,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
-        self.stage.userAskedForShuffle()
+        self.stage?.userAskedForShuffle()
         self.board.unhilite()
         self.board.redeal()
     }
@@ -393,7 +395,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: {
             _ in
             self.board.restartStage()
-            self.stage = Stage(lsvc: self, score: self.stage.scoreAtStartOfStage)
+            self.stage = Stage(lsvc: self, score: self.stage!.scoreAtStartOfStage)
             self.animateBoardTransition(.fade)
         }))
         self.present(alert, animated: true)
@@ -479,6 +481,9 @@ extension LinkSameViewController { // buttons in popover
         self.board.unhilite()
         self.interfaceMode = InterfaceMode(rawValue:self.timedPractice.selectedSegmentIndex)!
         // and changing the interface mode changes the interface accordingly
+        if self.interfaceMode == .practice {
+            self.stage = nil
+        }
     }
     
     @IBAction fileprivate func doHelp(_ sender : AnyObject?) {
