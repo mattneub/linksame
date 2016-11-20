@@ -253,7 +253,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
             }
         }
         deinit {
-            self.board.pathLayer.delegate = nil // crucial or we can crash
+            // self.board.pathLayer.delegate = nil // crucial or we can crash
         }
         func illuminate(path:Path) {
             self.pathToIlluminate = path
@@ -402,13 +402,6 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         let y = ((OUTER/2.0 + TOPMARGIN) * pieceHeight) + (CGFloat(j) * pieceHeight) + (onPhone ? 0 : 64/2) // allow for toolbar
         return CGPoint(x: x,y: y)
 
-    }
-
-    fileprivate func checkStuck() {
-        let path = self.legalPath()
-        if path == nil {
-            self.redeal()
-        }
     }
     
     fileprivate func reallyRemovePair () {
@@ -751,11 +744,13 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                 // print("To \(f)")
                 p.frame = f // this is the move that will be animated
             }
-        }, completion: {
-            _ in
-            self.checkStuck()
-            ui(true)
+        }, completion: { _ in
+            self.hintPath = self.legalPath() // okay, assess the situation; either way, we need a new hint ready
+            if self.hintPath == nil {
+                self.redeal()
+            }
             // we do this after the slide animation is over, so we can get two animations in row, cool
+            ui(true)
         })
     }
     
@@ -964,6 +959,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     }
 
     deinit {
+        self.pathLayer.delegate = nil // take no chances
         print("farewell from board")
     }
     

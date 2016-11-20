@@ -82,6 +82,13 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     // ...and then communicate with it only in terms of game-related events
     
     final class Stage : NSObject {
+        class Bouncer : NSObject {
+            unowned let stage : Stage
+            init(stage:Stage) {self.stage = stage}
+            func timerFired(_:Timer) {self.stage.userFailedToMove()}
+            deinit {print("farewell from bouncer")}
+        }
+        private lazy var bouncer : Bouncer = {return Bouncer(stage:self)}()
         private(set) var score : Int
         let scoreAtStartOfStage : Int
         private var timer : Timer! // no timer initially (user has not moved yet)
@@ -118,9 +125,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         private func restartTimer() { // private utility
             // print("restartTimer")
             self.timer?.invalidate()
-            self.timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [unowned self] _ in
-                self.userFailedToMove()
-            }
+            self.timer = Timer.scheduledTimer(timeInterval: 10, target: self.bouncer, selector: #selector(Bouncer.timerFired), userInfo: nil, repeats: true)
         }
         @objc private func becomingActive() { // notification
             self.restartTimer()
