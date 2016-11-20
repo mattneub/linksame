@@ -21,7 +21,7 @@ fileprivate var OUTER : CGFloat {
 // which hides (encapsulates) the actual grid
 
 struct Grid {
-    var grid : [[Piece?]]
+    private var grid : [[Piece?]]
     let xct : Int
     let yct : Int
     init(_ x:Int, _ y:Int) {
@@ -48,13 +48,13 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     
     let view: UIView
     var stage = 0
-    var showingHint : Bool { return self.illuminationStateMachine.isIlluminating }
+    var showingHint : Bool { return self.hintShower.isIlluminating }
     fileprivate var hilitedPieces = [Piece]()
     fileprivate var xct : Int { return self.grid.xct }
     fileprivate var yct : Int { return self.grid.yct }
     fileprivate var grid : Grid // can't live without a grid, but it is mutable
     fileprivate var hintPath : Path?
-    fileprivate var deckAtStartOfStage = [String]()
+    fileprivate var deckAtStartOfStage = [String]() // in case we are asked to restore this
     
     // reference to the view that holds the transparency layer
     // we need this so we can switch touch fall-thru on and off
@@ -140,7 +140,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                 }
             }
         }
-        self.legalPath() // generate initial hint
+        self.hintPath = self.legalPath() // generate initial hint
     }
     
     func createAndDealDeck() {
@@ -175,7 +175,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
             }
         }
         
-        self.legalPath() // generate initial hint
+        self.hintPath = self.legalPath() // generate initial hint
     }
     
     func restartStage() {
@@ -189,7 +189,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                 self.addPieceAt((i,j), withPicture: deck.removeLast()) // heh heh, pops and returns
             }
         }
-        self.legalPath() // generate initial hint
+        self.hintPath = self.legalPath() // generate initial hint
     }
 
 
@@ -233,10 +233,8 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     // board illuminate() and unilluminate(), plus remembering to set the state property
     // plus I was skankily handing the path to draw into the layer itself
     // that is just the kind of thing I wanted to clean up
-    // so I put it all into a little state machine struct
-    // the board is still the layer delegate and does the drawing
-    // and it provides front-end methods for this state machine
-    struct IlluminationStateMachine {
+    // so I put it all into a little helper class
+    class LegalPathShower : NSObject, CALayerDelegate {
         unowned private var board : Board
         init(board:Board) {self.board = board}
         private var pathToIlluminate : Path?
@@ -248,20 +246,23 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                     self.board.pathView.isUserInteractionEnabled = false // make touches just fall thru once again
                     self.board.pathLayer.setNeedsDisplay()
                 case true:
-                    self.board.pathLayer.delegate = board // tee-hee
+                    self.board.pathLayer.delegate = self // tee-hee
                     self.board.pathView.isUserInteractionEnabled = true // block touches
                     self.board.pathLayer.setNeedsDisplay()
                 }
             }
         }
-        mutating func illuminate(path:Path) {
+        func illuminate(path:Path) {
             self.pathToIlluminate = path
             self.isIlluminating = true
         }
-        mutating func unilluminate() {
+        func unilluminate() {
             self.isIlluminating = false
         }
-        func draw(intoIlluminationContext con: CGContext) {
+        func draw(_ layer: CALayer, in con: CGContext) {
+            self.draw(intoIlluminationContext: con)
+        }
+        private func draw(intoIlluminationContext con: CGContext) {
             // if no path, do nothing, thus causing the layer to become empty
             guard let arr = self.pathToIlluminate else {return}
             // okay, we have a path
@@ -274,42 +275,18 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
             con.setStrokeColor(red: 0.4, green: 0.4, blue: 1.0, alpha: 1.0)
             con.setLineWidth(3.0)
             con.beginPath()
-            // for (var i = 0; i < arr2.count - 1; i++) {
-            for i in 0..<arr.count-1 {
-                let p1 = arr[i]
-                let p2 = arr[i+1]
-                let orig1 = self.board.originOf(p1)
-                let orig2 = self.board.originOf(p2)
-                con.move(to: CGPoint(x: orig1.x + offx, y: orig1.y + offy))
-                con.addLine(to: CGPoint(x: orig2.x + offx, y: orig2.y + offy))
-            }
+            con.addLines(between: arr.map {piece in
+                let origin = self.board.originOf(piece)
+                return CGPoint(x: origin.x + offx, y: origin.y + offy)
+            })
             con.strokePath()
+        }
+        deinit {
+            self.board.pathLayer.delegate = nil // crucial or we can crash
         }
     }
     
-    lazy var illuminationStateMachine : IlluminationStateMachine = IlluminationStateMachine(board:self)
-    
-    // given a Path of Points, connect the dots
-    fileprivate func illuminate (_ arr: Path) {
-        // print("about to draw path: \(arr)")
-        self.illuminationStateMachine.illuminate(path:arr)
-    }
-    
-    // erase the path by clearing the transparency layer
-    func unilluminate () {
-        self.illuminationStateMachine.unilluminate()
-    }
-    
-    // we are the delegate of the transparency layer,
-    // so we are called when the layer is told it needs redrawing
-    // the state machine does the actual drawing
-    // would be great if the state machine could be the delegate, 
-    // but then it would have to an NSObject visible to Objective-C
-    
-    func draw(_ layer: CALayer, in con: CGContext) {
-        self.illuminationStateMachine.draw(intoIlluminationContext: con)
-    }
-    
+    lazy var hintShower : LegalPathShower = LegalPathShower(board:self)
     
     fileprivate func piece(at p:Point) -> Piece? {
         let (i,j) = p
@@ -353,21 +330,6 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         while self.hilitedPieces.count > 0 {
             let p = self.hilitedPieces.removeLast()
             p.toggleHilite()
-        }
-    }
-    
-    // bottleneck utility for when user correctly selects a pair
-    // flash the path and remove the two pieces
-    
-    fileprivate func removePairAndIlluminatePath(_ path:Path) {
-        ui(false)
-        self.illuminate(path)
-        delay(0.2) {
-            self.unilluminate()
-            delay(0.1) {
-                self.reallyRemovePair()
-                ui(true)
-            }
         }
     }
     
@@ -895,11 +857,19 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
             return
         }
         if let path = self.checkPair(p1, and:p2) {
-            self.removePairAndIlluminatePath(path)
+            // flash the path and remove the two pieces
+            self.hintShower.illuminate(path:path)
+            delay(0.2) {
+                self.hintShower.unilluminate()
+                delay(0.1) {
+                    ui(true)
+                    self.reallyRemovePair()
+                }
+            }
         } else {
+            ui(true)
             self.unhilite()
         }
-        ui(true)
     }
     
     // tap gesture recognizer action handler
@@ -923,9 +893,11 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         if self.hilitedPieces.count == 2 {
             // print("========")
             // print("about to check hilited pair \(self.hilitedPieces)")
+            ui(true)
             self.checkHilitedPair()
+        } else {
+            ui(true)
         }
-        ui(true)
     }
     
     // utility to run thru the entire grid and make sure there is at least one legal path somewhere
@@ -934,7 +906,6 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     // but caller can treat result as condition as well
     // the path is simply the path returned from checkPair
     
-    @discardableResult
     fileprivate func legalPath () -> Path? {
         for x in 0..<self.xct {
             for y in 0..<self.yct {
@@ -963,33 +934,37 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                             continue
                         }
                         // got one!
-                        self.hintPath = path // store so hint can fetch it
                         return path
                     }
                 }
             }
         }
-        self.hintPath = nil // store so hint can fetch it (should not happen)
         return nil
     }
     
+    // public, called by LinkSameViewController to ask us to display hint
     func hint () {
-        let path = self.hintPath // no need to waste time calling legalPath()
-        if path != nil {
-            self.illuminate(path!)
-        }
-        else { // just in case hintPath was somehow never set
-            let path = self.legalPath()
-            if path != nil {
-                self.illuminate(path!)
-                return
+        // no need to waste time calling legalPath(); path is ready (or not) in hintPath
+        if let path = self.hintPath {
+            self.hintShower.illuminate(path:path)
+        } else { // this part shouldn't happen, but just in case, waste time after all
+            self.hintPath = self.legalPath()
+            if self.hintPath != nil {
+                self.hint() // try again, and this time we'll succeed
+            } else {
+                self.redeal() // should _really_ never happen, but just in case
             }
-            self.redeal() // should never happen at this point
         }
     }
     
+    // public, for the same reason: if LinkSameViewController tells us to hint,
+    // we stay hinted until we are told to unhint
+    func unhint () {
+        self.hintShower.unilluminate()
+    }
+
+    
     deinit {
-        self.pathLayer.delegate = nil // crucial; if not, can crash when we are released and layer still exists
         print("farewell from board")
     }
     

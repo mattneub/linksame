@@ -7,7 +7,6 @@ import WebKit
 
 class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
-    fileprivate var didSetUp = false
     
     fileprivate var board : Board!
     @IBOutlet fileprivate weak var backgroundView : UIView!
@@ -33,6 +32,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         // and these are also the indexes of the timedPractice segmented control, heh heh
     }
     
+    // changing the interface mode changes our interace
     fileprivate var interfaceMode : InterfaceMode = .timed {
         willSet (mode) {
             let timed : Bool
@@ -78,20 +78,20 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     }
     
     // bring together the score, the timer, and control over the score display part of the interface
-    // the idea is to make a new one every time a new stage begins...
+    // the idea is to make a new Stage object every time a new timed stage begins...
     // ...and then communicate with it only in terms of game-related events
     
-    final class Stage : NSObject { // has to be a class so we can invalidate timer on deinit (maybe fix this later)
+    final class Stage : NSObject {
         private(set) var score : Int
         let scoreAtStartOfStage : Int
         private var timer : Timer! // no timer initially (user has not moved yet)
         private var lastTime : Date = Date.distantPast
         private unowned let lsvc : LinkSameViewController
-        init(lsvc:LinkSameViewController, score:Int = 0) {
+        init(lsvc:LinkSameViewController, score:Int = 0) { // initial score for this stage
             print("new game!")
             self.lsvc = lsvc
             self.score = score
-            self.scoreAtStartOfStage = score
+            self.scoreAtStartOfStage = score // might need this if we restart this stage later
             super.init()
             self.lsvc.scoreLabel.text = String(self.score)
             self.lsvc.scoreLabel.textColor = .black
@@ -101,8 +101,10 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
                     self.lsvc.prevLabel.text = "High score: \(prev)"
                 }
             }
+            // application lifetime events affect our timer
             nc.addObserver(self, selector: #selector(resigningActive), name: .UIApplicationWillResignActive, object: nil)
             nc.addObserver(self, selector: #selector(becomingActive), name: .UIApplicationDidBecomeActive, object: nil)
+            // long-distance communication from the board object
             nc.addObserver(self, selector: #selector(userMadeLegalMove), name: .userMoved, object: nil)
         }
         deinit {
@@ -114,16 +116,17 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             self.timer?.invalidate()
         }
         private func restartTimer() { // private utility
-            print("restartTimer")
+            // print("restartTimer")
             self.timer?.invalidate()
-            self.timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [unowned self] _ in
-                self.score -= 1
-                self.lsvc.scoreLabel.text = String(self.score)
-                self.lsvc.scoreLabel.textColor = .red
-            }
+            self.timer = Timer.scheduledTimer(timeInterval: 10, target: self, selector: #selector(userFailedToMove), userInfo: nil, repeats: true)
         }
         @objc private func becomingActive() { // notification
             self.restartTimer()
+        }
+        @objc private func userFailedToMove(_:Any) {
+            self.score -= 1
+            self.lsvc.scoreLabel.text = String(self.score)
+            self.lsvc.scoreLabel.textColor = .red
         }
         func userAskedForHint() {
             self.restartTimer()
@@ -143,21 +146,20 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             let now = Date()
             let diff = now.timeIntervalSinceReferenceDate - self.lastTime.timeIntervalSinceReferenceDate
             self.lastTime = now
-            var bonus = 0
-            if diff < 10 {
-                bonus = Int((10.0/diff).rounded(.up))
-            }
+            let bonus = (diff < 10) ? Int((10.0/diff).rounded(.up)) : 0
             self.score += 1 + bonus
             self.lsvc.scoreLabel.text = String(self.score)
             self.lsvc.scoreLabel.textColor = .black
         }
     }
     
+    fileprivate var didSetUp = false
     override func viewDidLayoutSubviews() {
         guard !self.didSetUp else { return }
         self.didSetUp = true
         
-        ui(false)
+        // prepare interface, including game setup if needed
+        
         // increase font size on 6 plus
         if on6plus {
             for lab in [self.scoreLabel!, self.prevLabel!, self.stageLabel!] {
@@ -183,24 +185,12 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         } else { // otherwise, create new game from scratch
             self.startNewGame()
         }
-        ui(true)
         
+        // responses to game events and application lifetime events
+        
+        // sent long-distance by board
         nc.addObserver(forName: .gameOver, object: nil, queue: nil) { n in
-            self.prepareNewStage(n as AnyObject?)
-        }
-//        nc.addObserver(forName: .UIApplicationWillEnterForeground, object: nil, queue: nil) { _ in
-//            // if there is no saved board, start the whole game over
-//            if ud.object(forKey: Default.boardData) == nil {
-//                self.startNewGame()
-//            }
-//        }
-        nc.addObserver(forName: .UIApplicationDidBecomeActive, object: nil, queue: nil) { _ in
-            // show the board view, just in case it was hidden on suspension
-            self.boardView?.isHidden = false
-            print(self.stage)
-            if self.stage == nil && ud.object(forKey: Default.boardData) == nil {
-                self.startNewGame()
-            }
+            self.prepareNewStage(n)
         }
         nc.addObserver(forName: .UIApplicationWillResignActive, object: nil, queue: nil) { _ in
             // remove hint
@@ -215,24 +205,34 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             }
         }
         nc.addObserver(forName: .UIApplicationDidEnterBackground, object: nil, queue: nil) { _ in
-            // set up board data defaults
             // user cannot escape the timer by suspending the app; the game just ends if we background
             self.stage = nil
             switch self.interfaceMode {
-            case .timed: // timed, make sure there is no saved board data
+            case .timed:
                 ud.removeObject(forKey: Default.boardData)
-                // hide the game, stop the timer, kill the score; snapshot will capture blank background
-                self.boardView.isHidden = true
-            case .practice: // practice, save out board state
+                self.boardView.isHidden = true // so snapshot will capture blank background
+            case .practice:
+                // save out board state
                 let boardData = NSKeyedArchiver.archivedData(withRootObject: self.board)
                 ud.set(boardData, forKey:Default.boardData)
             }
         }
+        // a big problem with lifetime events is that they are not sufficient fine-grained
+        // it makes a big difference whether we are activating from a mere deactivate...
+        // ...or coming back from the background
+        // to detect this, we have configured things in didEnterBackground
+        nc.addObserver(forName: .UIApplicationDidBecomeActive, object: nil, queue: nil) { _ in
+            // show the board view, just in case it was hidden on suspension
+            self.boardView?.isHidden = false
+            if self.stage == nil && ud.object(forKey: Default.boardData) == nil {
+                self.startNewGame()
+            }
+        }
+
     }
     
     fileprivate func animateBoardTransition (_ transition: BoardTransition) {
-        ui(false)
-        // about to animate, turn off interaction; will turn back on in delegate
+        ui(false) // about to animate, turn off interaction; will turn back on in delegate
         let t = CATransition()
         if transition == .slide { // default is .Fade, fade in
             t.type = kCATransitionMoveIn
@@ -249,22 +249,21 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
     // delegate from previous, called when animation ends
     func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
-        if anim.value(forKey: "name") as? NSString == "boardReplacement" {
-            // set and animated showing of "stage" label
+        if anim.value(forKey: "name") as? String == "boardReplacement" {
+            // set "stage" label, animate the change
+            let s = "Stage \(self.board.stage + 1) " +
+            "of \(ud.integer(forKey: Default.lastStage) + 1)"
+            self.stageLabel.text = s
             UIView.transition(with: self.stageLabel, duration: 0.4,
-                options: .transitionFlipFromLeft,
-                animations: {
-                    let s = "Stage \(self.board.stage + 1) " +
-                    "of \(ud.integer(forKey: Default.lastStage) + 1)"
-                    self.stageLabel.text = s
-                }, completion: {_ in ui(true) })
+                options: .transitionFlipFromLeft, animations: nil,
+                completion: {_ in ui(true) })
         }
     }
     
     // called at startup
     // called when user asks for a new game
     // called via notification when user completes a stage
-    @objc fileprivate func prepareNewStage (_ n : AnyObject?) {
+    @objc fileprivate func prepareNewStage (_ n : Any?) {
         ui(false)
         
         // determine layout dimensions
@@ -354,7 +353,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
     // ============================ toolbar buttons =================================
     
-    @IBAction @objc fileprivate func toggleHint(_:AnyObject?) { // hintButton
+    @IBAction @objc fileprivate func toggleHint(_:Any?) { // hintButton
         self.board.unhilite()
         let v = self.board.pathView
         if !self.board.showingHint {
@@ -367,7 +366,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             v.addGestureRecognizer(t)
         } else {
             self.hintButton?.title = HintButtonTitle.Show
-            self.board.unilluminate()
+            self.board.unhint()
             if let gs = v.gestureRecognizers {
                 for g in gs {
                     v.removeGestureRecognizer(g)
@@ -376,7 +375,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         }
     }
     
-    @IBAction fileprivate func doShuffle(_:AnyObject?) {
+    @IBAction fileprivate func doShuffle(_:Any?) {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
@@ -385,7 +384,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         self.board.redeal()
     }
     
-    @IBAction fileprivate func doRestartStage(_:AnyObject?) {
+    @IBAction fileprivate func doRestartStage(_:Any?) {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
@@ -426,7 +425,7 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
 
 extension LinkSameViewController { // buttons in popover
     
-    @IBAction fileprivate func doNew(_ sender:AnyObject?) {
+    @IBAction fileprivate func doNew(_ sender:Any?) {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
@@ -474,7 +473,7 @@ extension LinkSameViewController { // buttons in popover
         }
     }
     
-    @IBAction fileprivate func doTimedPractice(_ : AnyObject?) {
+    @IBAction fileprivate func doTimedPractice(_ : Any) {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
@@ -486,7 +485,7 @@ extension LinkSameViewController { // buttons in popover
         }
     }
     
-    @IBAction fileprivate func doHelp(_ sender : AnyObject?) {
+    @IBAction fileprivate func doHelp(_ sender: Any?) {
         // create help from scratch
         let vc = UIViewController()
         let wv = WKWebView()
@@ -514,7 +513,7 @@ extension LinkSameViewController { // buttons in popover
         }
     }
     
-    @objc fileprivate func dismissHelp(_:AnyObject) {
+    @objc fileprivate func dismissHelp(_:Any) {
         self.dismiss(animated: true)
     }
     
@@ -527,7 +526,7 @@ extension LinkSameViewController : UIToolbarDelegate {
 }
 
 extension LinkSameViewController { // hamburger button on phone
-    @IBAction func doHamburgerButton (_ sender:AnyObject!) {
+    @IBAction func doHamburgerButton (_ : Any) {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
