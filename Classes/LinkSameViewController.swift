@@ -4,6 +4,42 @@ import UIKit
 import Swift
 import WebKit
 
+class CancelableTimer: NSObject {
+    private var q = DispatchQueue(label: "timer")
+    private var timer : DispatchSourceTimer!
+    private var firsttime = true
+    private var once : Bool
+    private var handler : () -> ()
+    init(once:Bool, handler:@escaping ()->()) {
+        self.once = once
+        self.handler = handler
+        super.init()
+    }
+    func start(interval:Double, leeway:Int) {
+        self.firsttime = true
+        self.cancel()
+        self.timer = DispatchSource.makeTimerSource(queue: self.q)
+        self.timer.scheduleRepeating(wallDeadline: .now(), interval: interval, leeway: .milliseconds(leeway))
+        self.timer.setEventHandler {
+            if self.firsttime {
+                self.firsttime = false
+                return
+            }
+            self.handler()
+            if self.once {
+                self.cancel()
+            }
+        }
+        self.timer.resume()
+    }
+    func cancel() {
+        self.timer?.cancel()
+    }
+    deinit {
+        print("deinit cancelable timer")
+    }
+}
+
 
 class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
@@ -82,16 +118,9 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     // ...and then communicate with it only in terms of game-related events
     
     final class Stage : NSObject {
-        class Bouncer : NSObject {
-            unowned let stage : Stage
-            init(stage:Stage) {self.stage = stage}
-            func timerFired(_:Timer) {self.stage.userFailedToMove()}
-            deinit {print("farewell from bouncer")}
-        }
-        private lazy var bouncer : Bouncer = {return Bouncer(stage:self)}()
         private(set) var score : Int
         let scoreAtStartOfStage : Int
-        private var timer : Timer! // no timer initially (user has not moved yet)
+        private var timer : CancelableTimer! // no timer initially (user has not moved yet)
         private var lastTime : Date = Date.distantPast
         private unowned let lsvc : LinkSameViewController
         init(lsvc:LinkSameViewController, score:Int = 0) { // initial score for this stage
@@ -116,16 +145,21 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         }
         deinit {
             print("farewell from game")
-            self.timer?.invalidate()
+            self.timer?.cancel()
             nc.removeObserver(self)
         }
         @objc private func resigningActive() { // notification
-            self.timer?.invalidate()
+            self.timer?.cancel()
         }
         private func restartTimer() { // private utility
             // print("restartTimer")
-            self.timer?.invalidate()
-            self.timer = Timer.scheduledTimer(timeInterval: 10, target: self.bouncer, selector: #selector(Bouncer.timerFired), userInfo: nil, repeats: true)
+            self.timer?.cancel()
+            self.timer = CancelableTimer(once: false) { [unowned self] in
+                DispatchQueue.main.async {
+                    self.userFailedToMove()
+                }
+            }
+            self.timer.start(interval: 10, leeway: 100)
         }
         @objc private func becomingActive() { // notification
             self.restartTimer()
