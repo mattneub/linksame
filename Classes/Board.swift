@@ -252,6 +252,9 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                 }
             }
         }
+        deinit {
+            self.board.pathLayer.delegate = nil // crucial or we can crash
+        }
         func illuminate(path:Path) {
             self.pathToIlluminate = path
             self.isIlluminating = true
@@ -280,9 +283,6 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                 return CGPoint(x: origin.x + offx, y: origin.y + offy)
             })
             con.strokePath()
-        }
-        deinit {
-            self.board.pathLayer.delegate = nil // crucial or we can crash
         }
     }
     
@@ -963,7 +963,6 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         self.hintShower.unilluminate()
     }
 
-    
     deinit {
         print("farewell from board")
     }

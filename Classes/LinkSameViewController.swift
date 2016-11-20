@@ -118,12 +118,14 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         private func restartTimer() { // private utility
             // print("restartTimer")
             self.timer?.invalidate()
-            self.timer = Timer.scheduledTimer(timeInterval: 10, target: self, selector: #selector(userFailedToMove), userInfo: nil, repeats: true)
+            self.timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [unowned self] _ in
+                self.userFailedToMove()
+            }
         }
         @objc private func becomingActive() { // notification
             self.restartTimer()
         }
-        @objc private func userFailedToMove(_:Any) {
+        private func userFailedToMove() {
             self.score -= 1
             self.lsvc.scoreLabel.text = String(self.score)
             self.lsvc.scoreLabel.textColor = .red
