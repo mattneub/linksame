@@ -164,6 +164,9 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         @objc private func becomingActive() { // notification
             self.restartTimer()
         }
+        func gameEnded() {
+            self.timer?.cancel()
+        }
         private func userFailedToMove() {
             self.score -= 1
             self.lsvc.scoreLabel.text = String(self.score)
@@ -231,6 +234,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         
         // sent long-distance by board
         nc.addObserver(forName: .gameOver, object: nil, queue: nil) { n in
+            self.stage?.gameEnded()
             self.prepareNewStage(n)
         }
         nc.addObserver(forName: .UIApplicationWillResignActive, object: nil, queue: nil) { _ in
