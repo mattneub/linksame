@@ -44,17 +44,17 @@ class CancelableTimer: NSObject {
 class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
     
-    fileprivate var board : Board!
-    @IBOutlet fileprivate weak var backgroundView : UIView!
-    @IBOutlet fileprivate weak var stageLabel : UILabel!
-    @IBOutlet fileprivate weak var scoreLabel : UILabel!
-    @IBOutlet fileprivate weak var prevLabel : UILabel!
-    @IBOutlet fileprivate weak var hintButton : UIBarButtonItem!
-    @IBOutlet fileprivate weak var timedPractice : UISegmentedControl!
-    @IBOutlet fileprivate weak var restartStageButton : UIBarButtonItem!
-    @IBOutlet fileprivate weak var toolbar : UIToolbar!
-    fileprivate var boardView : UIView!
-    fileprivate var oldDefs : [String : Any]!
+    fileprivate var board : Board?
+    @IBOutlet fileprivate weak var backgroundView : UIView?
+    @IBOutlet fileprivate weak var stageLabel : UILabel?
+    @IBOutlet fileprivate weak var scoreLabel : UILabel?
+    @IBOutlet fileprivate weak var prevLabel : UILabel?
+    @IBOutlet fileprivate weak var hintButton : UIBarButtonItem?
+    @IBOutlet fileprivate weak var timedPractice : UISegmentedControl?
+    @IBOutlet fileprivate weak var restartStageButton : UIBarButtonItem?
+    @IBOutlet fileprivate weak var toolbar : UIToolbar?
+    fileprivate var boardView : UIView?
+    fileprivate var oldDefs : [String : Any]?
     
     override var nibName : String {
         get {
@@ -78,8 +78,8 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             case .practice:
                 timed = false
             }
-            self.scoreLabel.isHidden = !timed
-            self.prevLabel.isHidden = !timed
+            self.scoreLabel?.isHidden = !timed
+            self.prevLabel?.isHidden = !timed
             self.timedPractice?.selectedSegmentIndex = mode.rawValue
             self.timedPractice?.isEnabled = timed
             self.restartStageButton?.isEnabled = timed
@@ -129,12 +129,12 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             self.score = score
             self.scoreAtStartOfStage = score // might need this if we restart this stage later
             super.init()
-            self.lsvc.scoreLabel.text = String(self.score)
-            self.lsvc.scoreLabel.textColor = .black
-            self.lsvc.prevLabel.text = ""
+            self.lsvc.scoreLabel?.text = String(self.score)
+            self.lsvc.scoreLabel?.textColor = .black
+            self.lsvc.prevLabel?.text = ""
             if let scoresDict = ud.dictionary(forKey: Default.scores) as? [String:Int] {
                 if let prev = scoresDict[self.lsvc.scoresKey] {
-                    self.lsvc.prevLabel.text = "High score: \(prev)"
+                    self.lsvc.prevLabel?.text = "High score: \(prev)"
                 }
             }
             // application lifetime events affect our timer
@@ -169,20 +169,20 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         }
         private func userFailedToMove() {
             self.score -= 1
-            self.lsvc.scoreLabel.text = String(self.score)
-            self.lsvc.scoreLabel.textColor = .red
+            self.lsvc.scoreLabel?.text = String(self.score)
+            self.lsvc.scoreLabel?.textColor = .red
         }
         func userAskedForHint() {
             self.restartTimer()
             self.score -= 10
-            self.lsvc.scoreLabel.text = String(self.score)
-            self.lsvc.scoreLabel.textColor = .red
+            self.lsvc.scoreLabel?.text = String(self.score)
+            self.lsvc.scoreLabel?.textColor = .red
         }
         func userAskedForShuffle() {
             self.restartTimer()
             self.score -= 20
-            self.lsvc.scoreLabel.text = String(self.score)
-            self.lsvc.scoreLabel.textColor = .red
+            self.lsvc.scoreLabel?.text = String(self.score)
+            self.lsvc.scoreLabel?.textColor = .red
         }
         @objc private func userMadeLegalMove() {
             self.restartTimer()
@@ -192,8 +192,8 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             self.lastTime = now
             let bonus = (diff < 10) ? Int((10.0/diff).rounded(.up)) : 0
             self.score += 1 + bonus
-            self.lsvc.scoreLabel.text = String(self.score)
-            self.lsvc.scoreLabel.textColor = .black
+            self.lsvc.scoreLabel?.text = String(self.score)
+            self.lsvc.scoreLabel?.textColor = .black
         }
     }
     
@@ -219,10 +219,10 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         // have we a state saved from prior practice? (non-practice game is not saved as board data!)
         // if so, reconstruct practice game from board data
         if let boardData = ud.object(forKey: Default.boardData) as? Data {
-            self.board = NSKeyedUnarchiver.unarchiveObject(with: boardData) as! Board
-            self.boardView = self.board.view
-            self.backgroundView.addSubview(self.boardView)
-            self.boardView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            self.board = NSKeyedUnarchiver.unarchiveObject(with: boardData) as! Board?
+            self.boardView = self.board!.view
+            self.backgroundView!.addSubview(self.boardView!)
+            self.boardView?.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             // set interface up as practice and we're all set
             self.interfaceMode = .practice
             self.stage = nil // just in case
@@ -240,13 +240,13 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         }
         nc.addObserver(forName: .UIApplicationWillResignActive, object: nil, queue: nil) { _ in
             // remove hint
-            if self.board.showingHint {
+            if self.board!.showingHint {
                 self.toggleHint(nil)
             }
             // dismiss popover if any; counts as cancelling, so restore defaults if needed
             self.dismiss(animated: false)
-            if (self.oldDefs != nil) {
-                ud.setValuesForKeys(self.oldDefs)
+            if let defs = self.oldDefs {
+                ud.setValuesForKeys(defs)
                 self.oldDefs = nil
             }
         }
@@ -256,10 +256,10 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             switch self.interfaceMode {
             case .timed:
                 ud.removeObject(forKey: Default.boardData)
-                self.boardView.isHidden = true // so snapshot will capture blank background
+                self.boardView?.isHidden = true // so snapshot will capture blank background
             case .practice:
                 // save out board state
-                let boardData = NSKeyedArchiver.archivedData(withRootObject: self.board)
+                let boardData = NSKeyedArchiver.archivedData(withRootObject: self.board!)
                 ud.set(boardData, forKey:Default.boardData)
             }
         }
@@ -290,17 +290,17 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         t.timingFunction = CAMediaTimingFunction(name:kCAMediaTimingFunctionLinear)
         t.delegate = self
         t.setValue("boardReplacement", forKey:"name")
-        self.boardView.layer.add(t, forKey:nil)
+        self.boardView?.layer.add(t, forKey:nil)
     }
     
     // delegate from previous, called when animation ends
     func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
         if anim.value(forKey: "name") as? String == "boardReplacement" {
             // set "stage" label, animate the change
-            let s = "Stage \(self.board.stage + 1) " +
+            let s = "Stage \(self.board!.stage + 1) " +
             "of \(ud.integer(forKey: Default.lastStage) + 1)"
-            self.stageLabel.text = s
-            UIView.transition(with: self.stageLabel, duration: 0.4,
+            self.stageLabel?.text = s
+            UIView.transition(with: self.stageLabel!, duration: 0.4,
                 options: .transitionFlipFromLeft, animations: nil,
                 completion: {_ in ui(true) })
         }
@@ -318,15 +318,15 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             (w,h) = Sizes.boardSize(Sizes.easy)
         }
         // create new board object and configure it
-        self.board = Board(boardFrame:self.backgroundView.bounds, gridSize:(w,h))
+        self.board = Board(boardFrame:self.backgroundView!.bounds, gridSize:(w,h))
         // put its `view` into the interface, replacing the one that may be there already
         self.boardView?.removeFromSuperview()
-        self.boardView = self.board.view
-        self.backgroundView.addSubview(self.boardView)
-        self.boardView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
+        self.boardView = self.board!.view
+        self.backgroundView!.addSubview(self.boardView!)
+        self.boardView!.autoresizingMask = [.flexibleHeight, .flexibleWidth]
         // stage (current stage arrived in notification, or nil if we are just starting)
-        self.board.stage = 0 // default
-        // self.board.stage = 8 // testing, comment out!
+        self.board!.stage = 0 // default
+        // self.board!.stage = 8 // testing, comment out!
         
         // there are three possibilities:
         // * startup, or user asked for new game
@@ -344,14 +344,14 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 self.stage = Stage(lsvc: self, score: self.stage!.score) // score carries over
             }
             let boardTransition : BoardTransition = newGame ? .fade : .slide
-            board.createAndDealDeck()
+            self.board!.createAndDealDeck()
             self.animateBoardTransition(boardTransition)
         }
         
         if let stage = (n as? Notification)?.userInfo?["stage"] as? Int {
             if stage < ud.integer(forKey: Default.lastStage) {
                 // * notification, on to next stage
-                self.board.stage = stage + 1
+                self.board!.stage = stage + 1
                 newBoard(newGame:false)
             }
             else {
@@ -400,19 +400,19 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     // ============================ toolbar buttons =================================
     
     @IBAction @objc fileprivate func toggleHint(_:Any?) { // hintButton
-        self.board.unhilite()
-        let v = self.board.pathView
-        if !self.board.showingHint {
+        self.board!.unhilite()
+        let v = self.board!.pathView
+        if !self.board!.showingHint {
             self.hintButton?.title = HintButtonTitle.Hide
             self.stage?.userAskedForHint()
-            self.board.hint()
+            self.board!.hint()
             // if user taps board now, this should have just the same effect as tapping button
             // so, attach gesture rec
             let t = UITapGestureRecognizer(target: self, action: #selector(toggleHint))
             v.addGestureRecognizer(t)
         } else {
             self.hintButton?.title = HintButtonTitle.Show
-            self.board.unhint()
+            self.board!.unhint()
             if let gs = v.gestureRecognizers {
                 for g in gs {
                     v.removeGestureRecognizer(g)
@@ -422,24 +422,24 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     }
     
     @IBAction fileprivate func doShuffle(_:Any?) {
-        if self.board.showingHint {
+        if self.board!.showingHint {
             self.toggleHint(nil)
         }
         self.stage?.userAskedForShuffle()
-        self.board.unhilite()
-        self.board.redeal()
+        self.board!.unhilite()
+        self.board!.redeal()
     }
     
     @IBAction fileprivate func doRestartStage(_:Any?) {
-        if self.board.showingHint {
+        if self.board!.showingHint {
             self.toggleHint(nil)
         }
-        self.board.unhilite()
+        self.board!.unhilite()
         let alert = UIAlertController(title: "Restart Stage", message: "Really restart this stage?", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: {
             _ in
-            self.board.restartStage()
+            self.board!.restartStage()
             self.stage = Stage(lsvc: self, score: self.stage!.scoreAtStartOfStage)
             self.animateBoardTransition(.fade)
         }))
@@ -472,10 +472,10 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
 extension LinkSameViewController { // buttons in popover
     
     @IBAction fileprivate func doNew(_ sender:Any?) {
-        if self.board.showingHint {
+        if self.board!.showingHint {
             self.toggleHint(nil)
         }
-        self.board.unhilite()
+        self.board!.unhilite()
         // create dialog from scratch (see NewGameController for rest of interface)
         let dlg = NewGameController()
         dlg.isModalInPopover = true // must be before presentation to work
@@ -499,8 +499,8 @@ extension LinkSameViewController { // buttons in popover
     @objc fileprivate func cancelNewGame() { // cancel button in new game popover
         ui(false)
         self.dismiss(animated: true, completion: {_ in ui(true)})
-        if (self.oldDefs != nil) {
-            ud.setValuesForKeys(self.oldDefs)
+        if let d = self.oldDefs {
+            ud.setValuesForKeys(d)
             self.oldDefs = nil
         }
     }
@@ -520,11 +520,11 @@ extension LinkSameViewController { // buttons in popover
     }
     
     @IBAction fileprivate func doTimedPractice(_ : Any) {
-        if self.board.showingHint {
+        if self.board!.showingHint {
             self.toggleHint(nil)
         }
-        self.board.unhilite()
-        self.interfaceMode = InterfaceMode(rawValue:self.timedPractice.selectedSegmentIndex)!
+        self.board!.unhilite()
+        self.interfaceMode = InterfaceMode(rawValue:self.timedPractice!.selectedSegmentIndex)!
         // and changing the interface mode changes the interface accordingly
         if self.interfaceMode == .practice {
             self.stage = nil
@@ -573,10 +573,10 @@ extension LinkSameViewController : UIToolbarDelegate {
 
 extension LinkSameViewController { // hamburger button on phone
     @IBAction func doHamburgerButton (_ : Any) {
-        if self.board.showingHint {
+        if self.board!.showingHint {
             self.toggleHint(nil)
         }
-        self.board.unhilite()
+        self.board!.unhilite()
 
         let action = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
         action.addAction(UIAlertAction(title: "Game", style: .default, handler: {

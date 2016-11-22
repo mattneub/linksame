@@ -6,7 +6,7 @@ import Swift
 fileprivate let cellid = "Cell"
 
 class NewGameController : UIViewController {
-    weak var tableView : UITableView!
+    weak var tableView : UITableView?
     
     init () {
         super.init(nibName: nil, bundle: nil)
@@ -119,7 +119,7 @@ extension NewGameController : UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         if let setting = tableView.cellForRow(at: indexPath)?.textLabel?.text {
             ud.set(setting, forKey: self.tableView(tableView, titleForHeaderInSection:indexPath.section)!)
-            self.tableView.reloadData()
+            tableView.reloadData()
         }
     }
 }
