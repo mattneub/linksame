@@ -212,8 +212,9 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             }
         }
         // fix width of hint button to accomodate new labels Show Hint and Hide Hint
-        self.hintButton?.possibleTitles = [HintButtonTitle.Show, HintButtonTitle.Hide]
+        self.hintButton?.possibleTitles = [HintButtonTitle.Show, HintButtonTitle.Hide] // not working
         self.hintButton?.title = HintButtonTitle.Show
+        self.hintButton?.width = 100 // forced to take a wild guess 
         // return; // uncomment for launch image screen shot
         // have we a state saved from prior practice? (non-practice game is not saved as board data!)
         // if so, reconstruct practice game from board data
