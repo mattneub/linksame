@@ -19,7 +19,7 @@ class CancelableTimer: NSObject {
         self.firsttime = true
         self.cancel()
         self.timer = DispatchSource.makeTimerSource(queue: self.q)
-        self.timer.scheduleRepeating(wallDeadline: .now(), interval: interval, leeway: .milliseconds(leeway))
+        self.timer.schedule(wallDeadline: .now(), repeating: interval, leeway: .milliseconds(leeway))
         self.timer.setEventHandler {
             if self.firsttime {
                 self.firsttime = false
@@ -109,7 +109,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
     fileprivate var scoresKey : String {
         let size = ud.string(forKey: Default.size)
         let stages = ud.integer(forKey: Default.lastStage)
-        let key = "\(size)\(stages)"
+        let key = "\(size!)\(stages)"
         return key
     }
     
@@ -498,7 +498,7 @@ extension LinkSameViewController { // buttons in popover
     
     @objc fileprivate func cancelNewGame() { // cancel button in new game popover
         ui(false)
-        self.dismiss(animated: true, completion: {_ in ui(true)})
+        self.dismiss(animated: true, completion: {ui(true)})
         if let d = self.oldDefs {
             ud.setValuesForKeys(d)
             self.oldDefs = nil

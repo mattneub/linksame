@@ -44,18 +44,19 @@ func ui(_ yn:Bool) { // false means no user interaction, true means turn it back
 
 // operators
 
-infix operator <<< : RangeFormationPrecedence
-func <<<<Bound>
-    (minimum: Bound, maximum: Bound) ->
-    CountableRange<Bound> where Bound : Comparable, Bound.Stride : Integer {
-        return (minimum..<maximum)
+infix operator >>> : RangeFormationPrecedence
+func >>><Bound>(maximum: Bound, minimum: Bound)
+    -> ReversedRandomAccessCollection<CountableRange<Bound>>
+    where Bound : Comparable & Strideable {
+        return (minimum..<maximum).reversed()
 }
 
-infix operator >>> : RangeFormationPrecedence
-func >>><Bound>
-    (maximum: Bound, minimum: Bound) ->
-    ReversedRandomAccessCollection<CountableRange<Bound>> where Bound : Comparable, Bound.Stride : Integer {
-        return (minimum..<maximum).reversed()
+
+infix operator <<< : RangeFormationPrecedence
+func <<<<Bound>(minimum: Bound, maximum: Bound)
+    -> CountableRange<Bound>
+    where Bound : Comparable & Strideable {
+        return (minimum..<maximum)
 }
 
 // notifications used to communicate from Board to LinkSameViewController
