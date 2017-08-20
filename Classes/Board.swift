@@ -60,7 +60,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     // we need this so we can switch touch fall-thru on and off
     let pathView : UIView
     // reference to the transparency layer
-    fileprivate lazy var pathLayer : CALayer = self.pathView.layer.sublayers!.last!
+    fileprivate lazy var pathLayer = self.pathView.layer.sublayers!.last!
 
     fileprivate lazy var pieceSize : CGSize = {
         // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
@@ -286,7 +286,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         }
     }
     
-    lazy var hintShower : LegalPathShower = LegalPathShower(board:self)
+    lazy var hintShower = LegalPathShower(board:self)
     
     fileprivate func piece(at p:Point) -> Piece? {
         let (i,j) = p
