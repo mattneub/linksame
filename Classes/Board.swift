@@ -817,7 +817,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                 // utility to learn physical distance between two points (thank you, M. Descartes)
                 let deltax = pt1.0 - pt2.0
                 let deltay = pt1.1 - pt2.1
-                return sqrt(Double(deltax * deltax + deltay * deltay))
+                return Double(deltax * deltax + deltay * deltay).squareRoot()
             }
             var shortestLength = -1.0
             var shortestPath = Path()
