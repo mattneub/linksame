@@ -138,8 +138,8 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 }
             }
             // application lifetime events affect our timer
-            nc.addObserver(self, selector: #selector(resigningActive), name: .UIApplicationWillResignActive, object: nil)
-            nc.addObserver(self, selector: #selector(becomingActive), name: .UIApplicationDidBecomeActive, object: nil)
+            nc.addObserver(self, selector: #selector(resigningActive), name: UIApplication.willResignActiveNotification, object: nil)
+            nc.addObserver(self, selector: #selector(becomingActive), name: UIApplication.didBecomeActiveNotification, object: nil)
             // long-distance communication from the board object
             nc.addObserver(self, selector: #selector(userMadeLegalMove), name: .userMoved, object: nil)
         }
@@ -238,7 +238,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
             self.stage?.gameEnded()
             self.prepareNewStage(n)
         }
-        nc.addObserver(forName: .UIApplicationWillResignActive, object: nil, queue: nil) { _ in
+        nc.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: nil) { _ in
             // remove hint
             if self.board!.showingHint {
                 self.toggleHint(nil)
@@ -250,7 +250,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 self.oldDefs = nil
             }
         }
-        nc.addObserver(forName: .UIApplicationDidEnterBackground, object: nil, queue: nil) { _ in
+        nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { _ in
             // user cannot escape the timer by suspending the app; the game just ends if we background
             self.stage = nil
             switch self.interfaceMode {
@@ -267,7 +267,7 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         // it makes a big difference whether we are activating from a mere deactivate...
         // ...or coming back from the background
         // to detect this, we have configured things in didEnterBackground
-        nc.addObserver(forName: .UIApplicationDidBecomeActive, object: nil, queue: nil) { _ in
+        nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { _ in
             // show the board view, just in case it was hidden on suspension
             self.boardView?.isHidden = false
             if self.stage == nil && ud.object(forKey: Default.boardData) == nil {
@@ -281,13 +281,13 @@ class LinkSameViewController : UIViewController, CAAnimationDelegate {
         ui(false) // about to animate, turn off interaction; will turn back on in delegate
         let t = CATransition()
         if transition == .slide { // default is .Fade, fade in
-            t.type = kCATransitionMoveIn
-            t.subtype = kCATransitionFromLeft
+            t.type = .moveIn
+            t.subtype = .fromLeft
         }
         t.duration = 0.7
         t.beginTime = CACurrentMediaTime() + 0.4
-        t.fillMode = kCAFillModeBackwards
-        t.timingFunction = CAMediaTimingFunction(name:kCAMediaTimingFunctionLinear)
+        t.fillMode = .backwards
+        t.timingFunction = CAMediaTimingFunction(name:.linear)
         t.delegate = self
         t.setValue("boardReplacement", forKey:"name")
         self.boardView?.layer.add(t, forKey:nil)
