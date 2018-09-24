@@ -13,14 +13,7 @@ private var OUTER : CGFloat {
     return result
 }
 
-
-// I was hoping there would be no good reason to be an NSObject derivative
-// but it turned out that keyed archiving requires it
-// however, unfortunately then my grid gave trouble, probably because it is multidimensional
-// but I didn't want to lose that, so I created a grid struct (no need for full-fledged class), 
-// which hides (encapsulates) the actual grid
-
-struct Grid {
+struct Grid : Codable {
     private var grid : [[Piece?]]
     let xct : Int
     let yct : Int
@@ -41,8 +34,7 @@ struct Grid {
     }
 }
 
-final class Board : NSObject, NSSecureCoding, CALayerDelegate {
-    static var supportsSecureCoding: Bool { return true }
+final class Board : NSObject, CALayerDelegate, Codable {
     
     static let gameOver = Notification.Name("gameOver")
     static let userMoved = Notification.Name("userMoved")
@@ -90,60 +82,45 @@ final class Board : NSObject, NSSecureCoding, CALayerDelegate {
         lay.frame = v.layer.bounds
         self.view.addSubview(v)
         self.pathView = v
-        
         super.init()
-
     }
     
-    private struct CoderKey {
-        static let grid = "gridsw"
-        static let x = "xctsw"
-        static let y = "yctsw"
-        static let stage = "stagesw"
-        static let size = "piecesizesw"
-        static let frame = "framesw"
+    enum CodingKeys : String, CodingKey {
+        case grid
+        case stage
+        case frame
     }
-    
-    func encode(with coder: NSCoder) {
-        // coder.encodeObject(self.grid, forKey: "gridsw")
-        // but that's never going to work; there are nils in our grid!
-        // flatten to single-dimensional array of strings
-        var saveableGrid = [String]()
-        for i in 0 ..< self.xct {
-            for j in 0 ..< self.yct {
-                let piece = self.grid[i][j]
-                saveableGrid.append( piece?.picName ?? "" )
-            }
-        }
-        coder.encode(saveableGrid, forKey: CoderKey.grid)
-        coder.encode(self.xct, forKey: CoderKey.x)
-        coder.encode(self.yct, forKey: CoderKey.y)
-        coder.encode(self.stage, forKey: CoderKey.stage)
-        coder.encode(self.pieceSize, forKey: CoderKey.size)
-        coder.encode(self.view.frame, forKey: CoderKey.frame)
+    func encode(to encoder: Encoder) throws {
+        var con = encoder.container(keyedBy: CodingKeys.self)
+        try! con.encode(self.grid, forKey: .grid)
+        try! con.encode(self.stage, forKey: .stage)
+        try! con.encode(self.view.frame, forKey: .frame)
     }
-
-    // little-known fact: you have to implement init(coder:), but no law says it cannot be a convenience initializer!
-    // thus we can eliminate repetition by calling the other initializer
-    
-    required convenience init(coder: NSCoder) {
-        let xct = coder.decodeInteger( forKey: CoderKey.x )
-        let yct = coder.decodeInteger( forKey: CoderKey.y )
-        let frame = coder.decodeCGRect( forKey: CoderKey.frame )
-        self.init(boardFrame:frame, gridSize:(xct,yct))
-        
-        self.stage = coder.decodeInteger( forKey: CoderKey.stage )
-        self.pieceSize = coder.decodeCGSize( forKey: CoderKey.size )
-        
-        var flatGrid = coder.decodeObject( forKey: CoderKey.grid ) as! [String]
-        for i in 0 ..< self.xct {
-            for j in 0 ..< self.yct {
-                let picname = flatGrid.remove(at: 0)
-                if !picname.isEmpty {
-                    self.addPieceAt((i,j), withPicture: picname)
+    init(from decoder: Decoder) throws {
+        let con = try! decoder.container(keyedBy: CodingKeys.self)
+        self.grid = try! con.decode(Grid.self, forKey: .grid)
+        self.stage = try! con.decode(Int.self, forKey: .stage)
+        let frame = try! con.decode(CGRect.self, forKey: .frame)
+        // pathView; this duplicates our `init(boardFrame:gridSize:)` but I don't know how to prevent that!
+        self.view = UIView(frame:frame)
+        let v = UIView(frame: self.view.bounds)
+        v.isUserInteractionEnabled = false // clicks just fall right thru
+        let lay = CALayer()
+        v.layer.addSublayer(lay)
+        lay.frame = v.layer.bounds
+        self.view.addSubview(v)
+        self.pathView = v
+        super.init()
+        // okay we're all set, almost! we have the grid and it has the pieces,
+        // but we are not showing those pieces!
+        for i in 0..<self.xct {
+            for j in 0..<self.yct {
+                if let p = self.piece(at: (i,j)) {
+                    self.addPieceAt((i,j), withPicture: p.picName)
                 }
             }
         }
+        // aaaaaand we still have to make our hint path
         self.hintPath = self.legalPath() // generate initial hint
     }
     

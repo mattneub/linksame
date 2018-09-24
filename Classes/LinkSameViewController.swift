@@ -291,7 +291,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         // have we a state saved from prior practice? (non-practice game is not saved as board data!)
         // if so, reconstruct practice game from board data
         if let boardData = ud.object(forKey: Default.boardData) as? Data,
-            let boardArchive = try? NSKeyedUnarchiver.unarchivedObject(ofClass: Board.self, from: boardData) {
+            let boardArchive = try? PropertyListDecoder().decode(Board.self, from: boardData) {
             self.board = boardArchive
             self.boardView = self.board.view
             self.backgroundView.addSubview(self.boardView!)
@@ -347,8 +347,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 self.boardView?.isHidden = true // so snapshot will capture blank background
             case .practice:
                 // save out board state
-                let boardData = try! NSKeyedArchiver.archivedData(
-                    withRootObject: self.board, requiringSecureCoding:true)
+                let boardData = try! PropertyListEncoder().encode(self.board)
                 ud.set(boardData, forKey:Default.boardData)
             }
         }
@@ -423,7 +422,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             () -> WhatToDo in
             if let stageNumberFromNotification = (n as? Notification)?.userInfo?["stage"] as? Int {
                 if stageNumberFromNotification < ud.integer(forKey: Default.lastStage) {
-                    return .onToNextStage(stageNumberFromNotification + 1)
+                    return .onToNextStage(stageNumberFromNotification+1)
                 } else {
                     return .gameOver
                 }
@@ -450,7 +449,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         case .startFromScratch:
             newBoard(newGame:true)
         case .onToNextStage(let nextStage):
-            self.board.stage = nextStage + 1
+            self.board.stage = nextStage
             newBoard(newGame:false)
         case .gameOver:
             if self.interfaceMode == .practice {

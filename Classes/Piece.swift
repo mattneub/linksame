@@ -20,7 +20,7 @@ extension CGRect {
 import UIKit
 import AVFoundation
 
-class Piece : UIView {
+final class Piece : UIView, Codable {
     
     var picName : String
     
@@ -40,23 +40,23 @@ class Piece : UIView {
         super.init(frame:frame)
     }
     
-    struct CoderKey {
-        static let x = "x"
-        static let y = "y"
-        static let picName = "picName"
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
     
-    override func encode(with coder: NSCoder) {
-        coder.encode(self.x, forKey:CoderKey.x)
-        coder.encode(self.y, forKey:CoderKey.y)
-        coder.encode(self.picName, forKey:CoderKey.picName)
+    enum CodingKeys : String, CodingKey {
+        case x
+        case y
+        case picName
     }
     
-    required init(coder: NSCoder) {
-        self.x = coder.decodeInteger(forKey:CoderKey.x)
-        self.y = coder.decodeInteger(forKey:CoderKey.y)
-        self.picName = coder.decodeObject(forKey:CoderKey.picName) as! String
-        super.init(frame:CGRect(x: 0,y: 0,width: 0,height: 0)) // dummy value
+    // because we are subclass of class with designated initializer, must implement `init(from:)` ourselves
+    init(from decoder: Decoder) throws {
+        let con = try! decoder.container(keyedBy: CodingKeys.self)
+        self.x = try! con.decode(Int.self, forKey: .x)
+        self.y = try! con.decode(Int.self, forKey: .y)
+        self.picName = try! con.decode(String.self, forKey: .picName)
+        super.init(frame:.zero)
     }
     
     override func draw(_ rect: CGRect) {
