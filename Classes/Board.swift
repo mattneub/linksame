@@ -3,13 +3,13 @@ import UIKit
 import QuartzCore
 
 
-fileprivate let TOPMARGIN : CGFloat = (1.0/8.0)
-fileprivate let BOTTOMMARGIN : CGFloat = (1.0/8.0)
-fileprivate let LEFTMARGIN : CGFloat = (1.0/8.0)
-fileprivate let RIGHTMARGIN : CGFloat = (1.0/8.0)
-fileprivate var OUTER : CGFloat {
+private let TOPMARGIN : CGFloat = (1.0/8.0)
+private let BOTTOMMARGIN : CGFloat = (1.0/8.0)
+private let LEFTMARGIN : CGFloat = (1.0/8.0)
+private let RIGHTMARGIN : CGFloat = (1.0/8.0)
+private var OUTER : CGFloat {
     var result : CGFloat = onPhone ? 1.0 : 2.0
-    if on6plus { result = 2.0 }
+    if on3xScreen { result = 2.0 }
     return result
 }
 
@@ -41,7 +41,11 @@ struct Grid {
     }
 }
 
-final class Board : NSObject, NSCoding, CALayerDelegate {
+final class Board : NSObject, NSSecureCoding, CALayerDelegate {
+    static var supportsSecureCoding: Bool { return true }
+    
+    static let gameOver = Notification.Name("gameOver")
+    static let userMoved = Notification.Name("userMoved")
     
     typealias Point = (x:Int, y:Int)
     typealias Path = [Point]
@@ -49,20 +53,20 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     let view: UIView
     var stage = 0
     var showingHint : Bool { return self.hintShower.isIlluminating }
-    fileprivate var hilitedPieces = [Piece]()
-    fileprivate var xct : Int { return self.grid.xct }
-    fileprivate var yct : Int { return self.grid.yct }
-    fileprivate var grid : Grid // can't live without a grid, but it is mutable
-    fileprivate var hintPath : Path?
-    fileprivate var deckAtStartOfStage = [String]() // in case we are asked to restore this
+    private var hilitedPieces = [Piece]()
+    private var xct : Int { return self.grid.xct }
+    private var yct : Int { return self.grid.yct }
+    private var grid : Grid // can't live without a grid, but it is mutable
+    private var hintPath : Path?
+    private var deckAtStartOfStage = [String]() // in case we are asked to restore this
     
     // reference to the view that holds the transparency layer
     // we need this so we can switch touch fall-thru on and off
     let pathView : UIView
     // reference to the transparency layer
-    fileprivate lazy var pathLayer = self.pathView.layer.sublayers!.last!
+    private lazy var pathLayer = self.pathView.layer.sublayers!.last!
 
-    fileprivate lazy var pieceSize : CGSize = {
+    private lazy var pieceSize : CGSize = {
         // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
         assert((self.xct > 0 && self.yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
         // print("calculating piece size")
@@ -91,7 +95,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
 
     }
     
-    fileprivate struct CoderKey {
+    private struct CoderKey {
         static let grid = "gridsw"
         static let x = "xctsw"
         static let y = "yctsw"
@@ -118,7 +122,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         coder.encode(self.pieceSize, forKey: CoderKey.size)
         coder.encode(self.view.frame, forKey: CoderKey.frame)
     }
-    
+
     // little-known fact: you have to implement init(coder:), but no law says it cannot be a convenience initializer!
     // thus we can eliminate repetition by calling the other initializer
     
@@ -195,7 +199,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
 
     func redeal () {
         repeat {
-            ui(false)
+            UIApplication.ui(false)
             // gather up all pieces (as names), shuffle them, deal them into their current slots
             var deck = [String]()
             for i in 0 ..< self.xct {
@@ -211,7 +215,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
             deck.shuffle()
             deck.shuffle()
             deck.shuffle()
-            ui(true)
+            UIApplication.ui(true)
             for i in 0 ..< self.xct {
                 for j in 0 ..< self.yct {
                     let piece = self.piece(at:(i,j))
@@ -288,7 +292,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     
     lazy var hintShower = LegalPathShower(board:self)
     
-    fileprivate func piece(at p:Point) -> Piece? {
+    private func piece(at p:Point) -> Piece? {
         let (i,j) = p
         // it is legal to ask for piece one slot outside boundaries, but not further
         assert(i >= -1 && i <= self.xct, "Piece requested out of bounds (x)")
@@ -302,7 +306,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     
     // put a piece in a slot and into interface
     
-    fileprivate func addPieceAt(_ p:Point, withPicture picTitle:String) {
+    private func addPieceAt(_ p:Point, withPicture picTitle:String) {
         let sz = self.pieceSize
         let orig = self.originOf(p)
         let f = CGRect(origin: orig, size: sz)
@@ -335,7 +339,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     
     // utility to determine whether the line from p1 to p2 consists entirely of nil
     
-    fileprivate func lineIsClearFrom(_ p1:(x:Int,y:Int), to p2:(x:Int,y:Int)) -> Bool {
+    private func lineIsClearFrom(_ p1:(x:Int,y:Int), to p2:(x:Int,y:Int)) -> Bool {
         if !(p1.x == p2.x || p1.y == p2.y) {
             return false // they are not even on the same line
         }
@@ -370,14 +374,14 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     // utility to remove a piece from the interface and from the grid (i.e. replace it by nil)
     // no more NSNull!
     
-    fileprivate func removePiece(_ p:Piece) {
+    private func removePiece(_ p:Piece) {
         self.grid[p.x][p.y] = nil
         p.removeFromSuperview()
     }
     
     // utility to learn whether the grid is empty, indicating that the game is over
     
-    fileprivate func gameOver () -> Bool {
+    private func gameOver () -> Bool {
         // return true // testing game end
         for x in 0..<self.xct {
             for y in 0..<self.yct {
@@ -391,7 +395,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     
     // given a piece's place in the grid, where should it be physically drawn on the view?
     
-    fileprivate func originOf(_ p:Point) -> CGPoint {
+    private func originOf(_ p:Point) -> CGPoint {
         let (i,j) = p
         assert(i >= -1 && i <= self.xct, "Position requested out of bounds (x)")
         assert(j >= -1 && j <= self.yct, "Position requested out of bounds (y)")
@@ -404,7 +408,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
 
     }
     
-    fileprivate func reallyRemovePair () {
+    private func reallyRemovePair () {
         var movenda = [Piece]() // we will maintain a list of all pieces that need to animate a position change
         // utility to prepare pieces for position change
         // configure the piece internally and grid-wise for its new position, 
@@ -425,9 +429,9 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
             movenda += [pnew]
         }
 
-        ui(false)
+        UIApplication.ui(false)
         // notify (so score can be incremented)
-        nc.post(name: .userMoved, object: self)
+        nc.post(name: Board.userMoved, object: self)
         // actually remove the pieces (we happen to know there must be exactly two)
         for piece in self.hilitedPieces {
             self.removePiece(piece)
@@ -436,8 +440,8 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         // game over? if so, notify along with current stage and we're out of here!
         if self.gameOver() {
             delay(0.1) { // added this delay in swift, since I've never like what happens at game end
-                ui(true)
-                nc.post(name: .gameOver, object: self, userInfo: ["stage":self.stage])
+                UIApplication.ui(true)
+                nc.post(name: Board.gameOver, object: self, userInfo: ["stage":self.stage])
             }
             return
         }
@@ -750,7 +754,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
                 self.redeal()
             }
             // we do this after the slide animation is over, so we can get two animations in row, cool
-            ui(true)
+            UIApplication.ui(true)
         })
     }
     
@@ -760,7 +764,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     // the day I figured out how to do this is the day I realized I could write this game
     // we hand back the legal path joining the pieces, rather than a bool, so that the caller can draw the path
     
-    fileprivate func checkPair(_ p1:Piece, and p2:Piece) -> Path? {
+    private func checkPair(_ p1:Piece, and p2:Piece) -> Path? {
         // if not a pair, return nil
         // if a pair, return an array of successive xy positions showing the legal path
         let pt1 : Point = (x:p1.x, y:p1.y)
@@ -838,17 +842,17 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         return nil
     }
     
-    fileprivate func checkHilitedPair () {
+    private func checkHilitedPair () {
         assert(self.hilitedPieces.count == 2, "Must have a pair to check")
         for piece in self.hilitedPieces {
             assert(piece.superview == self.view, "Pieces to check must be displayed on board")
         }
-        ui(false)
+        UIApplication.ui(false)
         let p1 = self.hilitedPieces[0]
         let p2 = self.hilitedPieces[1]
         if p1.picName != p2.picName {
             self.unhilite()
-            ui(true)
+            UIApplication.ui(true)
             return
         }
         if let path = self.checkPair(p1, and:p2) {
@@ -857,12 +861,12 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
             delay(0.2) {
                 self.hintShower.unilluminate()
                 delay(0.1) {
-                    ui(true)
+                    UIApplication.ui(true)
                     self.reallyRemovePair()
                 }
             }
         } else {
-            ui(true)
+            UIApplication.ui(true)
             self.unhilite()
         }
     }
@@ -871,13 +875,13 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     // maintain an ivar pointing to hilited pieces
     // when that list has two items, check them for validity
 
-    @objc fileprivate func handleTap(_ g:UIGestureRecognizer) {
-        ui(false)
+    @objc private func handleTap(_ g:UIGestureRecognizer) {
+        UIApplication.ui(false)
         let p = g.view as! Piece
         let hilited = p.isHilited
         if !hilited {
             if self.hilitedPieces.count > 1 {
-                ui(true)
+                UIApplication.ui(true)
                 return
             }
             self.hilitedPieces += [p]
@@ -888,10 +892,10 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
         if self.hilitedPieces.count == 2 {
             // print("========")
             // print("about to check hilited pair \(self.hilitedPieces)")
-            ui(true)
+            UIApplication.ui(true)
             self.checkHilitedPair()
         } else {
-            ui(true)
+            UIApplication.ui(true)
         }
     }
     
@@ -901,7 +905,7 @@ final class Board : NSObject, NSCoding, CALayerDelegate {
     // but caller can treat result as condition as well
     // the path is simply the path returned from checkPair
     
-    fileprivate func legalPath () -> Path? {
+    private func legalPath () -> Path? {
         for x in 0..<self.xct {
             for y in 0..<self.yct {
                 let piece = self.piece(at:(x,y))

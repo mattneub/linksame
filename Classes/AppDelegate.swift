@@ -9,20 +9,9 @@ func delay(_ delay:Double, closure:@escaping ()->()) {
     DispatchQueue.main.asyncAfter(deadline: when, execute: closure)
 }
 
-extension Array {
-    mutating func shuffle () {
-        // for var i = self.count - 1; i != 0; i-- {
-        for i in self.count >>> 0 {
-            let ix1 = i
-            let ix2 = Int(arc4random_uniform(UInt32(i+1)))
-            (self[ix1], self[ix2]) = (self[ix2], self[ix1])
-        }
-    }
-}
-
 extension RangeReplaceableCollection where Iterator.Element : Equatable {
     mutating func remove(object:Self.Iterator.Element) {
-        if let found = self.index(of: object) {
+        if let found = self.firstIndex(of: object) {
             self.remove(at: found)
         }
     }
@@ -34,11 +23,14 @@ let ud = UserDefaults.standard
 
 let nc = NotificationCenter.default
 
-func ui(_ yn:Bool) { // false means no user interaction, true means turn it back on
-    if !yn {
-        UIApplication.shared.beginIgnoringInteractionEvents()
-    } else {
-        UIApplication.shared.endIgnoringInteractionEvents()
+extension UIApplication {
+    // false means no user interaction, true means turn it back on
+    static func ui(_ yn:Bool) {
+        if !yn {
+            UIApplication.shared.beginIgnoringInteractionEvents()
+        } else {
+            UIApplication.shared.endIgnoringInteractionEvents()
+        }
     }
 }
 
@@ -46,35 +38,18 @@ func ui(_ yn:Bool) { // false means no user interaction, true means turn it back
 
 infix operator >>> : RangeFormationPrecedence
 func >>><Bound>(maximum: Bound, minimum: Bound)
-    -> ReversedRandomAccessCollection<CountableRange<Bound>>
-    where Bound : Comparable & Strideable {
+    -> ReversedCollection<Range<Bound>>
+    where Bound : Strideable {
         return (minimum..<maximum).reversed()
 }
 
 
 infix operator <<< : RangeFormationPrecedence
 func <<<<Bound>(minimum: Bound, maximum: Bound)
-    -> CountableRange<Bound>
-    where Bound : Comparable & Strideable {
+    -> Range<Bound>
+    where Bound : Strideable {
         return (minimum..<maximum)
 }
-
-// notifications used to communicate from Board to LinkSameViewController
-// some game-significant event has occurred in the board
-extension Notification.Name {
-    static let gameOver = Notification.Name("gameOver")
-    static let userMoved = Notification.Name("userMoved")
-}
-
-// probably unnecessary, the idea was to suppress print in release
-// but print does nothing on the device so I should probably cut this
-/*
-func print(_ items: Any..., separator: String = " ", terminator: String = "\n") {
-    #if DEBUG
-        Swift.print(items[0], separator:separator, terminator: terminator)
-    #endif
-}
- */
 
 // determination of hardware environment
 
@@ -82,10 +57,9 @@ var onPhone : Bool {
     return UIScreen.main.traitCollection.userInterfaceIdiom == .phone
 }
 
-var on6plus : Bool {
+var on3xScreen : Bool {
     return UIScreen.main.traitCollection.displayScale > 2.5
 }
-
 
 // keys used in user defaults, determination of board size, game configurations, tile pictures
 
@@ -93,8 +67,8 @@ struct Default {
     static let size = "Size"
     static let style = "Style"
     static let lastStage = "Stages"
-    static let scores = "Scores"
-    static let boardData = "boardData"
+    static let scores = "Scoresv2"
+    static let boardData = "boardDatav2"
 }
 
 struct Sizes {
@@ -104,9 +78,9 @@ struct Sizes {
     static func sizes () -> [String] {
         return [easy, normal, hard]
     }
-    fileprivate static var easySize : (Int,Int) {
+    private static var easySize : (Int,Int) {
         var result : (Int,Int) = onPhone ? (10,6) : (12,7)
-        if on6plus { result = (12,7) }
+        if on3xScreen { result = (12,7) }
         return result
     }
     static func boardSize (_ s:String) -> (Int,Int) {
@@ -149,7 +123,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             Default.size: Sizes.easy,
             Default.style: Styles.snacks,
             Default.lastStage: 8, // meaning 0-thru-8, so there will be nine
-            ])
+        ])
         
         self.window = self.window ?? UIWindow()
         self.window!.rootViewController = LinkSameViewController()

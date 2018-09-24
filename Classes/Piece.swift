@@ -26,7 +26,7 @@ class Piece : UIView {
     
     var x : Int = 0, y : Int = 0 // where we are slotted
     
-    fileprivate var hilite : Bool = false
+    private var hilite : Bool = false
     var isHilited : Bool {
         return self.hilite
     }

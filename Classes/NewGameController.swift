@@ -3,7 +3,7 @@
 import UIKit
 import Swift
 
-fileprivate let cellid = "Cell"
+private let cellid = "Cell"
 
 class NewGameController : UIViewController {
     weak var tableView : UITableView?
