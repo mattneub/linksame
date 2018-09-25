@@ -51,6 +51,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
     
     static let gameOver = Notification.Name("gameOver")
     static let userMoved = Notification.Name("userMoved")
+    static let userTappedPath = Notification.Name("userTappedPath")
     
     typealias Point = (x:Int, y:Int)
     typealias Path = [Point]
@@ -78,6 +79,8 @@ final class Board : NSObject, CALayerDelegate, Codable {
         lay.frame = v.layer.bounds
         self.view.addSubview(v)
         self.pathView = v
+        let t = UITapGestureRecognizer(target: self, action: #selector(tappedPathView))
+        v.addGestureRecognizer(t)
         return v
     }() // unfortunately there is no `lazy let`
     // I don't want to assign to this accidentally but I don't know how to prevent it
@@ -110,26 +113,23 @@ final class Board : NSObject, CALayerDelegate, Codable {
     }
     func encode(to encoder: Encoder) throws {
         var con = encoder.container(keyedBy: CodingKeys.self)
-        try! con.encode(self.grid, forKey: .grid)
         try! con.encode(self.stageNumber, forKey: .stage)
         try! con.encode(self.view.frame, forKey: .frame)
+        try! con.encode(self.grid, forKey: .grid)
     }
     init(from decoder: Decoder) throws {
         let con = try! decoder.container(keyedBy: CodingKeys.self)
-        self.grid = try! con.decode(Grid.self, forKey: .grid)
         self.stageNumber = try! con.decode(Int.self, forKey: .stage)
         let frame = try! con.decode(CGRect.self, forKey: .frame)
         self.view = UIView(frame:frame)
-        super.init()
-        // okay we're all set, almost! we have the grid and it has the pieces,
-        // but we are not showing those pieces! fix that
-        // to be sure, there is something a little silly about this code:
-        // addPieceAt adds a piece both to the grid and to the view
-        // but the grid already has those pieces, so we're replacing them with clones
-        // but so what? it's clear, it works, it avoids duplication, and it isn't actually wasteful
-        for i in 0..<self.xct {
-            for j in 0..<self.yct {
-                if let p = self.piece(at: (i,j)) {
+        // instead of just setting the decoded grid as our grid,
+        // use it to create a new grid and populate it and our view
+        let grid = try! con.decode(Grid.self, forKey: .grid)
+        self.grid = Grid(grid.xct, grid.yct)
+        super.init() // has to go here so we can say `self`
+        for i in 0..<grid.xct {
+            for j in 0..<grid.yct {
+                if let p = grid[i][j] {
                     self.addPieceAt((i,j), withPicture: p.picName)
                 }
             }
@@ -138,6 +138,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
         self.hintPath = self.legalPath() // generate initial hint
     }
     
+    // the "deck" is just a list of piece names
     func createAndDealDeck() {
         // determine which pieces to use
         let (start1,start2) = Styles.pieces(ud.string(forKey: Default.style)!)
@@ -174,7 +175,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
     }
     
     func restartStage() {
-        // deal stored deck; we have to remove existing pieces as we go
+        // deal stored deck; remove existing pieces as we go
         var deck = self.deckAtStartOfStage
         for i in 0..<self.xct {
             for j in 0..<self.yct {
@@ -187,7 +188,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
         self.hintPath = self.legalPath() // generate initial hint
     }
 
-
+    // shuffle existing pieces; could be because user asked to shuffle, could be we're out of legal moves
     func redeal () {
         repeat {
             UIApplication.ui(false)
@@ -220,9 +221,8 @@ final class Board : NSObject, CALayerDelegate, Codable {
                     }
                 }
             }
-        } while self.legalPath() == nil
+        } while self.legalPath() == nil // both creates and tests for existence of legal path
     }
-    
     
     // okay, so previously I had this functionality spread over two methods
     // board illuminate() and unilluminate(), plus remembering to set the state property
@@ -363,7 +363,6 @@ final class Board : NSObject, CALayerDelegate, Codable {
     }
     
     // utility to remove a piece from the interface and from the grid (i.e. replace it by nil)
-    // no more NSNull!
     
     private func removePiece(_ p:Piece) {
         self.grid[p.x][p.y] = nil
@@ -394,7 +393,8 @@ final class Board : NSObject, CALayerDelegate, Codable {
         let pieceWidth = self.pieceSize.width
         let pieceHeight = self.pieceSize.height
         let x = ((OUTER/2.0 + LEFTMARGIN) * pieceWidth) + (CGFloat(i) * pieceWidth)
-        let y = ((OUTER/2.0 + TOPMARGIN) * pieceHeight) + (CGFloat(j) * pieceHeight) + (onPhone ? 0 : 64/2) // allow for toolbar
+        let y = ((OUTER/2.0 + TOPMARGIN) * pieceHeight) + (CGFloat(j) * pieceHeight)
+            + (onPhone ? 0 : 64/2) // allow for toolbar
         return CGPoint(x: x,y: y)
 
     }
@@ -430,7 +430,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
         self.hilitedPieces.removeAll()
         // game over? if so, notify along with current stage and we're out of here!
         if self.gameOver() {
-            delay(0.1) { // added this delay in swift, since I've never like what happens at game end
+            delay(0.1) { // nicer with a little delay
                 UIApplication.ui(true)
                 nc.post(name: Board.gameOver, object: self, userInfo: ["stage":self.stageNumber])
             }
@@ -438,7 +438,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
         }
         // close up! depends on what stage we are in
         // the following code is really ugly and repetitive, every case being modelled on the same template
-        // but C doesn't seem to give me a good way around that; will swift help? find out...
+        // but it works and I'm not touching it!
         switch self.stageNumber {
         case 0: // no gravity, do nothing
             // fallthrough // debugging later cases
@@ -890,10 +890,16 @@ final class Board : NSObject, CALayerDelegate, Codable {
         }
     }
     
+    // tap gesture on pathView
+    
+    @objc private func tappedPathView(_ : UIGestureRecognizer) {
+        nc.post(name: Board.userTappedPath, object: self)
+    }
+    
     // utility to run thru the entire grid and make sure there is at least one legal path somewhere
-    // if the path exists, we return NSArray representing path that joins them; otherwise nil
+    // if the path exists, we return array representing path that joins them; otherwise nil
     // that way, the caller can *show* the legal path if desired
-    // but caller can treat result as condition as well
+    // but caller can test result as condition as well
     // the path is simply the path returned from checkPair
     
     private func legalPath () -> Path? {

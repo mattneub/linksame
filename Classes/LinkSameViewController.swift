@@ -310,6 +310,12 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         nc.addObserver(forName: Board.gameOver, object: nil, queue: nil) { n in
             self.prepareNewStage(n)
         }
+        nc.addObserver(forName: Board.userTappedPath, object: nil, queue: nil) { n in
+            // remove hint
+            if self.board.showingHint {
+                self.toggleHint(nil)
+            }
+        }
         nc.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: nil) { _ in
             // remove hint
             if self.board.showingHint {
@@ -336,7 +342,6 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                     }
                 }
             }
-            
         }
         nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { _ in
             // user cannot escape the timer by suspending the app; the game just ends if we background
@@ -361,7 +366,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             t.subtype = .fromLeft
         }
         t.duration = 0.7
-        t.beginTime = CACurrentMediaTime() + 0.4
+        t.beginTime = CACurrentMediaTime() + 0.15 // 0.4 was just too long
         t.fillMode = .backwards
         t.timingFunction = CAMediaTimingFunction(name:.linear)
         t.delegate = self
@@ -494,23 +499,13 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
     @IBAction @objc private func toggleHint(_:Any?) { // hintButton
         self.board.unhilite()
-        let v = self.board.pathView
         if !self.board.showingHint {
             self.hintButton?.title = HintButtonTitle.hide
             self.stage?.userAskedForHint()
             self.board.hint()
-            // if user taps board now, this should have just the same effect as tapping button
-            // so, attach gesture rec; clever, eh?
-            let t = UITapGestureRecognizer(target: self, action: #selector(toggleHint))
-            v.addGestureRecognizer(t)
         } else {
             self.hintButton?.title = HintButtonTitle.show
             self.board.unhint()
-            if let gs = v.gestureRecognizers {
-                for g in gs {
-                    v.removeGestureRecognizer(g)
-                }
-            }
         }
     }
     
