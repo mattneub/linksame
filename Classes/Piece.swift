@@ -1,10 +1,5 @@
 
 
-// define equality as identity
-func == (lhs:Piece, rhs:Piece) -> Bool {
-    return lhs === rhs
-}
-
 extension CGRect {
     var center : CGPoint {
         return CGPoint(x: self.midX, y: self.midY)
@@ -20,7 +15,16 @@ extension CGRect {
 import UIKit
 import AVFoundation
 
+// A Piece is a view that knows the name of an image
+// given that, it knows how to draw and hilite itself
+// it also has properties so that it can report where it belongs in the grid
+
 final class Piece : UIView, Codable {
+    
+    // define equality as identity
+    static func == (lhs:Piece, rhs:Piece) -> Bool {
+        return lhs === rhs
+    }
     
     var picName : String
     
@@ -61,31 +65,31 @@ final class Piece : UIView, Codable {
     
     override func draw(_ rect: CGRect) {
         let perireal = CGRect(x: 0, y: 0, width: self.bounds.width, height: self.bounds.height)
-        let context = UIGraphicsGetCurrentContext()
+        let con = UIGraphicsGetCurrentContext()!
         
-        context?.setLineCap(.square)
+        con.setLineCap(.square)
         
         // fill: according to highlight state
         let beige = UIColor(red:0.900, green:0.798, blue:0.499, alpha:1.000)
         let purple = UIColor(red:0.898, green:0.502, blue:0.901, alpha:1.000)
-        context?.setFillColor(self.isHilited ? purple.cgColor : beige.cgColor)
-        context?.fill(perireal.insetBy(dx: -1, dy: -1)) // outset to ensure full coverage
+        con.setFillColor(self.isHilited ? purple.cgColor : beige.cgColor)
+        con.fill(perireal.insetBy(dx: -1, dy: -1)) // outset to ensure full coverage
         
         // frame: draw shade all the way round, then light round two sides
         let shadow = UIColor(red:0.670, green:0.537, blue:0.270, alpha:1.000)
-        context?.setStrokeColor(shadow.cgColor)
+        con.setStrokeColor(shadow.cgColor)
         let peri = perireal.insetBy(dx: 1, dy: 1)
-        context?.setLineWidth(1.5)
-        context?.stroke(peri)
+        con.setLineWidth(1.5)
+        con.stroke(peri)
         let lite = UIColor(red:1.000, green:0.999, blue:0.999, alpha:1.000)
-        context?.setStrokeColor(lite.cgColor)
+        con.setStrokeColor(lite.cgColor)
         let points = [
             CGPoint(x: peri.minX, y: peri.maxY),
             CGPoint(x: peri.minX, y: peri.minY),
             CGPoint(x: peri.minX, y: peri.minY),
             CGPoint(x: peri.maxX, y: peri.minY)
         ]
-        context?.strokeLineSegments(between: points)
+        con.strokeLineSegments(between: points)
         
 //        let path = Bundle.main.path(forResource: self.picName, ofType: "png", inDirectory:"foods")!
 //        let pic = UIImage(contentsOfFile:path)!

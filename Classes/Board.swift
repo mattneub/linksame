@@ -2,16 +2,13 @@
 import UIKit
 import QuartzCore
 
-
-private let TOPMARGIN : CGFloat = (1.0/8.0)
-private let BOTTOMMARGIN : CGFloat = (1.0/8.0)
-private let LEFTMARGIN : CGFloat = (1.0/8.0)
-private let RIGHTMARGIN : CGFloat = (1.0/8.0)
-private var OUTER : CGFloat {
-    var result : CGFloat = onPhone ? 1.0 : 2.0
-    if on3xScreen { result = 2.0 }
-    return result
-}
+// a Grid is a Board helper
+// it is just a nested array of Piece objects, which can be nil
+// that way, the Board can ask for piece at given coordinates
+// it is up to the Board to maintain consistency between:
+// * where a Piece is in the Grid
+// * where that same Piece is in the Board
+// * where that same Piece thinks it is (its x and y)
 
 struct Grid : Codable {
     private var grid : [[Piece?]]
@@ -34,7 +31,23 @@ struct Grid : Codable {
     }
 }
 
+// the Board is not a view (in a way, I suppose it's a kind of view controller!)
+// it _vends_ a view, its `view`, and in that view it maintains Pieces as its subviews and manipulates them
+// it understands the _physical_ mechanism of the game and the notion of a legal move and what happens in response
+// it detects taps
+// it draws hints in its `pathView` (actually, in the sublayer of its `pathView`)
+
 final class Board : NSObject, CALayerDelegate, Codable {
+    
+    private let TOPMARGIN : CGFloat = (1.0/8.0)
+    private let BOTTOMMARGIN : CGFloat = (1.0/8.0)
+    private let LEFTMARGIN : CGFloat = (1.0/8.0)
+    private let RIGHTMARGIN : CGFloat = (1.0/8.0)
+    private var OUTER : CGFloat {
+        var result : CGFloat = onPhone ? 1.0 : 2.0
+        if on3xScreen { result = 2.0 }
+        return result
+    }
     
     static let gameOver = Notification.Name("gameOver")
     static let userMoved = Notification.Name("userMoved")
@@ -43,7 +56,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
     typealias Path = [Point]
     
     let view: UIView
-    var stage = 0
+    var stageNumber = 0
     var showingHint : Bool { return self.hintShower.isIlluminating }
     private var hilitedPieces = [Piece]()
     private var xct : Int { return self.grid.xct }
@@ -54,25 +67,8 @@ final class Board : NSObject, CALayerDelegate, Codable {
     
     // reference to the view that holds the transparency layer
     // we need this so we can switch touch fall-thru on and off
-    let pathView : UIView
-    // reference to the transparency layer
-    private lazy var pathLayer = self.pathView.layer.sublayers!.last!
-
-    private lazy var pieceSize : CGSize = {
-        // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
-        assert((self.xct > 0 && self.yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
-        // print("calculating piece size")
-        // divide view bounds, allow 1 extra plus margins
-        let pieceWidth : CGFloat = self.view.bounds.size.width / (CGFloat(self.xct) + OUTER + LEFTMARGIN + RIGHTMARGIN)
-        let pieceHeight : CGFloat = self.view.bounds.size.height / (CGFloat(self.yct) + OUTER + TOPMARGIN + BOTTOMMARGIN)
-        return CGSize(width: pieceWidth, height: pieceHeight)
-    }()
-    
-    init (boardFrame:CGRect, gridSize:(Int,Int)) {
-        self.view = UIView(frame:boardFrame)
-        self.grid = Grid(gridSize.0, gridSize.1) // used to have Grid(gridSize) but now deprecated! :(
-
-        // create the path view; this is where paths will be drawn
+    lazy var pathView : UIView = { () -> UIView in
+        // this is where paths will be drawn
         // board will draw directly into its layer using layer delegate's drawLayer:inContext:
         // but we must not set a view's layer's delegate, so we create a sublayer
         let v = UIView(frame: self.view.bounds)
@@ -82,6 +78,28 @@ final class Board : NSObject, CALayerDelegate, Codable {
         lay.frame = v.layer.bounds
         self.view.addSubview(v)
         self.pathView = v
+        return v
+    }() // unfortunately there is no `lazy let`
+    // I don't want to assign to this accidentally but I don't know how to prevent it
+
+    // reference to the transparency layer
+    private var pathLayer : CALayer { return self.pathView.layer.sublayers!.last! }
+
+    private lazy var pieceSize : CGSize = {
+        // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
+        assert((self.xct > 0 && self.yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
+        // print("calculating piece size")
+        // divide view bounds, allow 1 extra plus margins
+        let pieceWidth : CGFloat =
+            self.view.bounds.size.width / (CGFloat(self.xct) + OUTER + LEFTMARGIN + RIGHTMARGIN)
+        let pieceHeight : CGFloat =
+            self.view.bounds.size.height / (CGFloat(self.yct) + OUTER + TOPMARGIN + BOTTOMMARGIN)
+        return CGSize(width: pieceWidth, height: pieceHeight)
+    }()
+    
+    init (boardFrame:CGRect, gridSize:(Int,Int)) {
+        self.view = UIView(frame:boardFrame)
+        self.grid = Grid(gridSize.0, gridSize.1)
         super.init()
     }
     
@@ -93,26 +111,22 @@ final class Board : NSObject, CALayerDelegate, Codable {
     func encode(to encoder: Encoder) throws {
         var con = encoder.container(keyedBy: CodingKeys.self)
         try! con.encode(self.grid, forKey: .grid)
-        try! con.encode(self.stage, forKey: .stage)
+        try! con.encode(self.stageNumber, forKey: .stage)
         try! con.encode(self.view.frame, forKey: .frame)
     }
     init(from decoder: Decoder) throws {
         let con = try! decoder.container(keyedBy: CodingKeys.self)
         self.grid = try! con.decode(Grid.self, forKey: .grid)
-        self.stage = try! con.decode(Int.self, forKey: .stage)
+        self.stageNumber = try! con.decode(Int.self, forKey: .stage)
         let frame = try! con.decode(CGRect.self, forKey: .frame)
-        // pathView; this duplicates our `init(boardFrame:gridSize:)` but I don't know how to prevent that!
         self.view = UIView(frame:frame)
-        let v = UIView(frame: self.view.bounds)
-        v.isUserInteractionEnabled = false // clicks just fall right thru
-        let lay = CALayer()
-        v.layer.addSublayer(lay)
-        lay.frame = v.layer.bounds
-        self.view.addSubview(v)
-        self.pathView = v
         super.init()
         // okay we're all set, almost! we have the grid and it has the pieces,
-        // but we are not showing those pieces!
+        // but we are not showing those pieces! fix that
+        // to be sure, there is something a little silly about this code:
+        // addPieceAt adds a piece both to the grid and to the view
+        // but the grid already has those pieces, so we're replacing them with clones
+        // but so what? it's clear, it works, it avoids duplication, and it isn't actually wasteful
         for i in 0..<self.xct {
             for j in 0..<self.yct {
                 if let p = self.piece(at: (i,j)) {
@@ -418,14 +432,14 @@ final class Board : NSObject, CALayerDelegate, Codable {
         if self.gameOver() {
             delay(0.1) { // added this delay in swift, since I've never like what happens at game end
                 UIApplication.ui(true)
-                nc.post(name: Board.gameOver, object: self, userInfo: ["stage":self.stage])
+                nc.post(name: Board.gameOver, object: self, userInfo: ["stage":self.stageNumber])
             }
             return
         }
         // close up! depends on what stage we are in
         // the following code is really ugly and repetitive, every case being modelled on the same template
         // but C doesn't seem to give me a good way around that; will swift help? find out...
-        switch self.stage {
+        switch self.stageNumber {
         case 0: // no gravity, do nothing
             // fallthrough // debugging later cases
             break

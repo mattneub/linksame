@@ -373,7 +373,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
     func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
         if anim.value(forKey: "name") as? String == "boardReplacement" {
             // set "stage" label, animate the change
-            let s = "Stage \(self.board.stage + 1) " +
+            let s = "Stage \(self.board.stageNumber + 1) " +
             "of \(ud.integer(forKey: Default.lastStage) + 1)"
             self.stageLabel?.text = s
             UIView.transition(with: self.stageLabel!, duration: 0.4,
@@ -403,7 +403,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         self.boardView = self.board.view
         self.backgroundView.addSubview(self.boardView!)
         self.boardView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
-        self.board.stage = 0 // default, we might change this in a moment
+        self.board.stageNumber = 0 // default, we might change this in a moment
         // self.board.stage = 8 // testing, comment out!
         
         // there are three possibilities:
@@ -449,7 +449,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         case .startFromScratch:
             newBoard(newGame:true)
         case .onToNextStage(let nextStage):
-            self.board.stage = nextStage
+            self.board.stageNumber = nextStage
             newBoard(newGame:false)
         case .gameOver:
             if self.interfaceMode == .practice {
