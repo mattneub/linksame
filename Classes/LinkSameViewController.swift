@@ -4,7 +4,7 @@ import UIKit
 import Swift
 import WebKit
 
-class CancelableTimer: NSObject {
+private final class CancelableTimer: NSObject {
     private var q = DispatchQueue(label: "timer")
     private var timer : DispatchSourceTimer!
     private var firsttime = true
@@ -93,7 +93,7 @@ func calcBonus(_ diff:Double) -> Int {
 
 // there are no stages in a practice game; a `nil` stage is a signal that this is a practice game
 
-fileprivate final class Stage : NSObject {
+private final class Stage : NSObject {
     private(set) var score : Int
     let scoreAtStartOfStage : Int
     private var timer : CancelableTimer? // no timer initially (user has not moved yet)
@@ -191,6 +191,11 @@ fileprivate final class Stage : NSObject {
     }
 }
 
+private struct State : Codable {
+    let board : Board
+    let score : Int?
+    let timed : Bool
+}
 
 final class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
@@ -266,6 +271,13 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         return key
     }
     
+    private var betweenStages = false {
+        didSet {
+            if oldValue != self.betweenStages {
+                print("between stages?", self.betweenStages)
+            }
+        }
+    }
     private var didSetUp = false
     private var didDeactivate = false
     override func viewDidLayoutSubviews() {
@@ -290,9 +302,9 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         
         // have we a state saved from prior practice? (non-practice game is not saved as board data!)
         // if so, reconstruct practice game from board data
-        if let boardData = ud.object(forKey: Default.boardData) as? Data,
-            let boardArchive = try? PropertyListDecoder().decode(Board.self, from: boardData) {
-            self.board = boardArchive
+        if let stateData = ud.object(forKey: Default.boardData) as? Data,
+            let state = try? PropertyListDecoder().decode(State.self, from: stateData) {
+            self.board = state.board
             self.boardView = self.board.view
             self.backgroundView.addSubview(self.boardView!)
             self.boardView?.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -315,6 +327,9 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             if self.board.showingHint {
                 self.toggleHint(nil)
             }
+        }
+        nc.addObserver(forName: Board.userMoved, object: nil, queue: nil) { n in
+            self.betweenStages = false
         }
         nc.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: nil) { _ in
             // remove hint
@@ -345,6 +360,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         }
         nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { _ in
             // user cannot escape the timer by suspending the app; the game just ends if we background
+            let score = self.stage?.score
             self.stage = nil
             switch self.interfaceMode {
             case .timed:
@@ -352,8 +368,9 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 self.boardView?.isHidden = true // so snapshot will capture blank background
             case .practice:
                 // save out board state
-                let boardData = try! PropertyListEncoder().encode(self.board)
-                ud.set(boardData, forKey:Default.boardData)
+                let state = State(board: self.board, score: score, timed: self.interfaceMode == .timed)
+                let stateData = try! PropertyListEncoder().encode(state)
+                ud.set(stateData, forKey:Default.boardData)
             }
         }
     }
@@ -479,6 +496,8 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 scoresDict[key] = self.stage!.score
                 ud.set(scoresDict, forKey:Default.scores)
             }
+            // raise flag that we are between stages
+            self.betweenStages = true
             // notify user
             let alert = UIAlertController(
                 title: "Congratulations!",
@@ -491,6 +510,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             }))
             self.present(alert, animated: true)
         }
+        self.betweenStages = true
         UIApplication.ui(true)
     }
     
@@ -524,6 +544,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             self.toggleHint(nil)
         }
         self.board.unhilite()
+        self.betweenStages = true
         let alert = UIAlertController(title: "Restart Stage", message: "Really restart this stage?", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: {
