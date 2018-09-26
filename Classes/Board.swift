@@ -110,16 +110,19 @@ final class Board : NSObject, CALayerDelegate, Codable {
         case grid
         case stage
         case frame
+        case deckAtStartOfStage
     }
     func encode(to encoder: Encoder) throws {
         var con = encoder.container(keyedBy: CodingKeys.self)
         try! con.encode(self.stageNumber, forKey: .stage)
         try! con.encode(self.view.frame, forKey: .frame)
         try! con.encode(self.grid, forKey: .grid)
+        try! con.encode(self.deckAtStartOfStage, forKey: .deckAtStartOfStage)
     }
     init(from decoder: Decoder) throws {
         let con = try! decoder.container(keyedBy: CodingKeys.self)
         self.stageNumber = try! con.decode(Int.self, forKey: .stage)
+        self.deckAtStartOfStage = try! con.decode([String].self, forKey: .deckAtStartOfStage)
         let frame = try! con.decode(CGRect.self, forKey: .frame)
         self.view = UIView(frame:frame)
         // instead of just setting the decoded grid as our grid,
@@ -314,6 +317,11 @@ final class Board : NSObject, CALayerDelegate, Codable {
         let t = UITapGestureRecognizer(target: self, action: #selector(handleTap))
         piece.addGestureRecognizer(t)
         // wow, that was easy
+        #if TESTING
+        let t2 = UITapGestureRecognizer(target: self, action: #selector(handleDeveloperDoubleTap))
+        t2.numberOfTapsRequired = 2
+        piece.addGestureRecognizer(t2)
+        #endif
     }
     
     // as pieces are highlighted, we store them in an ivar
@@ -887,6 +895,18 @@ final class Board : NSObject, CALayerDelegate, Codable {
             self.checkHilitedPair()
         } else {
             UIApplication.ui(true)
+        }
+    }
+    
+    // short-circuit, just make a legal move yet already
+    @objc private func handleDeveloperDoubleTap(_ g:UIGestureRecognizer) {
+        if let path = self.legalPath() {
+            let p = g.view as! Piece
+            if p.isHilited {
+                p.toggleHilite()
+            }
+            self.hilitedPieces = [self.piece(at: path.first!)!, self.piece(at: path.last!)!]
+            self.checkHilitedPair()
         }
     }
     

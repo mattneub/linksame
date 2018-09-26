@@ -273,11 +273,12 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             }
         }
     }
-    private var didSetUp = false
-    private var didDeactivate = false
+    private var didSetUpInitialLayout = false
+    private var didObserveActivate = false
+    private var comingBackFromBackground = false
     override func viewDidLayoutSubviews() {
-        guard !self.didSetUp else { return }
-        self.didSetUp = true
+        guard !self.didSetUpInitialLayout else { return }
+        self.didSetUpInitialLayout = true
         
         // prepare interface, including game setup if needed
         
@@ -342,21 +343,24 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 ud.setValuesForKeys(defs)
                 self.oldDefs = nil
             }
-            if !self.didDeactivate {
-                self.didDeactivate = true
+            if !self.didObserveActivate {
+                self.didObserveActivate = true
                 // register for activate notification only after have deactivated for the first time
-                // are we activating from a mere deactivate...
-                // ...or coming back from the background?
-                // to detect this, we will have configured things in didEnterBackground:
-                // if we can't get a board from defaults, start over
                 nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { _ in
+                    let comingBack = self.comingBackFromBackground
+                    self.comingBackFromBackground = false
                     // show the board view, just in case it was hidden on suspension
                     self.boardView?.isHidden = false
-                    if ud.object(forKey: Default.boardData) == nil {
+                    if ud.object(forKey: Default.boardData) == nil && !self.betweenStages {
                         self.startNewGame()
+                    } else if comingBack {
+                        self.animateBoardTransition(.fade)
                     }
                 }
             }
+        }
+        nc.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil) { _ in
+            self.comingBackFromBackground = true
         }
         nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { _ in
             switch self.interfaceMode {
