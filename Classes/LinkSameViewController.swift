@@ -91,8 +91,6 @@ func calcBonus(_ diff:Double) -> Int {
 // it is permitted to see and change its scoreLabel and prevLabel, and can see its scoresKey
 // in other words it is a kind of subcontroller for maintenance and display of the score
 
-// there are no stages in a practice game; a `nil` stage is a signal that this is a practice game
-
 private final class Stage : NSObject {
     private(set) var score : Int
     let scoreAtStartOfStage : Int
@@ -193,7 +191,7 @@ private final class Stage : NSObject {
 
 private struct State : Codable {
     let board : Board
-    let score : Int?
+    let score : Int
     let timed : Bool
 }
 
@@ -251,9 +249,6 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         case fade
     }
     
-    // there are no stages in a practice game; a `nil` stage is a signal that this is a practice game
-    // in fact we deliberately set the stage to `nil` when backgrounding
-    // TODO might want to change that and make it legal to rest indefinitely between stages
     private var stage : Stage?
     
     init() {
@@ -309,13 +304,11 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             self.boardView = self.board.view
             self.backgroundView.addSubview(self.boardView!)
             self.boardView?.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            // set interface up as practice and we're all set
             if !state.timed {
                 self.interfaceMode = .practice
-                self.stage = nil
             } else {
                 self.interfaceMode = .timed
-                self.stage = Stage(lsvc: self, score: state.score!)
+                self.stage = Stage(lsvc: self, score: state.score)
             }
             self.betweenStages = true
             self.animateBoardTransition(.fade)
@@ -351,23 +344,21 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             }
             if !self.didDeactivate {
                 self.didDeactivate = true
-                // register for activate notification only after have deactivate for the first time
+                // register for activate notification only after have deactivated for the first time
                 // are we activating from a mere deactivate...
                 // ...or coming back from the background?
                 // to detect this, we will have configured things in didEnterBackground:
-                // if stage is nil and we can't get a board from defaults, start over
+                // if we can't get a board from defaults, start over
                 nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { _ in
                     // show the board view, just in case it was hidden on suspension
                     self.boardView?.isHidden = false
-                    if self.stage == nil && ud.object(forKey: Default.boardData) == nil {
+                    if ud.object(forKey: Default.boardData) == nil {
                         self.startNewGame()
                     }
                 }
             }
         }
         nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { _ in
-            let score = self.stage?.score
-            self.stage = nil
             switch self.interfaceMode {
             case .timed:
                 if self.betweenStages {
@@ -379,7 +370,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 self.boardView?.isHidden = true // so snapshot will capture blank background
             case .practice:
                 // save out board state
-                let state = State(board: self.board, score: score, timed: self.interfaceMode == .timed)
+                let state = State(board: self.board, score: self.stage!.score, timed: self.interfaceMode == .timed)
                 let stateData = try! PropertyListEncoder().encode(state)
                 ud.set(stateData, forKey:Default.boardData)
             }
@@ -389,7 +380,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
     private func animateBoardTransition (_ transition: BoardTransition) {
         UIApplication.ui(false) // about to animate, turn off interaction; will turn back on in delegate
         let t = CATransition()
-        if transition == .slide { // default is .Fade, fade in
+        if transition == .slide { // default is .fade, fade in
             t.type = .moveIn
             t.subtype = .fromLeft
         }
@@ -403,9 +394,9 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
     }
     
     // delegate from previous, called when animation ends
+    // set "stage" label, animate the change, turn on interactivity at end
     func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
         if anim.value(forKey: "name") as? String == "boardReplacement" {
-            // set "stage" label, animate the change
             let s = "Stage \(self.board.stageNumber + 1) " +
             "of \(ud.integer(forKey: Default.lastStage) + 1)"
             self.stageLabel?.text = s
@@ -469,7 +460,6 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 self.stage = Stage(lsvc: self)
                 self.interfaceMode = .timed // every new game is a timed game
             } else {
-                assert(self.stage != nil, "stage cannot be nil, this is not a new game")
                 self.stage = Stage(lsvc: self, score: self.stage!.score) // score carries over
             }
             let boardTransition : BoardTransition = newGame ? .fade : .slide
@@ -498,10 +488,9 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             if let d = ud.dictionary(forKey: Default.scores) as? [String:Int] {
                 scoresDict = d
             }
-            // self.score is new high score if it is higher than corresponding previous dict entry...
+            // score is new high score if it is higher than corresponding previous dict entry...
             // ...or if there was no corresponding previous dict entry
             let prev = scoresDict[key]
-            assert(self.stage != nil, "stage cannot be nil, we just finished playing a game")
             if prev == nil || prev! < self.stage!.score {
                 newHigh = true
                 scoresDict[key] = self.stage!.score
@@ -550,7 +539,6 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
     }
     
     @IBAction private func doRestartStage(_:Any?) {
-        assert(self.stage != nil, "stage cannot be nil if we're restarting it")
         if self.board.showingHint {
             self.toggleHint(nil)
         }
@@ -645,9 +633,6 @@ extension LinkSameViewController { // buttons in popover
         self.board.unhilite()
         self.interfaceMode = InterfaceMode(rawValue:self.timedPractice.selectedSegmentIndex)!
         // and changing the interface mode changes the interface accordingly
-        if self.interfaceMode == .practice {
-            self.stage = nil
-        }
     }
     
     @IBAction private func doHelp(_ sender: Any?) {
