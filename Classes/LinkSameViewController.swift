@@ -300,17 +300,24 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         self.hintButton?.width = 100 // forced to take a wild guess 
         // return; // uncomment for launch image screen shot
         
-        // have we a state saved from prior practice? (non-practice game is not saved as board data!)
-        // if so, reconstruct practice game from board data
+        // have we a state saved?  if so, reconstruct game
         if let stateData = ud.object(forKey: Default.boardData) as? Data,
             let state = try? PropertyListDecoder().decode(State.self, from: stateData) {
+            // okay, we've got state! there are two possibilities:
+            // it might have been a practice game, or it might have been a timed game between stages
             self.board = state.board
             self.boardView = self.board.view
             self.backgroundView.addSubview(self.boardView!)
             self.boardView?.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             // set interface up as practice and we're all set
-            self.interfaceMode = .practice
-            self.stage = nil // just in case
+            if !state.timed {
+                self.interfaceMode = .practice
+                self.stage = nil
+            } else {
+                self.interfaceMode = .timed
+                self.stage = Stage(lsvc: self, score: state.score!)
+            }
+            self.betweenStages = true
             self.animateBoardTransition(.fade)
         } else { // otherwise, create new game from scratch
             self.startNewGame()
@@ -359,11 +366,15 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             }
         }
         nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { _ in
-            // user cannot escape the timer by suspending the app; the game just ends if we background
             let score = self.stage?.score
             self.stage = nil
             switch self.interfaceMode {
             case .timed:
+                if self.betweenStages {
+                    fallthrough // save out board state
+                }
+                // if we background when a stage is ongoing in a timed game, that's it:
+                // throw away the board data! this game is over, it's never coming back
                 ud.removeObject(forKey: Default.boardData)
                 self.boardView?.isHidden = true // so snapshot will capture blank background
             case .practice:
