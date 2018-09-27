@@ -30,9 +30,11 @@ private final class CancelableTimer: NSObject {
                 self.cancel()
             }
         }
+        print("timer start", self)
         self.timer.resume()
     }
     func cancel() {
+        print("timer cancel", self)
         self.timer?.cancel()
     }
     deinit {
@@ -135,12 +137,11 @@ private final class Stage : NSObject {
         self.timer?.cancel()
         if !self.didResign {
             self.didResign = true
-            nc.addObserver(self, selector: #selector(becomingActive),
+            nc.addObserver(self, selector: #selector(didBecomeActive),
                            name: UIApplication.didBecomeActiveNotification, object: nil)
         }
     }
     private func restartTimer() { // private utility: start counting down from 10
-        print("restartTimer")
         self.timer?.cancel()
         self.timer = CancelableTimer(once: false) { [unowned self] in
             DispatchQueue.main.async {
@@ -153,7 +154,10 @@ private final class Stage : NSObject {
         }
         self.timer!.start(interval: 10, leeway: 100)
     }
-    @objc private func becomingActive() { // notification
+    @objc private func didBecomeActive() { // notification
+        // okay, so it turns out we can "become active" spuriously when user pulls down notification center
+        // however, this is no big deal because we perfectly symmetrical;
+        // we will start the timer and then an instant later cancel it again
         self.restartTimer()
     }
     @objc private func gameEnded() { // notification from Board
@@ -347,14 +351,30 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 self.didObserveActivate = true
                 // register for activate notification only after have deactivated for the first time
                 nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { _ in
-                    let comingBack = self.comingBackFromBackground
-                    self.comingBackFromBackground = false
-                    // show the board view, just in case it was hidden on suspension
-                    self.boardView?.isHidden = false
-                    if ud.object(forKey: Default.boardData) == nil && !self.betweenStages {
-                        self.startNewGame()
-                    } else if comingBack {
-                        self.animateBoardTransition(.fade)
+                    // okay, we've got a huge problem: if the user pulls down the notification center...
+                    // we will get a spurious didBecomeActive just before we get a spurious second willResign
+                    // to work around this and not do all this work at the wrong moment,
+                    // we "debounce"
+                    delay(0.05) {
+                        if UIApplication.shared.applicationState == .inactive {
+                            return // debounce, this is a spurious notification
+                        }
+                        // if we get here, it's for real
+                        let comingBack = self.comingBackFromBackground
+                        self.comingBackFromBackground = false
+                        // show the board view, just in case it was hidden on suspension
+                        self.boardView?.isHidden = false
+                        if ud.object(forKey: Default.boardData) == nil && !self.betweenStages {
+                            self.startNewGame()
+                        } else if comingBack || self.betweenStages {
+                            self.animateBoardTransition(.fade)
+                            delay(0.1) { // delay because Stage also gets didBecomeActive, and we want to be _later_
+                                // replace the Stage, thus stopping the timer and ready for user to play
+                                self.stage = Stage(lsvc: self, score: self.stage!.score)
+                            }
+                        }
+                        // and if merely reactivating from deactive and not between stages,
+                        // Stage will restart timer
                     }
                 }
             }
