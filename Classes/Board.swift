@@ -66,27 +66,25 @@ final class Board : NSObject, CALayerDelegate, Codable {
     private var hintPath : Path?
     private var deckAtStartOfStage = [String]() // in case we are asked to restore this
     
+    // previously I had pathView as lazy and pathLayer as computed
+    // but decided this was too risky, because a ref to pathLayer could trigger creation of the pathView at wrong time
+    // I don't like the current arrangement either: must remember to call `createPathLayer` after init!
+    // but I don't see a better way right now
+    
+    // in the end I'm really sorry I went down this road of a layer with a special delegate to draw into it
+    // the resulting memory management issues are horrendous, because there is a danger we'll try to draw...
+    // at a time when the delegate has gone out of existence
+    // I now solve that by setting the delegate back to nil as soon as we draw!
+    // but I should have just used a view subclass and let the view do the drawing as usual
+    
     // reference to the view that holds the transparency layer
     // we need this so we can switch touch fall-thru on and off
-    lazy var pathView : UIView = { () -> UIView in
-        // this is where paths will be drawn
-        // board will draw directly into its layer using layer delegate's drawLayer:inContext:
-        // but we must not set a view's layer's delegate, so we create a sublayer
-        let v = UIView(frame: self.view.bounds)
-        v.isUserInteractionEnabled = false // clicks just fall right thru
-        let lay = CALayer()
-        v.layer.addSublayer(lay)
-        lay.frame = v.layer.bounds
-        self.view.addSubview(v)
-        self.pathView = v
-        let t = UITapGestureRecognizer(target: self, action: #selector(tappedPathView))
-        v.addGestureRecognizer(t)
-        return v
-    }() // unfortunately there is no `lazy let`
-    // I don't want to assign to this accidentally but I don't know how to prevent it
-
+    private var pathView : UIView!
+    // this is where paths will be drawn
+    // board will draw directly into its layer using layer delegate's drawLayer:inContext:
+    // but we must not set a view's layer's delegate, so we create a sublayer
     // reference to the transparency layer
-    private var pathLayer : CALayer { return self.pathView.layer.sublayers!.last! }
+    private var pathLayer : CALayer!
 
     private lazy var pieceSize : CGSize = {
         // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
@@ -104,6 +102,20 @@ final class Board : NSObject, CALayerDelegate, Codable {
         self.view = UIView(frame:boardFrame)
         self.grid = Grid(gridSize.0, gridSize.1)
         super.init()
+        self.createPathLayer()
+    }
+    
+    private func createPathLayer() {
+        let v = UIView(frame: self.view.bounds)
+        v.isUserInteractionEnabled = false // clicks just fall right thru
+        let lay = CALayer()
+        v.layer.addSublayer(lay)
+        lay.frame = v.layer.bounds
+        self.view.addSubview(v)
+        self.pathView = v
+        self.pathLayer = lay
+        let t = UITapGestureRecognizer(target: self, action: #selector(tappedPathView))
+        v.addGestureRecognizer(t)
     }
     
     enum CodingKeys : String, CodingKey {
@@ -130,6 +142,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
         let grid = try! con.decode(Grid.self, forKey: .grid)
         self.grid = Grid(grid.xct, grid.yct)
         super.init() // has to go here so we can say `self`
+        self.createPathLayer()
         for i in 0..<grid.xct {
             for j in 0..<grid.yct {
                 if let p = grid[i][j] {
@@ -249,16 +262,14 @@ final class Board : NSObject, CALayerDelegate, Codable {
                 case false:
                     self.pathToIlluminate = nil
                     self.board.pathView.isUserInteractionEnabled = false // make touches just fall thru once again
+                    self.board.pathLayer.delegate = self // cause our draw to be called
                     self.board.pathLayer.setNeedsDisplay()
                 case true:
-                    self.board.pathLayer.delegate = self // tee-hee
                     self.board.pathView.isUserInteractionEnabled = true // block touches
+                    self.board.pathLayer.delegate = self // cause our draw to be called
                     self.board.pathLayer.setNeedsDisplay()
                 }
             }
-        }
-        deinit {
-            // self.board.pathLayer.delegate = nil // crucial or we can crash
         }
         func illuminate(path:Path) {
             self.pathToIlluminate = path
@@ -271,6 +282,10 @@ final class Board : NSObject, CALayerDelegate, Codable {
             self.draw(intoIlluminationContext: con)
         }
         private func draw(intoIlluminationContext con: CGContext) {
+            defer {
+                // as soon as you're done drawing, stop being the delegate!
+                self.board.pathLayer.delegate = nil
+            }
             // if no path, do nothing, thus causing the layer to become empty
             guard let arr = self.pathToIlluminate else {return}
             // okay, we have a path
@@ -314,7 +329,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
         let piece = Piece(picName:picTitle, frame:f)
         // place the Piece in the interface
         // we are conscious that we must not accidentally draw on top of the transparency view
-        self.view.insertSubview(piece, belowSubview: self.pathView)
+        self.view.insertSubview(piece, belowSubview: self.pathView) // this is the cleverest line of code in the whole app :)
         // also place the Piece in the grid, and tell it where it is
         let (i,j) = p
         self.grid[i][j] = piece
@@ -987,7 +1002,6 @@ final class Board : NSObject, CALayerDelegate, Codable {
     }
 
     deinit {
-        self.pathLayer.delegate = nil // take no chances
         print("farewell from board")
     }
     
