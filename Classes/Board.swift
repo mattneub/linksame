@@ -2,6 +2,21 @@
 import UIKit
 import QuartzCore
 
+/*
+ Board has strong reference to View
+ Board has strong reference to Grid
+
+ Grid has strong reference to Pieces (qua array)
+ View has strong reference to Pieces (qua subviews)
+ 
+ Board has strong reference to PathView
+ View has strong reference to PathView (qua subview)
+ 
+ PathView has weak reference to LegalPathShower
+ LegalPathShower has unowned reference to Board
+ Board has strong reference to LegalPathShower
+ */
+
 // a Grid is a Board helper
 // it is just a nested array of Piece objects, which can be nil
 // that way, the Board can ask for piece at given coordinates
@@ -58,7 +73,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
     
     let view: UIView
     var stageNumber = 0
-    var showingHint : Bool { return self.hintShower.isIlluminating }
+    var showingHint : Bool { return self.legalPathShower.isIlluminating }
     private var hilitedPieces = [Piece]()
     private var xct : Int { return self.grid.xct }
     private var yct : Int { return self.grid.yct }
@@ -66,25 +81,19 @@ final class Board : NSObject, CALayerDelegate, Codable {
     private var hintPath : Path?
     private var deckAtStartOfStage = [String]() // in case we are asked to restore this
     
-    // previously I had pathView as lazy and pathLayer as computed
-    // but decided this was too risky, because a ref to pathLayer could trigger creation of the pathView at wrong time
-    // I don't like the current arrangement either: must remember to call `createPathLayer` after init!
-    // but I don't see a better way right now
-    
-    // in the end I'm really sorry I went down this road of a layer with a special delegate to draw into it
-    // the resulting memory management issues are horrendous, because there is a danger we'll try to draw...
-    // at a time when the delegate has gone out of existence
-    // I now solve that by setting the delegate back to nil as soon as we draw!
-    // but I should have just used a view subclass and let the view do the drawing as usual
-    
-    // reference to the view that holds the transparency layer
+    // view that holds the path drawing, goes in front of all pieces
     // we need this so we can switch touch fall-thru on and off
-    private var pathView : UIView!
-    // this is where paths will be drawn
-    // board will draw directly into its layer using layer delegate's drawLayer:inContext:
-    // but we must not set a view's layer's delegate, so we create a sublayer
-    // reference to the transparency layer
-    private var pathLayer : CALayer!
+    private lazy var pathView : UIView = {
+        let v = LegalPathShower.PathView(pathShower: self.legalPathShower)
+        v.isUserInteractionEnabled = false // clicks just fall right thru
+        self.view.addSubview(v)
+        self.pathView = v
+        let t = UITapGestureRecognizer(target: self, action: #selector(tappedPathView))
+        v.addGestureRecognizer(t)
+        v.frame = self.view.bounds
+        v.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        return v
+    }()
 
     private lazy var pieceSize : CGSize = {
         // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
@@ -102,20 +111,6 @@ final class Board : NSObject, CALayerDelegate, Codable {
         self.view = UIView(frame:boardFrame)
         self.grid = Grid(gridSize.0, gridSize.1)
         super.init()
-        self.createPathLayer()
-    }
-    
-    private func createPathLayer() {
-        let v = UIView(frame: self.view.bounds)
-        v.isUserInteractionEnabled = false // clicks just fall right thru
-        let lay = CALayer()
-        v.layer.addSublayer(lay)
-        lay.frame = v.layer.bounds
-        self.view.addSubview(v)
-        self.pathView = v
-        self.pathLayer = lay
-        let t = UITapGestureRecognizer(target: self, action: #selector(tappedPathView))
-        v.addGestureRecognizer(t)
     }
     
     enum CodingKeys : String, CodingKey {
@@ -142,7 +137,6 @@ final class Board : NSObject, CALayerDelegate, Codable {
         let grid = try! con.decode(Grid.self, forKey: .grid)
         self.grid = Grid(grid.xct, grid.yct)
         super.init() // has to go here so we can say `self`
-        self.createPathLayer()
         for i in 0..<grid.xct {
             for j in 0..<grid.yct {
                 if let p = grid[i][j] {
@@ -252,8 +246,26 @@ final class Board : NSObject, CALayerDelegate, Codable {
     // plus I was skankily handing the path to draw into the layer itself
     // that is just the kind of thing I wanted to clean up
     // so I put it all into a little helper class
-    final class LegalPathShower : NSObject, CALayerDelegate {
-        unowned private var board : Board
+    final class LegalPathShower : NSObject {
+        // view whose draw defers to us
+        final class PathView : UIView {
+            private var pathShower : LegalPathShower?
+            init(pathShower:LegalPathShower) {
+                self.pathShower = pathShower
+                super.init(frame:.zero) // caller's job to give us size
+                self.isOpaque = false
+            }
+            required init?(coder aDecoder: NSCoder) {
+                fatalError("init(coder:) has not been implemented")
+            }
+            override func draw(_ rect: CGRect) {
+                pathShower?.draw(intoIlluminationContext: UIGraphicsGetCurrentContext())
+            }
+            deinit {
+                print("farewell from PathView")
+            }
+        }
+        unowned private let board : Board
         fileprivate init(board:Board) {self.board = board}
         private var pathToIlluminate : Path?
         fileprivate private(set) var isIlluminating = false {
@@ -262,12 +274,10 @@ final class Board : NSObject, CALayerDelegate, Codable {
                 case false:
                     self.pathToIlluminate = nil
                     self.board.pathView.isUserInteractionEnabled = false // make touches just fall thru once again
-                    self.board.pathLayer.delegate = self // cause our draw to be called
-                    self.board.pathLayer.setNeedsDisplay()
+                    self.board.pathView.setNeedsDisplay()
                 case true:
                     self.board.pathView.isUserInteractionEnabled = true // block touches
-                    self.board.pathLayer.delegate = self // cause our draw to be called
-                    self.board.pathLayer.setNeedsDisplay()
+                    self.board.pathView.setNeedsDisplay()
                 }
             }
         }
@@ -278,16 +288,10 @@ final class Board : NSObject, CALayerDelegate, Codable {
         fileprivate func unilluminate() {
             self.isIlluminating = false
         }
-        private func draw(_ layer: CALayer, in con: CGContext) {
-            self.draw(intoIlluminationContext: con)
-        }
-        private func draw(intoIlluminationContext con: CGContext) {
-            defer {
-                // as soon as you're done drawing, stop being the delegate!
-                self.board.pathLayer.delegate = nil
-            }
+        private func draw(intoIlluminationContext con: CGContext?) {
             // if no path, do nothing, thus causing the layer to become empty
             guard let arr = self.pathToIlluminate else {return}
+            guard let con = con else {return}
             // okay, we have a path
             // connect the dots; however, the dots we want to connect are the *centers* of the pieces...
             // whereas we are given piece *origins*, so calculate offsets
@@ -304,9 +308,12 @@ final class Board : NSObject, CALayerDelegate, Codable {
             })
             con.strokePath()
         }
+        deinit {
+            print("farewell from LegalPathShower")
+        }
     }
     
-    private lazy var hintShower = LegalPathShower(board:self)
+    private lazy var legalPathShower = LegalPathShower(board:self)
     
     private func piece(at p:Point) -> Piece? {
         let (i,j) = p
@@ -878,9 +885,9 @@ final class Board : NSObject, CALayerDelegate, Codable {
         }
         if let path = self.checkPair(p1, and:p2) {
             // flash the path and remove the two pieces
-            self.hintShower.illuminate(path:path)
+            self.legalPathShower.illuminate(path:path)
             delay(0.2) {
-                self.hintShower.unilluminate()
+                self.legalPathShower.unilluminate()
                 delay(0.1) {
                     UIApplication.ui(true)
                     self.reallyRemovePair()
@@ -984,7 +991,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
     func hint () {
         // no need to waste time calling legalPath(); path is ready (or not) in hintPath
         if let path = self.hintPath {
-            self.hintShower.illuminate(path:path)
+            self.legalPathShower.illuminate(path:path)
         } else { // this part shouldn't happen, but just in case, waste time after all
             self.hintPath = self.legalPath()
             if self.hintPath != nil {
@@ -998,7 +1005,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
     // public, for the same reason: if LinkSameViewController tells us to hint,
     // we stay hinted until we are told to unhint
     func unhint () {
-        self.hintShower.unilluminate()
+        self.legalPathShower.unilluminate()
     }
 
     deinit {
