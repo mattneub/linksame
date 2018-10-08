@@ -177,8 +177,15 @@ final class Board : NSObject, CALayerDelegate, Codable {
         self.hintPath = self.legalPath() // generate initial hint
     }
     
-    func restartStage() {
+    func restartStage() throws {
         // deal stored deck; remove existing pieces as we go
+        // attempt to deal with crashes, hard to see what could be crashing except maybe removeLast
+        guard self.deckAtStartOfStage.count == self.xct * self.yct else {
+            enum DeckSizeError : Error {
+                case oops
+            }
+            throw DeckSizeError.oops
+        }
         var deck = self.deckAtStartOfStage
         for i in 0..<self.xct {
             for j in 0..<self.yct {

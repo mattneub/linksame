@@ -622,9 +622,11 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: {
             _ in
-            self.board.restartStage()
-            self.stage = Stage(lsvc: self, score: self.stage!.scoreAtStartOfStage)
-            self.animateBoardTransition(.fade)
+            do {
+                try self.board.restartStage()
+                self.stage = Stage(lsvc: self, score: self.stage!.scoreAtStartOfStage)
+                self.animateBoardTransition(.fade)
+            } catch { print(error) }
         }))
         self.present(alert, animated: true)
     }
