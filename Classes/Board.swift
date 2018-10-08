@@ -252,11 +252,11 @@ final class Board : NSObject, CALayerDelegate, Codable {
     // plus I was skankily handing the path to draw into the layer itself
     // that is just the kind of thing I wanted to clean up
     // so I put it all into a little helper class
-    class LegalPathShower : NSObject, CALayerDelegate {
+    final class LegalPathShower : NSObject, CALayerDelegate {
         unowned private var board : Board
-        init(board:Board) {self.board = board}
+        fileprivate init(board:Board) {self.board = board}
         private var pathToIlluminate : Path?
-        private(set) var isIlluminating = false {
+        fileprivate private(set) var isIlluminating = false {
             didSet {
                 switch self.isIlluminating {
                 case false:
@@ -271,14 +271,14 @@ final class Board : NSObject, CALayerDelegate, Codable {
                 }
             }
         }
-        func illuminate(path:Path) {
+        fileprivate func illuminate(path:Path) {
             self.pathToIlluminate = path
             self.isIlluminating = true
         }
-        func unilluminate() {
+        fileprivate func unilluminate() {
             self.isIlluminating = false
         }
-        func draw(_ layer: CALayer, in con: CGContext) {
+        private func draw(_ layer: CALayer, in con: CGContext) {
             self.draw(intoIlluminationContext: con)
         }
         private func draw(intoIlluminationContext con: CGContext) {
@@ -306,7 +306,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
         }
     }
     
-    lazy var hintShower = LegalPathShower(board:self)
+    private lazy var hintShower = LegalPathShower(board:self)
     
     private func piece(at p:Point) -> Piece? {
         let (i,j) = p
