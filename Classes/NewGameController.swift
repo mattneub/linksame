@@ -4,6 +4,7 @@ import UIKit
 import Swift
 
 private let cellid = "Cell"
+private let headerid = "Header"
 
 class NewGameController : UIViewController {
     weak var tableView : UITableView?
@@ -24,9 +25,9 @@ class NewGameController : UIViewController {
         let v = self.view
         v?.backgroundColor = UIColor.white
         
-        // unfortunately I have not found any way except to size manually like this by experimentation
+        // initial table height just an estimate, real height will be determined later
         let tableHeight : CGFloat = (onPhone ? 120 : 300)
-        let tv = UITableView(frame:CGRect(x: 0,y: 0,width: 320,height: tableHeight), style:.grouped)
+        let tv = UITableView(frame:CGRect(x: 0,y: 0,width: 320,height: tableHeight), style:.plain)
         
         v?.addSubview(tv)
         tv.dataSource = self
@@ -34,21 +35,18 @@ class NewGameController : UIViewController {
         tv.bounces = false
         tv.isScrollEnabled = false
         tv.register(UITableViewCell.self, forCellReuseIdentifier: cellid)
+        tv.register(UITableViewHeaderFooterView.self, forHeaderFooterViewReuseIdentifier: headerid)
         self.tableView = tv
         tv.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            NSLayoutConstraint.constraints(withVisualFormat: "H:|[tv]|", options: [], metrics: nil, views: ["tv":tv]),
-            NSLayoutConstraint.constraints(withVisualFormat: "V:|-(0)-[tv(tableHeight)]", options: [],
-                metrics: ["tableHeight":tableHeight],
-                views: ["tv":tv])
-            ].flatMap{$0})
         
         let pv = UIPickerView()
         pv.translatesAutoresizingMaskIntoConstraints = false
         pv.dataSource = self
         pv.delegate = self
         v?.addSubview(pv)
+        // no table height constraint yet
         NSLayoutConstraint.activate([
+            NSLayoutConstraint.constraints(withVisualFormat: "H:|[tv]|", options: [], metrics: nil, views: ["tv":tv]),
             NSLayoutConstraint.constraints(withVisualFormat: "H:|[pv]|", options: [], metrics: nil, views: ["pv":pv]),
             NSLayoutConstraint.constraints(withVisualFormat: "V:[tv]-(0)-[pv]", options: [],
                 metrics: nil,
@@ -59,6 +57,30 @@ class NewGameController : UIViewController {
 
         self.preferredContentSize = CGSize(width: 320, height: tv.frame.size.height + pv.frame.size.height)
     }
+    
+    // determine actual table height constraint
+    var didUpdateConstraints = false
+    override func updateViewConstraints() {
+        if !didUpdateConstraints {
+            didUpdateConstraints = true
+            var h : CGFloat = 0
+            let tv = self.tableView!
+            let secs = tv.numberOfSections
+            for sec in 0..<secs {
+                h += tv.rectForHeader(inSection: sec).height
+                let rows = tv.numberOfRows(inSection: sec)
+                for row in 0..<rows {
+                    h += tv.rectForRow(at: IndexPath(row: row, section: sec)).height
+                }
+            }
+            NSLayoutConstraint.activate([
+                NSLayoutConstraint.constraints(withVisualFormat: "V:|-(0)-[tv(tableHeight)]", options: [],
+                                               metrics: ["tableHeight":h],
+                                               views: ["tv":tv])
+                ].flatMap{$0})
+        }
+        super.updateViewConstraints()
+    }
 }
 
 extension NewGameController : UITableViewDelegate, UITableViewDataSource {
@@ -66,15 +88,23 @@ extension NewGameController : UITableViewDelegate, UITableViewDataSource {
         return onPhone ? 1 : 2 // on iPhone, omit second (Size) section: there is just one size
     }
     
-    func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        switch section {
-        case 0:
-            return Default.style
-        case 1:
-            return Default.size
-        default:
-            return nil
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let v = tableView.dequeueReusableHeaderFooterView(withIdentifier: headerid)!
+        if v.viewWithTag(99) == nil {
+            let lab = UILabel()
+            lab.tag = 99
+            lab.font = UIFont.systemFont(ofSize: 20, weight: .bold)
+            lab.translatesAutoresizingMaskIntoConstraints = false
+            v.contentView.addSubview(lab)
+            NSLayoutConstraint.activate([
+                lab.topAnchor.constraint(equalTo: v.contentView.topAnchor),
+                lab.bottomAnchor.constraint(equalTo: v.contentView.bottomAnchor),
+                lab.leadingAnchor.constraint(equalTo: v.contentView.layoutMarginsGuide.leadingAnchor)
+            ])
         }
+        let lab = v.viewWithTag(99) as! UILabel
+        lab.text = section == 0 ? Default.style : Default.size
+        return v
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
@@ -106,6 +136,7 @@ extension NewGameController : UITableViewDelegate, UITableViewDataSource {
         default:
             cell.textLabel!.text = "" // throwaway
         }
+        cell.textLabel?.font = UIFont.systemFont(ofSize: 17, weight: .regular)
         
         cell.accessoryType = .none
         let currentDefaults = [ud.string(forKey: Default.style), ud.string(forKey: Default.size)]
@@ -118,7 +149,7 @@ extension NewGameController : UITableViewDelegate, UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         if let setting = tableView.cellForRow(at: indexPath)?.textLabel?.text {
-            ud.set(setting, forKey: self.tableView(tableView, titleForHeaderInSection:indexPath.section)!)
+            ud.set(setting, forKey: indexPath.section == 0 ? Default.style : Default.size)
             tableView.reloadData()
         }
     }

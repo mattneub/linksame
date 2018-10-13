@@ -1,11 +1,11 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="11542" systemVersion="15G1108" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES">
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="14313.18" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="retina4_7" orientation="landscape">
         <adaptation id="fullscreen"/>
     </device>
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="11524"/>
-        <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14283.14"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -27,7 +27,7 @@
                     <rect key="frame" x="0.0" y="0.0" width="667" height="375"/>
                 </imageView>
                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text=" " lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="VU9-Zp-brR" userLabel="stageLabel">
-                    <rect key="frame" x="8" y="8" width="38" height="18"/>
+                    <rect key="frame" x="20" y="0.0" width="38" height="18"/>
                     <constraints>
                         <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="38" id="beK-x7-Lgt"/>
                     </constraints>
@@ -36,7 +36,7 @@
                     <nil key="highlightedColor"/>
                 </label>
                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text=" " textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="8BP-Em-5qp" userLabel="scoreLabel" customClass="MyRightLabel" customModule="LinkSame" customModuleProvider="target">
-                    <rect key="frame" x="599" y="8" width="60" height="18"/>
+                    <rect key="frame" x="587" y="0.0" width="60" height="18"/>
                     <constraints>
                         <constraint firstAttribute="width" constant="60" id="qlz-W8-zYg"/>
                     </constraints>
@@ -45,7 +45,7 @@
                     <nil key="highlightedColor"/>
                 </label>
                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text=" " textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Olt-kE-dV4" userLabel="highScoreLabel">
-                    <rect key="frame" x="541" y="8" width="38" height="18"/>
+                    <rect key="frame" x="529" y="0.0" width="38" height="18"/>
                     <constraints>
                         <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="38" id="VEb-ap-UaO"/>
                     </constraints>
@@ -54,7 +54,7 @@
                     <nil key="highlightedColor"/>
                 </label>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="hKC-mU-HxB" userLabel="hamburgerButton">
-                    <rect key="frame" x="635" y="343" width="24" height="24"/>
+                    <rect key="frame" x="623" y="351" width="24" height="24"/>
                     <state key="normal" image="hamburger.png">
                         <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                     </state>
@@ -72,13 +72,14 @@
                 <constraint firstItem="VU9-Zp-brR" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leadingMargin" id="Q2w-qi-a58"/>
                 <constraint firstItem="Olt-kE-dV4" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="topMargin" id="Vcg-VQ-ROY"/>
                 <constraint firstAttribute="trailingMargin" secondItem="hKC-mU-HxB" secondAttribute="trailing" id="XNf-5g-Ity"/>
-                <constraint firstAttribute="bottomMargin" secondItem="hKC-mU-HxB" secondAttribute="bottom" id="csM-4a-V00"/>
+                <constraint firstAttribute="bottom" secondItem="hKC-mU-HxB" secondAttribute="bottom" id="csM-4a-V00"/>
                 <constraint firstItem="8BP-Em-5qp" firstAttribute="leading" secondItem="Olt-kE-dV4" secondAttribute="trailing" constant="20" id="h0L-dw-SDd"/>
                 <constraint firstAttribute="trailingMargin" secondItem="8BP-Em-5qp" secondAttribute="trailing" id="h9e-e1-pEw"/>
                 <constraint firstItem="VU9-Zp-brR" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="topMargin" id="pf9-eb-PZZ"/>
                 <constraint firstItem="NYp-Ld-1O6" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leading" id="yDX-pa-oB8"/>
             </constraints>
             <nil key="simulatedStatusBarMetrics"/>
+            <viewLayoutGuide key="safeArea" id="5gK-eb-Sbm"/>
             <point key="canvasLocation" x="436" y="372"/>
         </view>
     </objects>
