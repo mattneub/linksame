@@ -197,7 +197,6 @@ private struct State : Codable {
     let board : Board
     let score : Int
     let timed : Bool
-    let betweenStages : Bool
 }
 
 final class LinkSameViewController : UIViewController, CAAnimationDelegate {
@@ -271,13 +270,6 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         return key
     }
     
-    private var betweenStages = false {
-        didSet {
-            if oldValue != self.betweenStages {
-                print("between stages?", self.betweenStages)
-            }
-        }
-    }
     private var didSetUpInitialLayout = false
     private var didObserveActivate = false
     private var comingBackFromBackground = false
@@ -300,28 +292,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         self.hintButton?.title = HintButtonTitle.show
         self.hintButton?.width = 110 // forced to take a wild guess
         // return; // uncomment for launch image screen shot
-        
-        // have we a state saved?  if so, reconstruct game
-        if let stateData = ud.object(forKey: Default.boardData) as? Data,
-            let state = try? PropertyListDecoder().decode(State.self, from: stateData) {
-            // okay, we've got state! there are two possibilities:
-            // it might have been a practice game, or it might have been a timed game between stages
-            self.board = state.board
-            self.boardView = self.board.view
-            self.betweenStages = state.betweenStages
-            self.backgroundView.addSubview(self.boardView!)
-            self.boardView?.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            // there must _always_ be a Stage, and a practice game just ignores it
-            self.stage = Stage(lsvc: self, score: state.score)
-            self.interfaceMode = state.timed ? .timed : .practice
-            if state.betweenStages {
-                self.animateBoardTransition(.fade)
-            } else {
-                self.populateStageLabel() // with no animation
-            }
-        } else { // otherwise, create new game from scratch
-            self.startNewGame()
-        }
+        self.restoreGameFromSavedDataOrStartNewGame()
         
         // responses to game events and application lifetime events
         
@@ -334,9 +305,6 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             if self.board.showingHint {
                 self.toggleHint(nil)
             }
-        }
-        nc.addObserver(forName: Board.userMoved, object: nil, queue: nil) { n in
-            self.betweenStages = false
         }
         nc.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: nil) { _ in
             // remove hint
@@ -385,10 +353,30 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
     private func saveBoardState() {
         let state = State(board: self.board, score: self.stage!.score,
-                          timed: self.interfaceMode == .timed,
-                          betweenStages: self.betweenStages)
+                          timed: self.interfaceMode == .timed)
         let stateData = try! PropertyListEncoder().encode(state)
         ud.set(stateData, forKey:Default.boardData)
+    }
+    
+    private func restoreGameFromSavedDataOrStartNewGame() {
+        // have we a state saved?  if so, reconstruct game
+        if let stateData = ud.object(forKey: Default.boardData) as? Data,
+            let state = try? PropertyListDecoder().decode(State.self, from: stateData) {
+            // okay, we've got state! there are two possibilities:
+            // it might have been a practice game, or it might have been a timed game between stages
+            self.board = state.board
+            self.boardView?.removeFromSuperview()
+            self.boardView = self.board.view
+            self.backgroundView.addSubview(self.boardView!)
+            self.boardView?.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            // there must _always_ be a Stage, and a practice game just ignores it
+            self.stage = Stage(lsvc: self, score: state.score)
+            self.interfaceMode = state.timed ? .timed : .practice
+            self.animateBoardTransition(.fade)
+            self.populateStageLabel() // with no animation
+        } else { // otherwise, create new game from scratch
+            self.startNewGame()
+        }
     }
     
     // this is what we do when we become active, NOT on launch, NOT spurious
@@ -398,43 +386,17 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         // show the board view, just in case it was hidden on suspension
         self.boardView?.isHidden = false
         
-        func pauseBetweenStages() {
-            self.animateBoardTransition(.fade)
-            delay(0.1) {
-                // delay because Stage also gets didBecomeActive, and we want to be _later_
-                // replace the Stage, thus stopping the timer and ready for user to play
-                self.stage = Stage(lsvc: self, score: self.stage!.score)
-            }
-        }
-        
         let comingBack = self.comingBackFromBackground
         self.comingBackFromBackground = false
-        let weHaveData : Bool = ud.object(forKey: Default.boardData) != nil
         if !comingBack { // we were merely deactivated
-            if !self.betweenStages {
-                // do nothing! Stage will start the clock
-                return
-            } else { // we are between stages
-                pauseBetweenStages()
-                return
-            }
+            return
         } else { // we were backgrounded
             if ud.bool(forKey: Default.gameEnded) {
+                ud.set(false, forKey: Default.gameEnded)
                 self.startNewGame()
                 return
             }
-            if self.betweenStages {
-                pauseBetweenStages()
-                return
-            } else {
-                if weHaveData { // if we have data but not between stages, this is a practice game
-                    // so just go right on
-                    return
-                } else {
-                    self.startNewGame()
-                    return
-                }
-            }
+            self.restoreGameFromSavedDataOrStartNewGame()
         }
         
         // and if merely reactivating from deactive and not between stages,
@@ -569,8 +531,6 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 scoresDict[key] = self.stage!.score
                 ud.set(scoresDict, forKey:Default.scores)
             }
-            // raise flag that we are between stages
-            self.betweenStages = true
             // notify user
             let alert = UIAlertController(
                 title: "Congratulations!",
@@ -585,7 +545,6 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             self.present(alert, animated: true)
             ud.set(true, forKey: Default.gameEnded)
         }
-        self.betweenStages = true
         UIApplication.ui(true)
     }
     
@@ -618,7 +577,6 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             self.toggleHint(nil)
         }
         self.board.unhilite()
-        self.betweenStages = true
         let alert = UIAlertController(title: "Restart Stage", message: "Really restart this stage?", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: {
