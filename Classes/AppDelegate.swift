@@ -69,6 +69,7 @@ struct Default {
     static let lastStage = "Stages"
     static let scores = "Scoresv2"
     static let boardData = "boardDatav2"
+    static let gameEnded = "gameEnded"
 }
 
 struct Sizes {

@@ -419,6 +419,10 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 return
             }
         } else { // we were backgrounded
+            if ud.bool(forKey: Default.gameEnded) {
+                self.startNewGame()
+                return
+            }
             if self.betweenStages {
                 pauseBetweenStages()
                 return
@@ -575,9 +579,11 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 preferredStyle: .alert)
             alert.addAction(UIAlertAction(
                 title: "Cool!", style: .cancel, handler:  { _ in
+                    ud.set(false, forKey: Default.gameEnded)
                     newBoard(newGame:true)
             }))
             self.present(alert, animated: true)
+            ud.set(true, forKey: Default.gameEnded)
         }
         self.betweenStages = true
         UIApplication.ui(true)
