@@ -380,28 +380,27 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
     }
     
     // this is what we do when we become active, NOT on launch, NOT spurious
-    // rather desperate attempt to express the full logic of possibilities in a legible maintainable way
-    // that's why there are no AND or OR in the logic: every path is spelled out exhaustively
     private func didBecomeActive() { // notification
         // show the board view, just in case it was hidden on suspension
         self.boardView?.isHidden = false
         
+        // distinguish return from suspension from mere reactivation from deactivation
         let comingBack = self.comingBackFromBackground
         self.comingBackFromBackground = false
-        if !comingBack { // we were merely deactivated
+        
+        // take care of corner case where user saw game over alert but didn't dismiss it
+        // (and so it was automatically dismissed when we deactivated)
+        if ud.bool(forKey: Default.gameEnded) {
+            ud.set(false, forKey: Default.gameEnded)
+            self.startNewGame()
             return
-        } else { // we were backgrounded
-            if ud.bool(forKey: Default.gameEnded) {
-                ud.set(false, forKey: Default.gameEnded)
-                self.startNewGame()
-                return
-            }
-            self.restoreGameFromSavedDataOrStartNewGame()
         }
         
+        if comingBack { // we were backgrounded
+            self.restoreGameFromSavedDataOrStartNewGame()
+        }
         // and if merely reactivating from deactive and not between stages,
-        // Stage will restart timer
-
+        // do nothing and let Stage restart timer
     }
     
     private func animateBoardTransition (_ transition: BoardTransition) {
