@@ -373,22 +373,22 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { _ in
             switch self.interfaceMode {
             case .timed:
-                if self.betweenStages {
-                    fallthrough // save out board state
-                }
-                // if we background when a stage is ongoing in a timed game, that's it:
-                // throw away the board data! this game is over, it's never coming back
-                ud.removeObject(forKey: Default.boardData)
-                self.boardView?.isHidden = true // so snapshot will capture blank background
+                // do not save board state! it was saved when the stage started, and that's where we'll return to
+                // but do hide the board view so snapshot will capture blank background
+                self.boardView?.isHidden = true
             case .practice:
-                // save out board state
-                let state = State(board: self.board, score: self.stage!.score,
-                                  timed: self.interfaceMode == .timed,
-                                  betweenStages: self.betweenStages)
-                let stateData = try! PropertyListEncoder().encode(state)
-                ud.set(stateData, forKey:Default.boardData)
+                // do save out board state! and let the board appear in the snapshot, as it will be the same returning
+                self.saveBoardState()
             }
         }
+    }
+    
+    private func saveBoardState() {
+        let state = State(board: self.board, score: self.stage!.score,
+                          timed: self.interfaceMode == .timed,
+                          betweenStages: self.betweenStages)
+        let stateData = try! PropertyListEncoder().encode(state)
+        ud.set(stateData, forKey:Default.boardData)
     }
     
     // this is what we do when we become active, NOT on launch, NOT spurious
@@ -433,13 +433,6 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             }
         }
         
-        /*
-         if comingBack && ud.object(forKey: Default.boardData) == nil && !self.betweenStages {
-         self.startNewGame()
-         } else if comingBack || self.betweenStages {
-         pauseBetweenStages()
-         }
-         */
         // and if merely reactivating from deactive and not between stages,
         // Stage will restart timer
 
@@ -467,6 +460,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         of \(ud.integer(forKey: Default.lastStage) + 1)
         """
         self.stageLabel?.text = s
+        self.stageLabel?.sizeToFit()
     }
     
     // delegate from previous, called when animation ends
@@ -482,7 +476,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         }
     }
     
-    // called from startNewGame (n is nil)
+    // called from startNewGame (n is nil), which itself is called by Done button and at launch
     // called when we get Board.gameOver (n is Notification, passed along)
     // in latter case, might mean go on to next stage or might mean entire game is over
     @objc private func prepareNewStage (_ n : Any?) {
@@ -539,6 +533,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
             let boardTransition : BoardTransition = newGame ? .fade : .slide
             self.board.createAndDealDeck()
             self.animateBoardTransition(boardTransition)
+            self.saveBoardState()
         }
         
         // okay, how we proceed depends upon how we got here!
@@ -626,6 +621,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                 try self.board.restartStage()
                 self.stage = Stage(lsvc: self, score: self.stage!.scoreAtStartOfStage)
                 self.animateBoardTransition(.fade)
+                self.saveBoardState()
             } catch { print(error) }
         }))
         self.present(alert, animated: true)
@@ -689,7 +685,10 @@ extension LinkSameViewController { // buttons in popover
         }
     }
     
-    @objc private func startNewGame() { // save button in new game popover; can also be called manually at launch
+    // Done button in new game popover
+    // also, at launch, through layout subviews
+    // also when we become active, if we have no board data
+    @objc private func startNewGame() {
         func whatToDo() {
             self.interfaceMode = .timed
             self.oldDefs = nil // crucial or we'll fall one behind
