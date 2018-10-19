@@ -8,6 +8,7 @@ private let headerid = "Header"
 
 class NewGameController : UIViewController {
     weak var tableView : UITableView?
+    weak var picker : UIPickerView?
     
     init () {
         super.init(nibName: nil, bundle: nil)
@@ -38,6 +39,9 @@ class NewGameController : UIViewController {
         tv.register(UITableViewHeaderFooterView.self, forHeaderFooterViewReuseIdentifier: headerid)
         self.tableView = tv
         tv.translatesAutoresizingMaskIntoConstraints = false
+        // border, seems more crisp somehow
+        tv.layer.borderWidth = 1
+        tv.layer.borderColor = UIColor.lightGray.cgColor
         
         let pv = UIPickerView()
         pv.translatesAutoresizingMaskIntoConstraints = false
@@ -54,8 +58,7 @@ class NewGameController : UIViewController {
             ].flatMap{$0})
         pv.showsSelectionIndicator = true
         pv.selectRow(ud.integer(forKey: Default.lastStage), inComponent: 0, animated: false)
-
-        self.preferredContentSize = CGSize(width: 320, height: tv.frame.size.height + pv.frame.size.height)
+        self.picker = pv
     }
     
     // determine actual table height constraint
@@ -67,11 +70,7 @@ class NewGameController : UIViewController {
             let tv = self.tableView!
             let secs = tv.numberOfSections
             for sec in 0..<secs {
-                h += tv.rectForHeader(inSection: sec).height
-                let rows = tv.numberOfRows(inSection: sec)
-                for row in 0..<rows {
-                    h += tv.rectForRow(at: IndexPath(row: row, section: sec)).height
-                }
+                h += tv.rect(forSection: sec).height
             }
             NSLayoutConstraint.activate([
                 NSLayoutConstraint.constraints(withVisualFormat: "V:|-(0)-[tv(tableHeight)]", options: [],
@@ -80,6 +79,12 @@ class NewGameController : UIViewController {
                 ].flatMap{$0})
         }
         super.updateViewConstraints()
+    }
+    
+    // determine desired height based on actual heights, which are now known
+    override func viewDidLayoutSubviews() {
+        let h = self.tableView!.bounds.height + self.picker!.bounds.height
+        self.preferredContentSize = CGSize(width: 320, height: h)
     }
 }
 

@@ -360,7 +360,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
     
     private func restoreGameFromSavedDataOrStartNewGame() {
         // have we a state saved?  if so, reconstruct game
-        if let stateData = ud.object(forKey: Default.boardData) as? Data,
+        if let stateData = ud.data(forKey: Default.boardData),
             let state = try? PropertyListDecoder().decode(State.self, from: stateData) {
             // okay, we've got state! there are two possibilities:
             // it might have been a practice game, or it might have been a timed game between stages
