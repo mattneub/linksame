@@ -61,6 +61,7 @@ func test() {
         print(s, calcBonus(d))
     }
 }
+// linear interpolation formula
 // https://math.stackexchange.com/a/377174
 // Quote: If you have numbers x in the range [a,b] and you want to transform them
 // to numbers y in the range [c,d], you need to do this:
