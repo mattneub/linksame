@@ -69,6 +69,7 @@ func test() {
 func transform(x:Double, r1lo a:Double, r1hi b:Double, r2lo c:Double, d2hi d:Double) -> Double {
     return (x-a)*(d-c)/(b-a)+c
 }
+// but see also https://developer.apple.com/documentation/accelerate/vdsp/linear_interpolation_functions/use_linear_interpolation_to_construct_new_data_points
 // ok, this is it! arrived at experimentally
 // I like the curve and I like the values attainable (i.e. you can pretty easily get 10 but not _too_ easily)
 func calcBonus(_ diff:Double) -> Int {
