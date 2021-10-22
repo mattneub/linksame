@@ -29,7 +29,7 @@ class NewGameController : UIViewController {
         // initial table height just an estimate, real height will be determined later
         let tableHeight : CGFloat = (onPhone ? 120 : 300)
         let tv = UITableView(frame:CGRect(x: 0,y: 0,width: 320,height: tableHeight), style:.plain)
-        
+        tv.backgroundColor = .secondarySystemBackground
         v?.addSubview(tv)
         tv.dataSource = self
         tv.delegate = self
@@ -42,8 +42,10 @@ class NewGameController : UIViewController {
         // border, seems more crisp somehow
         tv.layer.borderWidth = 1
         tv.layer.borderColor = UIColor.lightGray.cgColor
+        tv.sectionHeaderTopPadding = 6
         
         let pv = UIPickerView()
+        pv.backgroundColor = .systemBackground
         pv.translatesAutoresizingMaskIntoConstraints = false
         pv.dataSource = self
         pv.delegate = self
@@ -108,6 +110,9 @@ extension NewGameController : UITableViewDelegate, UITableViewDataSource {
         }
         let lab = v.viewWithTag(99) as! UILabel
         lab.text = section == 0 ? Default.style : Default.size
+        var back = UIBackgroundConfiguration.listPlainHeaderFooter()
+        back.backgroundColor = .secondarySystemBackground
+        v.backgroundConfiguration = back
         return v
     }
     
@@ -169,8 +174,10 @@ extension NewGameController : UIPickerViewDelegate, UIPickerViewDataSource {
         return 9
     }
     
-    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
-        return "\(row+1) Stage" + ( row > 0 ? "s" : "")
+    func pickerView(_ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int) -> NSAttributedString? {
+        var s = AttributedString("\(row+1) Stage" + ( row > 0 ? "s" : ""))
+        s.uiKit.foregroundColor = .label
+        return NSAttributedString(s)
     }
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
