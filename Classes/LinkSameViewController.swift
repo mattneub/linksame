@@ -622,7 +622,7 @@ extension LinkSameViewController { // buttons in popover
         self.board.unhilite()
         // create dialog from scratch (see NewGameController for rest of interface)
         let dlg = NewGameController()
-        dlg.isModalInPopover = true // must be before presentation to work
+        dlg.isModalInPresentation = true // must be before presentation to work
         let b1 = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(cancelNewGame))
         dlg.navigationItem.rightBarButtonItem = b1
         let b2 = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(startNewGame))

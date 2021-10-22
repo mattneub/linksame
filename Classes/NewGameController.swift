@@ -56,7 +56,6 @@ class NewGameController : UIViewController {
                 metrics: nil,
                 views: ["tv":tv, "pv":pv])
             ].flatMap{$0})
-        pv.showsSelectionIndicator = true
         pv.selectRow(ud.integer(forKey: Default.lastStage), inComponent: 0, animated: false)
         self.picker = pv
     }

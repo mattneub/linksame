@@ -24,12 +24,23 @@ let ud = UserDefaults.standard
 let nc = NotificationCenter.default
 
 extension UIApplication {
-    // false means no user interaction, true means turn it back on
+    // I want to be able to nest pairs
+    static var level = 0
     static func ui(_ yn:Bool) {
+        let w = UIApplication.shared.delegate!.window!!
         if !yn {
-            UIApplication.shared.beginIgnoringInteractionEvents()
+            print("off")
+            w.isUserInteractionEnabled = false
+            Self.level += 1
         } else {
-            UIApplication.shared.endIgnoringInteractionEvents()
+            print("on")
+            Self.level -= 1
+            if Self.level < 0 {
+                Self.level = 0
+            }
+            if Self.level == 0 {
+                w.isUserInteractionEnabled = true
+            }
         }
     }
 }
