@@ -24,7 +24,7 @@ class NewGameController : UIViewController {
         super.viewDidLoad()
 
         let v = self.view
-        v?.backgroundColor = UIColor.white
+        v?.backgroundColor = .systemBackground
         
         // initial table height just an estimate, real height will be determined later
         let tableHeight : CGFloat = (onPhone ? 120 : 300)

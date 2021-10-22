@@ -607,6 +607,9 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
                 let nav = UINavigationController(rootViewController: vc)
                 vc.navigationItem.rightBarButtonItem = UIBarButtonItem(
                     title: "Done", style: .plain, target: self, action: #selector(dismissHelp))
+                // whoa, nice
+                nav.navigationBar.scrollEdgeAppearance = nav.navigationBar.standardAppearance
+                nav.navigationBar.compactScrollEdgeAppearance = nav.navigationBar.compactAppearance
                 return nav
             }
             return nil
@@ -628,6 +631,8 @@ extension LinkSameViewController { // buttons in popover
         let b2 = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(startNewGame))
         dlg.navigationItem.leftBarButtonItem = b2
         let nav = UINavigationController(rootViewController: dlg)
+        nav.navigationBar.scrollEdgeAppearance = nav.navigationBar.standardAppearance
+        nav.navigationBar.compactScrollEdgeAppearance = nav.navigationBar.compactAppearance
         nav.modalPresentationStyle = .popover // *
         self.present(nav, animated: true) {
             nav.popoverPresentationController?.passthroughViews = nil
