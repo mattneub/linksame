@@ -94,7 +94,7 @@ private final class Stage: NSObject {
     deinit {
         print("farewell from Stage object", self)
         // self.timer?.cancel()
-        nc.removeObserver(self) // probably not needed, but whatever
+        // nc.removeObserver(self) // probably not needed, but whatever
     }
     // okay, you're never going to believe this one
     // I finally saw how to register for become active without triggering on the first one:
@@ -166,14 +166,15 @@ private final class Stage: NSObject {
     }
 }
 
+@MainActor
 private struct State : Codable {
     let board : Board
     let score : Int
     let timed : Bool
 }
 
-final class LinkSameViewController : UIViewController, CAAnimationDelegate {
-    
+final class LinkSameViewController : UIViewController, @preconcurrency CAAnimationDelegate {
+
     private var board : Board!
     @IBOutlet private weak var backgroundView : UIView!
     @IBOutlet private weak var stageLabel : UILabel!
@@ -270,57 +271,68 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         // responses to game events and application lifetime events
         
         // sent long-distance by board
-        nc.addObserver(forName: Board.gameOver, object: nil, queue: nil) { n in
-            self.prepareNewStage(n)
-        }
-        nc.addObserver(forName: Board.userTappedPath, object: nil, queue: nil) { n in
-            // remove hint
-            if self.board.showingHint {
-                self.toggleHint(nil)
+        nc.addObserver(forName: Board.gameOver, object: nil, queue: .main) { notification in
+            let notificationStage = notification.userInfo?["stage"] as? Int
+            MainActor.assumeIsolated {
+                self.prepareNewStage(notificationStage)
             }
         }
-        nc.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: nil) { _ in
+        nc.addObserver(forName: Board.userTappedPath, object: nil, queue: .main) { _ in
             // remove hint
-            if self.board.showingHint {
-                self.toggleHint(nil)
+            MainActor.assumeIsolated {
+                if self.board.showingHint {
+                    self.toggleHint(nil)
+                }
             }
-            // dismiss popover if any; counts as cancelling, so restore defaults if needed
-            self.dismiss(animated: false)
-            if let defs = self.oldDefs {
-                ud.setValuesForKeys(defs)
-                self.oldDefs = nil
-            }
-            if !self.didObserveActivate {
-                self.didObserveActivate = true
-                // register for activate notification only after have deactivated for the first time
-                nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { _ in
-                    // okay, we've got a huge problem: if the user pulls down the notification center...
-                    // we will get a spurious didBecomeActive just before we get a spurious second willResign
-                    // to work around this and not do all this work at the wrong moment,
-                    // we "debounce"
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .seconds(0.05))
-                        if UIApplication.shared.applicationState == .inactive {
-                            return // debounce, this is a spurious notification
+        }
+        nc.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated {
+                // remove hint
+                if self.board.showingHint {
+                    self.toggleHint(nil)
+                }
+                // dismiss popover if any; counts as cancelling, so restore defaults if needed
+                self.dismiss(animated: false)
+                if let defs = self.oldDefs {
+                    ud.setValuesForKeys(defs)
+                    self.oldDefs = nil
+                }
+                if !self.didObserveActivate {
+                    self.didObserveActivate = true
+                    // register for activate notification only after have deactivated for the first time
+                    nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { _ in
+                        // okay, we've got a huge problem: if the user pulls down the notification center...
+                        // we will get a spurious didBecomeActive just before we get a spurious second willResign
+                        // to work around this and not do all this work at the wrong moment,
+                        // we "debounce"
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(0.05))
+                            if UIApplication.shared.applicationState == .inactive {
+                                return // debounce, this is a spurious notification
+                            }
+                            // if we get here, it's for real
+                            self.didBecomeActive()
                         }
-                        // if we get here, it's for real
-                        self.didBecomeActive()
                     }
                 }
             }
         }
-        nc.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil) { _ in
-            self.comingBackFromBackground = true
+        nc.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated {
+                self.comingBackFromBackground = true
+            }
         }
-        nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { _ in
-            switch self.interfaceMode {
-            case .timed:
-                // do not save board state! it was saved when the stage started, and that's where we'll return to
-                // but do hide the board view so snapshot will capture blank background
-                self.boardView?.isHidden = true
-            case .practice:
-                // do save out board state! and let the board appear in the snapshot, as it will be the same returning
-                self.saveBoardState()
+        nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated {
+                switch self.interfaceMode {
+                case .timed:
+                    // do not save board state! it was saved when the stage started, and that's where we'll return to
+                    // but do hide the board view so snapshot will capture blank background
+                    self.boardView?.isHidden = true
+                case .practice:
+                    // do save out board state! and let the board appear in the snapshot, as it will be the same returning
+                    self.saveBoardState()
+                }
             }
         }
     }
@@ -422,7 +434,7 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
     // called from startNewGame (n is nil), which itself is called by Done button and at launch
     // called when we get Board.gameOver (n is Notification, passed along)
     // in latter case, might mean go on to next stage or might mean entire game is over
-    @objc private func prepareNewStage (_ n : Any?) {
+    private func prepareNewStage (_ notificationStage: Int?) {
         UIApplication.ui(false)
         
         // determine layout dimensions
@@ -455,9 +467,9 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
         }
         let howWeGotHere : WhatToDo = {
             () -> WhatToDo in
-            if let stageNumberFromNotification = (n as? Notification)?.userInfo?["stage"] as? Int {
-                if stageNumberFromNotification < ud.integer(forKey: Default.lastStage) {
-                    return .onToNextStage(stageNumberFromNotification+1)
+            if let notificationStage {
+                if notificationStage < ud.integer(forKey: Default.lastStage) {
+                    return .onToNextStage(notificationStage + 1)
                 } else {
                     return .gameOver
                 }
@@ -693,7 +705,7 @@ extension LinkSameViewController { // buttons in popover
 }
 
 extension LinkSameViewController : UIToolbarDelegate {
-    func position(for bar: UIBarPositioning) -> UIBarPosition {
+    func position(for bar: any UIBarPositioning) -> UIBarPosition {
         return .topAttached
     }
 }

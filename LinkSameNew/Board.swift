@@ -25,6 +25,7 @@ import QuartzCore
 // * where that same Piece is in the Board
 // * where that same Piece thinks it is (its x and y)
 
+@MainActor
 struct Grid : Codable {
     private var grid : [[Piece?]]
     let xct : Int
@@ -52,7 +53,8 @@ struct Grid : Codable {
 // it detects taps
 // it draws hints in its `pathView` (actually, in the sublayer of its `pathView`)
 
-final class Board : NSObject, CALayerDelegate, Codable {
+@MainActor
+final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     
     private let TOPMARGIN : CGFloat = (1.0/8.0)
     private let BOTTOMMARGIN : CGFloat = (1.0/8.0)
@@ -119,14 +121,15 @@ final class Board : NSObject, CALayerDelegate, Codable {
         case frame
         case deckAtStartOfStage
     }
-    func encode(to encoder: Encoder) throws {
+    func encode(to encoder: any Encoder) throws {
         var con = encoder.container(keyedBy: CodingKeys.self)
         try! con.encode(self.stageNumber, forKey: .stage)
         try! con.encode(self.view.frame, forKey: .frame)
         try! con.encode(self.grid, forKey: .grid)
         try! con.encode(self.deckAtStartOfStage, forKey: .deckAtStartOfStage)
     }
-    init(from decoder: Decoder) throws {
+
+    init(from decoder: any Decoder) throws {
         let con = try! decoder.container(keyedBy: CodingKeys.self)
         self.stageNumber = try! con.decode(Int.self, forKey: .stage)
         self.deckAtStartOfStage = try! con.decode([String].self, forKey: .deckAtStartOfStage)
@@ -246,6 +249,7 @@ final class Board : NSObject, CALayerDelegate, Codable {
     // plus I was skankily handing the path to draw into the layer itself
     // that is just the kind of thing I wanted to clean up
     // so I put it all into a little helper class
+    @MainActor
     final class LegalPathShower : NSObject {
         // view whose draw defers to us
         final class PathView : UIView {

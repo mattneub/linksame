@@ -6,7 +6,7 @@ import Swift
 private let cellid = "Cell"
 private let headerid = "Header"
 
-class NewGameController : UIViewController {
+final class NewGameController : UIViewController {
     weak var tableView : UITableView?
     weak var picker : UIPickerView?
     

@@ -1,17 +1,4 @@
 
-
-extension CGRect {
-    var center : CGPoint {
-        return CGPoint(x: self.midX, y: self.midY)
-    }
-    func centeredRectOfSize(_ sz:CGSize) -> CGRect {
-        let c = self.center
-        let x = c.x - sz.width/2.0
-        let y = c.y - sz.height/2.0
-        return CGRect(origin:CGPoint(x: x,y: y), size:sz)
-    }
-}
-
 import UIKit
 import AVFoundation
 
@@ -19,26 +6,29 @@ import AVFoundation
 // given that, it knows how to draw and hilite itself
 // it also has properties so that it can report where it belongs in the grid
 
-final class Piece : UIView, Codable {
-    
+final class Piece: UIView, Encodable, @preconcurrency Decodable {
+
     // define equality as identity
     static func == (lhs:Piece, rhs:Piece) -> Bool {
         return lhs === rhs
     }
-    
-    var picName : String
-    
-    var x : Int = 0, y : Int = 0 // where we are slotted
-    
+
+    // what image we display
+    nonisolated(unsafe) var picName : String
+
+    // where we are slotted
+    nonisolated(unsafe) var x : Int = 0
+    nonisolated(unsafe) var y : Int = 0
+
     private var hilite : Bool = false
     var isHilited : Bool {
         return self.hilite
     }
-    
+
     override var description : String {
         return "picname: \(picName); x: \(x); y: \(y)"
     }
-        
+
     init(picName:String, frame:CGRect) {
         self.picName = picName
         super.init(frame:frame)
@@ -47,7 +37,7 @@ final class Piece : UIView, Codable {
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     enum CodingKeys : String, CodingKey {
         case x
         case y
@@ -55,7 +45,7 @@ final class Piece : UIView, Codable {
     }
     
     // because we are subclass of class with designated initializer, must implement `init(from:)` ourselves
-    init(from decoder: Decoder) throws {
+    init(from decoder: any Decoder) throws {
         let con = try! decoder.container(keyedBy: CodingKeys.self)
         self.x = try! con.decode(Int.self, forKey: .x)
         self.y = try! con.decode(Int.self, forKey: .y)

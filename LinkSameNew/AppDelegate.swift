@@ -14,8 +14,10 @@ extension RangeReplaceableCollection where Iterator.Element : Equatable {
 
 // space savers
 
+@MainActor
 let ud = UserDefaults.standard
 
+@MainActor
 let nc = NotificationCenter.default
 
 extension UIApplication {
@@ -57,11 +59,12 @@ where Bound : Strideable {
 }
 
 // determination of hardware environment
-
+@MainActor
 var onPhone : Bool {
     return UIScreen.main.traitCollection.userInterfaceIdiom == .phone
 }
 
+@MainActor
 var on3xScreen : Bool {
     return UIScreen.main.traitCollection.displayScale > 2.5
 }
@@ -77,6 +80,7 @@ struct Default {
     static let gameEnded = "gameEnded"
 }
 
+@MainActor
 struct Sizes {
     static let easy = "Easy"
     static let normal = "Normal"
@@ -118,7 +122,7 @@ struct Styles {
 // =========================================
 
 
-@UIApplicationMain
+@main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]?) -> Bool {
