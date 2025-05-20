@@ -467,7 +467,8 @@ final class Board : NSObject, CALayerDelegate, Codable {
         self.hilitedPieces.removeAll()
         // game over? if so, notify along with current stage and we're out of here!
         if self.gameOver() {
-            delay(0.1) { // nicer with a little delay
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(0.1)) // nicer with a little delay
                 UIApplication.ui(true)
                 nc.post(name: Board.gameOver, object: self, userInfo: ["stage":self.stageNumber])
             }
@@ -765,25 +766,26 @@ final class Board : NSObject, CALayerDelegate, Codable {
         // thus it doesn't matter that we moved the piece into its right place;
         // we also moved the piece back into its wrong place, 
         // and that is what the user will see when the animation starts
-        
-        UIView.animate(withDuration: 0.15, delay: 0.1, options: .curveLinear, animations: {
-            while movenda.count > 0 {
-                let p = movenda.removeLast()
-                var f = p.frame
-                f.origin = self.originOf((p.x, p.y))
-                // print("Will change frame of piece \(p)")
-                // print("From \(p.frame)")
-                // print("To \(f)")
-                p.frame = f // this is the move that will be animated
+
+        Task { @MainActor in
+            await UIView.animate(withDuration: 0.15, delay: 0.1, options: .curveLinear) {
+                while movenda.count > 0 {
+                    let p = movenda.removeLast()
+                    var f = p.frame
+                    f.origin = self.originOf((p.x, p.y))
+                    // print("Will change frame of piece \(p)")
+                    // print("From \(p.frame)")
+                    // print("To \(f)")
+                    p.frame = f // this is the move that will be animated
+                }
             }
-        }, completion: { _ in
             self.hintPath = self.legalPath() // okay, assess the situation; either way, we need a new hint ready
             if self.hintPath == nil {
                 self.redeal()
             }
             // we do this after the slide animation is over, so we can get two animations in row, cool
             UIApplication.ui(true)
-        })
+        }
     }
     
 
@@ -886,12 +888,12 @@ final class Board : NSObject, CALayerDelegate, Codable {
         if let path = self.checkPair(p1, and:p2) {
             // flash the path and remove the two pieces
             self.legalPathShower.illuminate(path:path)
-            delay(0.2) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(0.2))
                 self.legalPathShower.unilluminate()
-                delay(0.1) {
-                    UIApplication.ui(true)
-                    self.reallyRemovePair()
-                }
+                try? await Task.sleep(for: .seconds(0.1))
+                UIApplication.ui(true)
+                self.reallyRemovePair()
             }
         } else {
             UIApplication.ui(true)

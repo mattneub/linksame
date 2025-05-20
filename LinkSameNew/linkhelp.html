@@ -7,11 +7,11 @@
     <meta name="viewport" content="initial-scale=1.0" />
 	<title>Untitled</title>
 </head>
-<body style="font:FIXMEpt Georgia">
+<body style="font:FIXMEpt Georgia; margin-left:FIXME2pt; margin-right:FIXME2pt">
 
 <p>LinkSame reconstructs MacLinkSame, a popular PPC Mac OS X application by Zheng Xiaoping, released in 2004 and no longer supported, nor even, as far as I can tell, available.</p>
 
-<p>The basic rules (which turn out to be based on the traditional Shisen-Sho) are simple. All you have to do is spot a pair of tiles bearing the same picture, such that the <b>centers</b> of the tiles can be connected by a path, where:
+<p>The basic rules (which turn out to be based on the traditional Shisen-Sho) are simple. All you have to do is spot a pair of tiles bearing the same picture, such that the <b>centers</b> of the tiles can be connected by a path, where:</p>
 
 <ol>
 	<li>The path is made up entirely of <b>straight line</b> segments.</li>
@@ -29,22 +29,18 @@
 <p>My scoring system is a little different from the original MacLinkSame. MacLinkSame imposed a countdown timer on each stage; if you didn&#8217;t clear the board before time ran out, the game ended prematurely. I want you to be able to finish the game every time, but I still want to reward alacrity and punish sloth. So my scoring system works like this:</p>
 
 <ul>
-	<li><p>You get 1 point for removing a pair of tiles.</p></li>
-
-	<li><p>You get bonus points for making pair-removals in quick succession - under ten seconds, and the faster the better. You can pretty easily get 10 bonus points per move if you&#8217;re quick.</p></li>
-
-	<li><p>To encourage you not to fall asleep at the wheel, you <i>lose</i> 1 point for every 10 seconds of inactivity. This loss is emphasized by showing the score in red.</p></li>
-
-	<li><p>If you are at a stand, you may ask for a <b>hint</b>. A legal path appears on the screen until you dismiss it by tapping. But you <i>lose 10 points</i> for doing this. This loss can in fact be worth it; if the hint causes you to spot multiple paths, you can quickly make up the loss with bonus points.</p></li>
-
-	<li><p>Alternatively, you can ask for the pieces to be <b>reshuffled</b>. The pieces presently on the board are gathered up, reshuffled, and replaced into the same locations. This can make pairs easier to spot, but you <i>lose 20 points</i>. Again, you may be able to make up the loss by a couple of rapid moves after the shuffle. You never <i>need</i> to reshuffle, however, since the board is reshuffled automatically if a configuration is reached where there are no legal paths.</p></li>
+	<li style="margin: 10px 0;">You get 1 point for removing a pair of tiles.</li>
+	<li style="margin: 10px 0;">You get bonus points for making pair-removals in quick succession - under ten seconds, and the faster the better. You can pretty easily get 10 bonus points per move if you&#8217;re quick.</li>
+	<li style="margin: 10px 0;">To encourage you not to fall asleep at the wheel, you <i>lose</i> 1 point for every 10 seconds of inactivity. This loss is emphasized by showing the score in red.</li>
+	<li style="margin: 10px 0;">If you are at a stand, you may ask for a <b>hint</b>. A legal path appears on the screen until you dismiss it by tapping. But you <i>lose 10 points</i> for doing this. This loss can in fact be worth it; if the hint causes you to spot multiple paths, you can quickly make up the loss with bonus points.</li>
+	<li style="margin: 10px 0;">Alternatively, you can ask for the pieces to be <b>reshuffled</b>. The pieces presently on the board are gathered up, reshuffled, and replaced into the same locations. This can make pairs easier to spot, but you <i>lose 20 points</i>. Again, you may be able to make up the loss by a couple of rapid moves after the shuffle. You never <i>need</i> to reshuffle, however, since the board is reshuffled automatically if a configuration is reached where there are no legal paths.</li>
 </ul>
 
 <p>Unlike the original MacLinkSame, there is no limit to the number of shuffles or hints you can request per stage; the loss of points is, I think, sufficient to discourage you from using those features too frequently. Also, you can restart the current stage without penalty; thus, if you feel you are playing a stage too slowly, you can try again with the same layout of tiles.</p>
 
 <p>If you leave the game in the middle of a stage, the stage will start over. The idea is that you are not allowed to rest in the middle of a stage, because the timer is running and the pressure is on. However, you can rest in the middle of a stage by summoning the control center or notification center (the timer will pause).</p>
 
-<p>If you dislike the time pressure, you can turn off scoring altogether by switching from Timed mode to Practice mode. (This feature is not available in the iPhone version of LinkSame.) In that case, you can pause at any time, because there's no timer. Every new game starts in Timed mode; to switch from Practice mode to Timed mode, simply begin a new game.</p>
+<p>If you dislike the time pressure, you can turn off scoring altogether by switching from Timed mode to Practice mode. (This feature is not available in the iPhone version of LinkSame.) In that case, you can pause at any time, because there&#8217;s no timer. Every new game starts in Timed mode; to switch from Practice mode to Timed mode, simply begin a new game.</p>
 
 <!--
 

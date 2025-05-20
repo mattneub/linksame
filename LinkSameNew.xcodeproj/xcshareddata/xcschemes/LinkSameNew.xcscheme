@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "0730"
-   version = "1.3">
+   LastUpgradeVersion = "1640"
+   version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES">
+      buildImplicitDependencies = "YES"
+      buildArchitectures = "Automatic">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -14,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "1D6058900D05DD3D006BFB54"
+               BlueprintIdentifier = "3F6B09172DDBC17E0053C85C"
                BuildableName = "LinkSame.app"
-               BlueprintName = "LinkSame"
-               ReferencedContainer = "container:LinkSame.xcodeproj">
+               BlueprintName = "LinkSameNew"
+               ReferencedContainer = "container:LinkSameNew.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -26,9 +27,8 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES">
-      <Testables>
-      </Testables>
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      shouldAutocreateTestPlan = "YES">
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -44,10 +44,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "1D6058900D05DD3D006BFB54"
+            BlueprintIdentifier = "3F6B09172DDBC17E0053C85C"
             BuildableName = "LinkSame.app"
-            BlueprintName = "LinkSame"
-            ReferencedContainer = "container:LinkSame.xcodeproj">
+            BlueprintName = "LinkSameNew"
+            ReferencedContainer = "container:LinkSameNew.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -61,10 +61,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "1D6058900D05DD3D006BFB54"
+            BlueprintIdentifier = "3F6B09172DDBC17E0053C85C"
             BuildableName = "LinkSame.app"
-            BlueprintName = "LinkSame"
-            ReferencedContainer = "container:LinkSame.xcodeproj">
+            BlueprintName = "LinkSameNew"
+            ReferencedContainer = "container:LinkSameNew.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

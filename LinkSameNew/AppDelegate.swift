@@ -4,11 +4,6 @@ import UIKit
 
 // utility
 
-func delay(_ delay:Double, closure:@escaping ()->()) {
-    let when = DispatchTime.now() + delay
-    DispatchQueue.main.asyncAfter(deadline: when, execute: closure)
-}
-
 extension RangeReplaceableCollection where Iterator.Element : Equatable {
     mutating func remove(object:Self.Iterator.Element) {
         if let found = self.firstIndex(of: object) {
@@ -27,7 +22,7 @@ extension UIApplication {
     // I want to be able to nest pairs
     static var level = 0
     static func ui(_ yn:Bool) {
-        let w = UIApplication.shared.delegate!.window!!
+        let w = (UIApplication.shared.connectedScenes.first as! UIWindowScene).windows.first!
         if !yn {
             print("off")
             w.isUserInteractionEnabled = false
@@ -49,17 +44,16 @@ extension UIApplication {
 
 infix operator >>> : RangeFormationPrecedence
 func >>><Bound>(maximum: Bound, minimum: Bound)
-    -> ReversedCollection<Range<Bound>>
-    where Bound : Strideable {
-        return (minimum..<maximum).reversed()
+-> ReversedCollection<Range<Bound>>
+where Bound : Strideable {
+    return (minimum..<maximum).reversed()
 }
-
 
 infix operator <<< : RangeFormationPrecedence
 func <<<<Bound>(minimum: Bound, maximum: Bound)
-    -> Range<Bound>
-    where Bound : Strideable {
-        return (minimum..<maximum)
+-> Range<Bound>
+where Bound : Strideable {
+    return (minimum..<maximum)
 }
 
 // determination of hardware environment
@@ -126,22 +120,15 @@ struct Styles {
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
-    
-    var window: UIWindow?
-    
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]?) -> Bool {
-        
+
         ud.register(defaults: [
             Default.size: Sizes.easy,
             Default.style: Styles.snacks,
             Default.lastStage: 8, // meaning 0-thru-8, so there will be nine
         ])
-        
-        self.window = self.window ?? UIWindow()
-        self.window!.rootViewController = LinkSameViewController()
-        self.window!.backgroundColor = .white
-        self.window!.makeKeyAndVisible()
-        
+
         return true
     }
 }

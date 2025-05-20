@@ -20,17 +20,15 @@ class NewGameController : UIViewController {
     }
     
     override func viewDidLoad() {
-        
         super.viewDidLoad()
 
-        let v = self.view
-        v?.backgroundColor = .systemBackground
+        view.backgroundColor = .systemBackground
         
         // initial table height just an estimate, real height will be determined later
         let tableHeight : CGFloat = (onPhone ? 120 : 300)
-        let tv = UITableView(frame:CGRect(x: 0,y: 0,width: 320,height: tableHeight), style:.plain)
+        let tv = UITableView(frame: CGRect(x: 0, y: 0, width: 320, height: tableHeight), style:.plain)
         tv.backgroundColor = .secondarySystemBackground
-        v?.addSubview(tv)
+        view.addSubview(tv)
         tv.dataSource = self
         tv.delegate = self
         tv.bounces = false
@@ -49,39 +47,39 @@ class NewGameController : UIViewController {
         pv.translatesAutoresizingMaskIntoConstraints = false
         pv.dataSource = self
         pv.delegate = self
-        v?.addSubview(pv)
+        view.addSubview(pv)
+
         // no table height constraint yet
         NSLayoutConstraint.activate([
-            NSLayoutConstraint.constraints(withVisualFormat: "H:|[tv]|", options: [], metrics: nil, views: ["tv":tv]),
-            NSLayoutConstraint.constraints(withVisualFormat: "H:|[pv]|", options: [], metrics: nil, views: ["pv":pv]),
-            NSLayoutConstraint.constraints(withVisualFormat: "V:[tv]-(0)-[pv]", options: [],
-                metrics: nil,
-                views: ["tv":tv, "pv":pv])
-            ].flatMap{$0})
+            view.leadingAnchor.constraint(equalTo: tv.leadingAnchor),
+            view.trailingAnchor.constraint(equalTo: tv.trailingAnchor),
+            view.leadingAnchor.constraint(equalTo: pv.leadingAnchor),
+            view.trailingAnchor.constraint(equalTo: pv.trailingAnchor),
+            view.topAnchor.constraint(equalTo: tv.topAnchor),
+            tv.bottomAnchor.constraint(equalTo: pv.topAnchor),
+        ])
         pv.selectRow(ud.integer(forKey: Default.lastStage), inComponent: 0, animated: false)
         self.picker = pv
     }
-    
+
     // determine actual table height constraint
     var didUpdateConstraints = false
     override func updateViewConstraints() {
         if !didUpdateConstraints {
             didUpdateConstraints = true
-            var h : CGFloat = 0
+            var h: CGFloat = 0
             let tv = self.tableView!
             let secs = tv.numberOfSections
             for sec in 0..<secs {
                 h += tv.rect(forSection: sec).height
             }
             NSLayoutConstraint.activate([
-                NSLayoutConstraint.constraints(withVisualFormat: "V:|-(0)-[tv(tableHeight)]", options: [],
-                                               metrics: ["tableHeight":h],
-                                               views: ["tv":tv])
-                ].flatMap{$0})
+                tv.heightAnchor.constraint(equalToConstant: h),
+            ])
         }
         super.updateViewConstraints()
     }
-    
+
     // determine desired height based on actual heights, which are now known
     override func viewDidLayoutSubviews() {
         let h = self.tableView!.bounds.height + self.picker!.bounds.height
@@ -110,7 +108,7 @@ extension NewGameController : UITableViewDelegate, UITableViewDataSource {
         }
         let lab = v.viewWithTag(99) as! UILabel
         lab.text = section == 0 ? Default.style : Default.size
-        var back = UIBackgroundConfiguration.listPlainHeaderFooter()
+        var back = UIBackgroundConfiguration.listHeader()
         back.backgroundColor = .secondarySystemBackground
         v.backgroundConfiguration = back
         return v

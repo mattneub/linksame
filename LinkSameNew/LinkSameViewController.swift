@@ -4,44 +4,6 @@ import UIKit
 import Swift
 import WebKit
 
-private final class CancelableTimer: NSObject {
-    private var q = DispatchQueue(label: "timer")
-    private var timer : DispatchSourceTimer!
-    private var firsttime = true
-    private var once : Bool
-    private var handler : () -> ()
-    init(once:Bool, handler:@escaping ()->()) {
-        self.once = once
-        self.handler = handler
-        super.init()
-    }
-    func start(interval:Double, leeway:Int) {
-        self.firsttime = true
-        self.cancel()
-        self.timer = DispatchSource.makeTimerSource(queue: self.q)
-        self.timer.schedule(wallDeadline: .now(), repeating: interval, leeway: .milliseconds(leeway))
-        self.timer.setEventHandler {
-            if self.firsttime {
-                self.firsttime = false
-                return
-            }
-            self.handler()
-            if self.once {
-                self.cancel()
-            }
-        }
-        print("timer start", self)
-        self.timer.resume()
-    }
-    func cancel() {
-        print("timer cancel", self)
-        self.timer?.cancel()
-    }
-    deinit {
-        print("deinit cancelable timer")
-    }
-}
-
 // ------ score-calculation utilities ------
 
 // not used here, but good for output
@@ -72,10 +34,12 @@ func transform(x:Double, r1lo a:Double, r1hi b:Double, r2lo c:Double, d2hi d:Dou
 // but see also https://developer.apple.com/documentation/accelerate/vdsp/linear_interpolation_functions/use_linear_interpolation_to_construct_new_data_points
 // ok, this is it! arrived at experimentally
 // I like the curve and I like the values attainable (i.e. you can pretty easily get 10 but not _too_ easily)
-func calcBonus(_ diff:Double) -> Int {
-    // https://stackoverflow.com/a/30203599/341994
-    func getNthRoot(_ x:Double, r:Double = 2.5) -> Double {
-        return pow(x, 1.0/r)
+func calcBonus(_ diff: Double) -> Int {
+    // There is a rare crash here where `diff` is a nan or infinite. To avoid this, let's try to
+    // pick out the crash cases and return some value immediately. I am not actually sure what
+    // value to return; should it be zero or 10, the two ends of the scale as it were...?
+    if diff.isNaN || diff.isInfinite {
+        return 0
     }
     let bonus = (diff >= 10) ? 0 : 15-1.5*transform(
         x: diff.squareRoot(), r1lo: 0, r1hi: (10.0).squareRoot(), r2lo: 0, d2hi: 10)
@@ -95,7 +59,8 @@ func calcBonus(_ diff:Double) -> Int {
 // it is permitted to see and change its scoreLabel and prevLabel, and can see its scoresKey
 // in other words it is a kind of subcontroller for maintenance and display of the score
 
-private final class Stage : NSObject {
+@MainActor
+private final class Stage: NSObject {
     private(set) var score : Int
     let scoreAtStartOfStage : Int
     private var timer : CancelableTimer? // no timer initially (user has not moved yet)
@@ -128,7 +93,7 @@ private final class Stage : NSObject {
     }
     deinit {
         print("farewell from Stage object", self)
-        self.timer?.cancel()
+        // self.timer?.cancel()
         nc.removeObserver(self) // probably not needed, but whatever
     }
     // okay, you're never going to believe this one
@@ -136,7 +101,9 @@ private final class Stage : NSObject {
     // register in the first resign active! what a dummy I am not to have realized this
     private var didResign = false
     @objc private func resigningActive() { // notification
-        self.timer?.cancel()
+        Task {
+            await self.timer?.cancel()
+        }
         if !self.didResign {
             self.didResign = true
             nc.addObserver(self, selector: #selector(didBecomeActive),
@@ -144,18 +111,20 @@ private final class Stage : NSObject {
         }
     }
     private func restartTimer() { // private utility: start counting down from 10
-        self.timer?.cancel()
-        self.timer = CancelableTimer(once: false) { [unowned self] in
-            DispatchQueue.main.async {
-                // timed out! user failed to move, adjust score, interface
-                // this is our main job!
-                self.score -= 1
-                self.lsvc.scoreLabel?.text = String(self.score)
-                self.lsvc.scoreLabel?.textColor = .red
-            }
+        self.timer = CancelableTimer(interval: 10) { [weak self] in
+            await self?.timerTimedOut()
         }
-        self.timer!.start(interval: 10, leeway: 100)
     }
+
+    private func timerTimedOut() {
+        // timed out! user failed to move, adjust score, interface
+        // this is our main job!
+        self.score -= 1
+        self.lsvc.scoreLabel?.text = String(self.score)
+        self.lsvc.scoreLabel?.textColor = .red
+        restartTimer()
+    }
+
     @objc private func didBecomeActive() { // notification
         // okay, so it turns out we can "become active" spuriously when user pulls down notification center
         // however, this is no big deal because we perfectly symmetrical;
@@ -163,7 +132,9 @@ private final class Stage : NSObject {
         self.restartTimer()
     }
     @objc private func gameEnded() { // notification from Board
-        self.timer?.cancel()
+        Task {
+            await self.timer?.cancel()
+        }
     }
     func userAskedForHint() { // called by LinkSameViewController
         self.restartTimer()
@@ -327,7 +298,8 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
                     // we will get a spurious didBecomeActive just before we get a spurious second willResign
                     // to work around this and not do all this work at the wrong moment,
                     // we "debounce"
-                    delay(0.05) {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .seconds(0.05))
                         if UIApplication.shared.applicationState == .inactive {
                             return // debounce, this is a spurious notification
                         }
@@ -406,19 +378,23 @@ final class LinkSameViewController : UIViewController, CAAnimationDelegate {
     }
     
     private func animateBoardTransition (_ transition: BoardTransition) {
-        UIApplication.ui(false) // about to animate, turn off interaction; will turn back on in delegate
-        let t = CATransition()
-        if transition == .slide { // default is .fade, fade in
-            t.type = .moveIn
-            t.subtype = .fromLeft
+        self.boardView.layer.isHidden = true
+        Task { @MainActor in
+            UIApplication.ui(false) // about to animate, turn off interaction; will turn back on in delegate
+            let t = CATransition()
+            if transition == .slide { // default is .fade, fade in
+                t.type = .moveIn
+                t.subtype = .fromLeft
+            }
+            t.duration = 0.7
+            t.beginTime = CACurrentMediaTime() + 0.15
+            t.fillMode = .backwards
+            t.timingFunction = CAMediaTimingFunction(name:.linear)
+            t.delegate = self
+            t.setValue("boardReplacement", forKey:"name")
+            self.boardView?.layer.add(t, forKey:nil)
+            self.boardView.layer.isHidden = false
         }
-        t.duration = 0.7
-        t.beginTime = CACurrentMediaTime() + 0.15 // 0.4 was just too long
-        t.fillMode = .backwards
-        t.timingFunction = CAMediaTimingFunction(name:.linear)
-        t.delegate = self
-        t.setValue("boardReplacement", forKey:"name")
-        self.boardView?.layer.add(t, forKey:nil)
     }
     
     private func populateStageLabel() {
@@ -687,8 +663,9 @@ extension LinkSameViewController { // buttons in popover
         
         wv.backgroundColor = .white // new, fix background
         let path = Bundle.main.path(forResource: "linkhelp", ofType: "html")!
-        var s = try! String.init(contentsOfFile: path)
-        s = s.replacingOccurrences(of: "FIXME", with: (!onPhone || on3xScreen) ? "12" : "9") // fix text size issue
+        var s = try! String.init(contentsOfFile: path, encoding: .utf8)
+        s = s.replacingOccurrences(of: "FIXME2", with: onPhone ? "30" : "5") // margin
+        s = s.replacingOccurrences(of: "FIXME", with: onPhone ? "8" : "12") // text size
         wv.loadHTMLString(s, baseURL: nil)
         // print(s)
         vc.view = wv
