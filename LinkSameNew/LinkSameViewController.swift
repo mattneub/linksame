@@ -395,7 +395,7 @@ final class LinkSameViewController : UIViewController {
         guard let boardView = self.boardView else { return }
         boardView.layer.isHidden = true
         UIApplication.ui(false)
-        try? await Task.sleep(for: .seconds(0.1)) // crucial! interface must settle before transition
+        CATransaction.flush() // crucial! interface must settle before transition
         let t = CATransition()
         if transition == .slide { // default is .fade, fade in
             t.type = .moveIn

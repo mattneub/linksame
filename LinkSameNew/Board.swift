@@ -350,11 +350,11 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         let t = UITapGestureRecognizer(target: self, action: #selector(handleTap))
         piece.addGestureRecognizer(t)
         // wow, that was easy
-        #if TESTING
-        let t2 = UITapGestureRecognizer(target: self, action: #selector(handleDeveloperDoubleTap))
-        t2.numberOfTapsRequired = 2
-        piece.addGestureRecognizer(t2)
-        #endif
+        if ProcessInfo.processInfo.environment["TESTING"] != nil {
+            let t2 = UITapGestureRecognizer(target: self, action: #selector(handleDeveloperDoubleTap))
+            t2.numberOfTapsRequired = 2
+            piece.addGestureRecognizer(t2)
+        }
     }
     
     // as pieces are highlighted, we store them in an ivar
