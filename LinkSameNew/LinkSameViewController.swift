@@ -173,7 +173,7 @@ private struct State : Codable {
     let timed : Bool
 }
 
-final class LinkSameViewController : UIViewController, @preconcurrency CAAnimationDelegate {
+final class LinkSameViewController : UIViewController {
 
     private var board : Board!
     @IBOutlet private weak var backgroundView : UIView!
@@ -358,8 +358,10 @@ final class LinkSameViewController : UIViewController, @preconcurrency CAAnimati
             // there must _always_ be a Stage, and a practice game just ignores it
             self.stage = Stage(lsvc: self, score: state.score)
             self.interfaceMode = state.timed ? .timed : .practice
-            self.animateBoardTransition(.fade)
-            self.populateStageLabel() // with no animation
+            Task {
+                await self.animateBoardTransition(.fade)
+                self.populateStageLabel() // with no animation
+            }
         } else { // otherwise, create new game from scratch
             self.startNewGame()
         }
@@ -389,24 +391,26 @@ final class LinkSameViewController : UIViewController, @preconcurrency CAAnimati
         // do nothing and let Stage restart timer
     }
     
-    private func animateBoardTransition (_ transition: BoardTransition) {
-        self.boardView.layer.isHidden = true
-        Task { @MainActor in
-            UIApplication.ui(false) // about to animate, turn off interaction; will turn back on in delegate
-            let t = CATransition()
-            if transition == .slide { // default is .fade, fade in
-                t.type = .moveIn
-                t.subtype = .fromLeft
-            }
-            t.duration = 0.7
-            t.beginTime = CACurrentMediaTime() + 0.15
-            t.fillMode = .backwards
-            t.timingFunction = CAMediaTimingFunction(name:.linear)
-            t.delegate = self
-            t.setValue("boardReplacement", forKey:"name")
-            self.boardView?.layer.add(t, forKey:nil)
-            self.boardView.layer.isHidden = false
+    private func animateBoardTransition(_ transition: BoardTransition) async {
+        guard let boardView = self.boardView else { return }
+        boardView.layer.isHidden = true
+        UIApplication.ui(false)
+        try? await Task.sleep(for: .seconds(0.1)) // crucial! interface must settle before transition
+        let t = CATransition()
+        if transition == .slide { // default is .fade, fade in
+            t.type = .moveIn
+            t.subtype = .fromLeft
         }
+        t.duration = 0.7
+        t.beginTime = CACurrentMediaTime() + 0.15
+        t.fillMode = .backwards
+        t.timingFunction = CAMediaTimingFunction(name:.linear)
+        let transitionProvider = TransitionProvider()
+        boardView.layer.isHidden = false
+        await transitionProvider.performTransition(transition: t, layer: boardView.layer)
+        self.populateStageLabel()
+        await UIView.transition(with: self.stageLabel, duration: 0.4, options: .transitionFlipFromLeft)
+        UIApplication.ui(true)
     }
     
     private func populateStageLabel() {
@@ -417,20 +421,7 @@ final class LinkSameViewController : UIViewController, @preconcurrency CAAnimati
         self.stageLabel?.text = s
         self.stageLabel?.sizeToFit()
     }
-    
-    // delegate from previous, called when animation ends
-    // set "stage" label, animate the change, turn on interactivity at end
-    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
-        if anim.value(forKey: "name") as? String == "boardReplacement" {
-            self.populateStageLabel()
-            UIView.transition(with: self.stageLabel!, duration: 0.4,
-                              options: .transitionFlipFromLeft, animations: nil,
-                              completion: {_ in
-                                UIApplication.ui(true)
-            })
-        }
-    }
-    
+
     // called from startNewGame (n is nil), which itself is called by Done button and at launch
     // called when we get Board.gameOver (n is Notification, passed along)
     // in latter case, might mean go on to next stage or might mean entire game is over
@@ -486,9 +477,11 @@ final class LinkSameViewController : UIViewController, @preconcurrency CAAnimati
                 self.stage = Stage(lsvc: self, score: self.stage!.score) // score carries over
             }
             let boardTransition : BoardTransition = newGame ? .fade : .slide
-            self.board.createAndDealDeck()
-            self.animateBoardTransition(boardTransition)
-            self.saveBoardState()
+            Task {
+                self.board.createAndDealDeck()
+                await self.animateBoardTransition(boardTransition)
+                self.saveBoardState()
+            }
         }
         
         // okay, how we proceed depends upon how we got here!
@@ -573,8 +566,10 @@ final class LinkSameViewController : UIViewController, @preconcurrency CAAnimati
             do {
                 try self.board.restartStage()
                 self.stage = Stage(lsvc: self, score: self.stage!.scoreAtStartOfStage)
-                self.animateBoardTransition(.fade)
-                self.saveBoardState()
+                Task {
+                    await self.animateBoardTransition(.fade)
+                    self.saveBoardState()
+                }
             } catch { print(error) }
         }))
         self.present(alert, animated: true)

@@ -16,4 +16,19 @@ extension UIView {
             }
         }
     }
+    
+    /// Async version of `transition`. There is no completion handler; if there is something to do
+    /// after the animation ends, just do it after awaiting the call.
+    /// - Parameters:
+    ///   - view: The view to be animated.
+    ///   - duration: Duration of the animation.
+    ///   - options: Animation options describing the transition.
+    ///
+    static func transition(with view: UIView, duration: Double, options: UIView.AnimationOptions) async {
+        await withCheckedContinuation { continuation in
+            UIView.transition(with: view, duration: duration, options: options, animations: {}) { _ in
+                continuation.resume(returning: ())
+            }
+        }
+    }
 }
