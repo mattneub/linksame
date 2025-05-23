@@ -1,16 +1,4 @@
-
-
 import UIKit
-
-// utility
-
-extension RangeReplaceableCollection where Iterator.Element : Equatable {
-    mutating func remove(object:Self.Iterator.Element) {
-        if let found = self.firstIndex(of: object) {
-            self.remove(at: found)
-        }
-    }
-}
 
 // space savers
 
@@ -19,44 +7,6 @@ let ud = UserDefaults.standard
 
 @MainActor
 let nc = NotificationCenter.default
-
-extension UIApplication {
-    // I want to be able to nest pairs
-    static var level = 0
-    static func ui(_ yn:Bool) {
-        let w = (UIApplication.shared.connectedScenes.first as! UIWindowScene).windows.first!
-        if !yn {
-            print("off")
-            w.isUserInteractionEnabled = false
-            Self.level += 1
-        } else {
-            print("on")
-            Self.level -= 1
-            if Self.level < 0 {
-                Self.level = 0
-            }
-            if Self.level == 0 {
-                w.isUserInteractionEnabled = true
-            }
-        }
-    }
-}
-
-// operators
-
-infix operator >>> : RangeFormationPrecedence
-func >>><Bound>(maximum: Bound, minimum: Bound)
--> ReversedCollection<Range<Bound>>
-where Bound : Strideable {
-    return (minimum..<maximum).reversed()
-}
-
-infix operator <<< : RangeFormationPrecedence
-func <<<<Bound>(minimum: Bound, maximum: Bound)
--> Range<Bound>
-where Bound : Strideable {
-    return (minimum..<maximum)
-}
 
 // determination of hardware environment
 @MainActor

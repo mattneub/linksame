@@ -394,7 +394,7 @@ final class LinkSameViewController : UIViewController {
     private func animateBoardTransition(_ transition: BoardTransition) async {
         guard let boardView = self.boardView else { return }
         boardView.layer.isHidden = true
-        UIApplication.ui(false)
+        UIApplication.userInteraction(false)
         CATransaction.flush() // crucial! interface must settle before transition
         let t = CATransition()
         if transition == .slide { // default is .fade, fade in
@@ -410,7 +410,7 @@ final class LinkSameViewController : UIViewController {
         await transitionProvider.performTransition(transition: t, layer: boardView.layer)
         self.populateStageLabel()
         await UIView.transition(with: self.stageLabel, duration: 0.4, options: .transitionFlipFromLeft)
-        UIApplication.ui(true)
+        UIApplication.userInteraction(true)
     }
     
     private func populateStageLabel() {
@@ -426,8 +426,8 @@ final class LinkSameViewController : UIViewController {
     // called when we get Board.gameOver (n is Notification, passed along)
     // in latter case, might mean go on to next stage or might mean entire game is over
     private func prepareNewStage (_ notificationStage: Int?) {
-        UIApplication.ui(false)
-        
+        UIApplication.userInteraction(false)
+
         // determine layout dimensions
         var (w,h) = Sizes.boardSize(ud.string(forKey: Default.size)!)
         if onPhone {
@@ -527,7 +527,7 @@ final class LinkSameViewController : UIViewController {
             self.present(alert, animated: true)
             ud.set(true, forKey: Default.gameEnded)
         }
-        UIApplication.ui(true)
+        UIApplication.userInteraction(true)
     }
     
     
@@ -630,8 +630,8 @@ extension LinkSameViewController { // buttons in popover
     }
     
     @objc private func cancelNewGame() { // cancel button in new game popover
-        UIApplication.ui(false)
-        self.dismiss(animated: true, completion: { UIApplication.ui(true) })
+        UIApplication.userInteraction(false)
+        self.dismiss(animated: true, completion: { UIApplication.userInteraction(true) })
         if let d = self.oldDefs {
             ud.setValuesForKeys(d)
             self.oldDefs = nil

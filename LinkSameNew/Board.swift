@@ -211,7 +211,7 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     // shuffle existing pieces; could be because user asked to shuffle, could be we're out of legal moves
     func redeal () {
         repeat {
-            UIApplication.ui(false)
+            UIApplication.userInteraction(false)
             // gather up all pieces (as names), shuffle them, deal them into their current slots
             var deck = [String]()
             for i in 0 ..< self.xct {
@@ -227,7 +227,7 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
             deck.shuffle()
             deck.shuffle()
             deck.shuffle()
-            UIApplication.ui(true)
+            UIApplication.userInteraction(true)
             for i in 0 ..< self.xct {
                 for j in 0 ..< self.yct {
                     let piece = self.piece(at:(i,j))
@@ -461,7 +461,7 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
             movenda += [pnew]
         }
 
-        UIApplication.ui(false)
+        UIApplication.userInteraction(false)
         // notify (so score can be incremented)
         nc.post(name: Board.userMoved, object: self)
         // actually remove the pieces (we happen to know there must be exactly two)
@@ -473,7 +473,7 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         if self.gameOver() {
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(0.1)) // nicer with a little delay
-                UIApplication.ui(true)
+                UIApplication.userInteraction(true)
                 nc.post(name: Board.gameOver, object: self, userInfo: ["stage":self.stageNumber])
             }
             return
@@ -788,7 +788,7 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
                 self.redeal()
             }
             // we do this after the slide animation is over, so we can get two animations in row, cool
-            UIApplication.ui(true)
+            UIApplication.userInteraction(true)
         }
     }
     
@@ -881,12 +881,12 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         for piece in self.hilitedPieces {
             assert(piece.superview == self.view, "Pieces to check must be displayed on board")
         }
-        UIApplication.ui(false)
+        UIApplication.userInteraction(false)
         let p1 = self.hilitedPieces[0]
         let p2 = self.hilitedPieces[1]
         if p1.picName != p2.picName {
             self.unhilite()
-            UIApplication.ui(true)
+            UIApplication.userInteraction(true)
             return
         }
         if let path = self.checkPair(p1, and:p2) {
@@ -896,11 +896,11 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
                 try? await Task.sleep(for: .seconds(0.2))
                 self.legalPathShower.unilluminate()
                 try? await Task.sleep(for: .seconds(0.1))
-                UIApplication.ui(true)
+                UIApplication.userInteraction(true)
                 self.reallyRemovePair()
             }
         } else {
-            UIApplication.ui(true)
+            UIApplication.userInteraction(true)
             self.unhilite()
         }
     }
@@ -910,12 +910,12 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     // when that list has two items, check them for validity
 
     @objc private func handleTap(_ g:UIGestureRecognizer) {
-        UIApplication.ui(false)
+        UIApplication.userInteraction(false)
         let p = g.view as! Piece
         let hilited = p.isHilited
         if !hilited {
             if self.hilitedPieces.count > 1 {
-                UIApplication.ui(true)
+                UIApplication.userInteraction(true)
                 return
             }
             self.hilitedPieces += [p]
@@ -926,10 +926,10 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         if self.hilitedPieces.count == 2 {
             // print("========")
             // print("about to check hilited pair \(self.hilitedPieces)")
-            UIApplication.ui(true)
+            UIApplication.userInteraction(true)
             self.checkHilitedPair()
         } else {
-            UIApplication.ui(true)
+            UIApplication.userInteraction(true)
         }
     }
     
