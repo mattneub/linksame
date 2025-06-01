@@ -75,13 +75,17 @@ var services: Services = Services.shared
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]?) -> Bool {
+        unlessTesting {
+            bootstrap()
+        }
+        return true
+    }
 
+    func bootstrap() {
         services.persistence.register([
             .size: Sizes.easy,
             .style: Styles.snacks,
             .lastStage: 8, // meaning 0-thru-8, so there will be nine
         ])
-
-        return true
     }
 }
