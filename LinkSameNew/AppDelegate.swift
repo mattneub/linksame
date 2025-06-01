@@ -46,7 +46,7 @@ struct Sizes {
             normal:(14,8),
             hard:(16,9)
         ]
-        return d[s]!
+        return d[s] ?? d[easy]!
     }
 }
 
@@ -56,12 +56,12 @@ struct Styles {
     static func styles () -> [String] {
         return [animals, snacks]
     }
-    static func pieces (_ s:String) -> (Int,Int) {
+    static func pieces (_ s: String) -> (Int,Int) {
         let d = [
-            animals:(11,110),
-            snacks:(21,210)
+            animals: (11,110),
+            snacks: (21,210)
         ]
-        return d[s]!
+        return d[s] ?? d[snacks]!
     }
 }
 

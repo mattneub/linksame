@@ -10,7 +10,8 @@ extension UIApplication {
     /// - Parameter interactionOn: Flag stating whether user interaction is to be turned on (true) or off (false).
     ///
     static func userInteraction(_ interactionOn: Bool) {
-        guard let window = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first else { return }
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
+        guard let window = scene.windows.first(where: { $0.isKeyWindow }) else { return }
         switch interactionOn {
         case false: // turn interaction off, increase nesting level
             print("off")

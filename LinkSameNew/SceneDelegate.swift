@@ -5,6 +5,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
 
+    var rootCoordinator: any RootCoordinatorType = RootCoordinator()
+
     func scene(
         _ scene: UIScene,
         willConnectTo session: UISceneSession,
@@ -18,10 +20,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func bootstrap(scene: UIWindowScene) {
-        self.window = self.window ?? UIWindow(windowScene: scene)
-        self.window!.rootViewController = LinkSameViewController()
-        self.window!.backgroundColor = .white
-        self.window!.makeKeyAndVisible()
+        let window = UIWindow(windowScene: scene)
+        self.window = window
+        rootCoordinator.createInitialInterface(window: window)
+        window.makeKeyAndVisible()
     }
 }
 
