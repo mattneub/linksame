@@ -3,9 +3,6 @@ import UIKit
 // space savers
 
 @MainActor
-let ud = UserDefaults.standard
-
-@MainActor
 let nc = NotificationCenter.default
 
 // determination of hardware environment
@@ -70,17 +67,19 @@ struct Styles {
 
 
 // =========================================
-
+/// The sole global instance of the services.
+@MainActor
+var services: Services = Services.shared
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]?) -> Bool {
 
-        ud.register(defaults: [
-            Default.size: Sizes.easy,
-            Default.style: Styles.snacks,
-            Default.lastStage: 8, // meaning 0-thru-8, so there will be nine
+        services.persistence.register([
+            .size: Sizes.easy,
+            .style: Styles.snacks,
+            .lastStage: 8, // meaning 0-thru-8, so there will be nine
         ])
 
         return true

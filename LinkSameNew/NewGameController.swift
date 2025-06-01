@@ -58,7 +58,7 @@ final class NewGameController : UIViewController {
             view.topAnchor.constraint(equalTo: tv.topAnchor),
             tv.bottomAnchor.constraint(equalTo: pv.topAnchor),
         ])
-        pv.selectRow(ud.integer(forKey: Default.lastStage), inComponent: 0, animated: false)
+        pv.selectRow(services.persistence.loadInt(forKey: .lastStage), inComponent: 0, animated: false)
         self.picker = pv
     }
 
@@ -146,7 +146,10 @@ extension NewGameController : UITableViewDelegate, UITableViewDataSource {
         cell.textLabel?.font = UIFont.systemFont(ofSize: 17, weight: .regular)
         
         cell.accessoryType = .none
-        let currentDefaults = [ud.string(forKey: Default.style), ud.string(forKey: Default.size)]
+        let currentDefaults = [
+            services.persistence.loadString(forKey: .style),
+            services.persistence.loadString(forKey: .size),
+        ]
         if currentDefaults.contains(where: {$0 == cell.textLabel!.text}) {
             cell.accessoryType = .checkmark
         }
@@ -156,7 +159,7 @@ extension NewGameController : UITableViewDelegate, UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         if let setting = tableView.cellForRow(at: indexPath)?.textLabel?.text {
-            ud.set(setting, forKey: indexPath.section == 0 ? Default.style : Default.size)
+            services.persistence.save(setting, forKey: indexPath.section == 0 ? .style : .size)
             tableView.reloadData()
         }
     }
@@ -179,7 +182,7 @@ extension NewGameController : UIPickerViewDelegate, UIPickerViewDataSource {
     }
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        ud.set(row, forKey:Default.lastStage)
+        services.persistence.save(row, forKey: .lastStage)
     }
     
     func pickerView(_ pickerView: UIPickerView, rowHeightForComponent component: Int) -> CGFloat {

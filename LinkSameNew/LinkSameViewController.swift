@@ -75,7 +75,7 @@ private final class Stage: NSObject {
 
         self.lsvc.scoreLabel?.text = String(self.score)
         self.lsvc.scoreLabel?.textColor = .black
-        if let scoresDict = ud.dictionary(forKey: Default.scores) as? [String:Int],
+        if let scoresDict: [String: Int] = services.persistence.loadDictionary(forKey: .scores),
             let prev = scoresDict[self.lsvc.scoresKey] {
             self.lsvc.prevLabel?.text = "High score: \(prev)"
         } else {
@@ -185,7 +185,7 @@ final class LinkSameViewController : UIViewController {
     @IBOutlet private weak var restartStageButton : UIBarButtonItem!
     @IBOutlet private weak var toolbar : UIToolbar!
     private var boardView : UIView!
-    private var oldDefs : [String : Any]?
+    private var oldDefs : [DefaultKey : Any]?
     
     override var nibName : String {
         get {
@@ -238,9 +238,9 @@ final class LinkSameViewController : UIViewController {
     }
     
     fileprivate var scoresKey : String { // fileprivate so Stage can see it
-        let size = ud.string(forKey: Default.size)
-        let stages = ud.integer(forKey: Default.lastStage)
-        let key = "\(size!)\(stages)"
+        let size = services.persistence.loadString(forKey: .size)
+        let stages = services.persistence.loadInt(forKey: .lastStage)
+        let key = "\(size)\(stages)"
         return key
     }
     
@@ -294,7 +294,7 @@ final class LinkSameViewController : UIViewController {
                 // dismiss popover if any; counts as cancelling, so restore defaults if needed
                 self.dismiss(animated: false)
                 if let defs = self.oldDefs {
-                    ud.setValuesForKeys(defs)
+                    services.persistence.saveIndividually(defs)
                     self.oldDefs = nil
                 }
                 if !self.didObserveActivate {
@@ -341,12 +341,12 @@ final class LinkSameViewController : UIViewController {
         let state = State(board: self.board, score: self.stage!.score,
                           timed: self.interfaceMode == .timed)
         let stateData = try! PropertyListEncoder().encode(state)
-        ud.set(stateData, forKey:Default.boardData)
+        services.persistence.save(stateData, forKey: .boardData)
     }
     
     private func restoreGameFromSavedDataOrStartNewGame() {
         // have we a state saved?  if so, reconstruct game
-        if let stateData = ud.data(forKey: Default.boardData),
+        if let stateData = services.persistence.loadData(forKey: .boardData),
             let state = try? PropertyListDecoder().decode(State.self, from: stateData) {
             // okay, we've got state! there are two possibilities:
             // it might have been a practice game, or it might have been a timed game between stages
@@ -378,8 +378,8 @@ final class LinkSameViewController : UIViewController {
         
         // take care of corner case where user saw game over alert but didn't dismiss it
         // (and so it was automatically dismissed when we deactivated)
-        if ud.bool(forKey: Default.gameEnded) {
-            ud.set(false, forKey: Default.gameEnded)
+        if services.persistence.loadBool(forKey: .gameEnded) {
+            services.persistence.save(false, forKey: .gameEnded)
             self.startNewGame()
             return
         }
@@ -416,7 +416,7 @@ final class LinkSameViewController : UIViewController {
     private func populateStageLabel() {
         let s = """
         Stage \(self.board.stageNumber + 1) \
-        of \(ud.integer(forKey: Default.lastStage) + 1)
+        of \(services.persistence.loadInt(forKey: .lastStage) + 1)
         """
         self.stageLabel?.text = s
         self.stageLabel?.sizeToFit()
@@ -429,7 +429,7 @@ final class LinkSameViewController : UIViewController {
         UIApplication.userInteraction(false)
 
         // determine layout dimensions
-        var (w,h) = Sizes.boardSize(ud.string(forKey: Default.size)!)
+        var (w,h) = Sizes.boardSize(services.persistence.loadString(forKey: .size))
         if onPhone {
             (w,h) = Sizes.boardSize(Sizes.easy)
         }
@@ -459,7 +459,7 @@ final class LinkSameViewController : UIViewController {
         let howWeGotHere : WhatToDo = {
             () -> WhatToDo in
             if let notificationStage {
-                if notificationStage < ud.integer(forKey: Default.lastStage) {
+                if notificationStage < services.persistence.loadInt(forKey: .lastStage) {
                     return .onToNextStage(notificationStage + 1)
                 } else {
                     return .gameOver
@@ -502,7 +502,7 @@ final class LinkSameViewController : UIViewController {
             var newHigh = false
             // get dict from defaults, or an empty dict
             var scoresDict = [String:Int]()
-            if let d = ud.dictionary(forKey: Default.scores) as? [String:Int] {
+            if let d: [String: Int] = services.persistence.loadDictionary(forKey: .scores) {
                 scoresDict = d
             }
             // score is new high score if it is higher than corresponding previous dict entry...
@@ -511,7 +511,7 @@ final class LinkSameViewController : UIViewController {
             if prev == nil || prev! < self.stage!.score {
                 newHigh = true
                 scoresDict[key] = self.stage!.score
-                ud.set(scoresDict, forKey:Default.scores)
+                services.persistence.save(scoresDict, forKey: .scores)
             }
             // notify user
             let alert = UIAlertController(
@@ -521,11 +521,11 @@ final class LinkSameViewController : UIViewController {
                 preferredStyle: .alert)
             alert.addAction(UIAlertAction(
                 title: "Cool!", style: .cancel, handler:  { _ in
-                    ud.set(false, forKey: Default.gameEnded)
+                    services.persistence.save(false, forKey: .gameEnded)
                     newBoard(newGame:true)
             }))
             self.present(alert, animated: true)
-            ud.set(true, forKey: Default.gameEnded)
+            services.persistence.save(true, forKey: .gameEnded)
         }
         UIApplication.userInteraction(true)
     }
@@ -626,14 +626,14 @@ extension LinkSameViewController { // buttons in popover
             pop.delegate = self
         }
         // save defaults so we can restore them later if user cancels
-        self.oldDefs = ud.dictionaryWithValues(forKeys: [Default.style, Default.size, Default.lastStage])
+        self.oldDefs = services.persistence.loadAsDictionary([.style, .size, .lastStage])
     }
     
     @objc private func cancelNewGame() { // cancel button in new game popover
         UIApplication.userInteraction(false)
         self.dismiss(animated: true, completion: { UIApplication.userInteraction(true) })
         if let d = self.oldDefs {
-            ud.setValuesForKeys(d)
+            services.persistence.saveIndividually(d)
             self.oldDefs = nil
         }
     }

@@ -154,7 +154,7 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     // the "deck" is just a list of piece names
     func createAndDealDeck() {
         // determine which pieces to use
-        let (start1,start2) = Styles.pieces(ud.string(forKey: Default.style)!)
+        let (start1,start2) = Styles.pieces(services.persistence.loadString(forKey: .style))
         // create deck of piece names
         var deck = [String]()
         for _ in 0..<4 {
