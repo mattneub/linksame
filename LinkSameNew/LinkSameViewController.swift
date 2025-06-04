@@ -173,7 +173,7 @@ private struct State : Codable {
     let timed : Bool
 }
 
-final class LinkSameViewController : UIViewController {
+final class LinkSameViewController : UIViewController, NewGamePopoverDismissalButtonDelegate {
 
     private var board : Board!
     @IBOutlet private weak var backgroundView : UIView!
@@ -186,7 +186,9 @@ final class LinkSameViewController : UIViewController {
     @IBOutlet private weak var toolbar : UIToolbar!
     private var boardView : UIView!
     private var oldDefs : [DefaultKey : Any]?
-    
+
+    weak var coordinator: (any RootCoordinatorType)?
+
     override var nibName : String {
         get {
             return onPhone ? "LinkSameViewControllerPhone" : "LinkSameViewController"
@@ -601,35 +603,21 @@ extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
 
 extension LinkSameViewController { // buttons in popover
     
-    @IBAction private func doNew(_ sender:Any?) {
+    @IBAction private func doNew(_ sender: (any UIPopoverPresentationControllerSourceItem)?) {
         if self.board.showingHint {
             self.toggleHint(nil)
         }
         self.board.unhilite()
-        // create dialog from scratch (see NewGameController for rest of interface)
-        let dlg = NewGameController()
-        dlg.isModalInPresentation = true // must be before presentation to work
-        let b1 = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(cancelNewGame))
-        dlg.navigationItem.rightBarButtonItem = b1
-        let b2 = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(startNewGame))
-        dlg.navigationItem.leftBarButtonItem = b2
-        let nav = UINavigationController(rootViewController: dlg)
-        nav.navigationBar.scrollEdgeAppearance = nav.navigationBar.standardAppearance
-        nav.navigationBar.compactScrollEdgeAppearance = nav.navigationBar.compactAppearance
-        nav.modalPresentationStyle = .popover // *
-        self.present(nav, animated: true) {
-            nav.popoverPresentationController?.passthroughViews = nil
-        }
-        if let pop = nav.popoverPresentationController, let sender = sender as? UIBarButtonItem {
-            pop.permittedArrowDirections = .any
-            pop.barButtonItem = sender
-            pop.delegate = self
-        }
+        coordinator?.showNewGameController(
+            sourceItem: sender,
+            dismissalDelegate: self,
+            popoverPresentationDelegate: self
+        )
         // save defaults so we can restore them later if user cancels
         self.oldDefs = services.persistence.loadAsDictionary([.style, .size, .lastStage])
     }
     
-    @objc private func cancelNewGame() { // cancel button in new game popover
+    func cancelNewGame() { // cancel button in new game popover
         UIApplication.userInteraction(false)
         self.dismiss(animated: true, completion: { UIApplication.userInteraction(true) })
         if let d = self.oldDefs {
@@ -641,7 +629,7 @@ extension LinkSameViewController { // buttons in popover
     // Done button in new game popover
     // also, at launch, through layout subviews
     // also when we become active, if we have no board data
-    @objc private func startNewGame() {
+    func startNewGame() {
         func whatToDo() {
             self.interfaceMode = .timed
             self.oldDefs = nil // crucial or we'll fall one behind

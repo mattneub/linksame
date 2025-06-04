@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		3F0BBD212DE0A9D000D60735 /* SnapshotTesting in Frameworks */ = {isa = PBXBuildFile; productRef = 3F0BBD202DE0A9D000D60735 /* SnapshotTesting */; };
 		3F6B09D62DDBC6520053C85C /* foods in Resources */ = {isa = PBXBuildFile; fileRef = 3F6B09D52DDBC62A0053C85C /* foods */; };
+		3FE2612D2DEF914500E69400 /* WaitWhile in Frameworks */ = {isa = PBXBuildFile; productRef = 3FE2612C2DEF914500E69400 /* WaitWhile */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +62,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3F0BBD212DE0A9D000D60735 /* SnapshotTesting in Frameworks */,
+				3FE2612D2DEF914500E69400 /* WaitWhile in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,6 +119,7 @@
 			name = LinkSameTests;
 			packageProductDependencies = (
 				3F0BBD202DE0A9D000D60735 /* SnapshotTesting */,
+				3FE2612C2DEF914500E69400 /* WaitWhile */,
 			);
 			productName = LinkSameTests;
 			productReference = 3F2955BE2DDF7C7D0080F31B /* LinkSameTests.xctest */;
@@ -175,6 +178,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3F0BBD1F2DE0A9D000D60735 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */,
+				3FE2612B2DEF914500E69400 /* XCRemoteSwiftPackageReference "WaitWhile" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3F6B09192DDBC17E0053C85C /* Products */;
@@ -496,6 +500,14 @@
 				minimumVersion = 1.18.4;
 			};
 		};
+		3FE2612B2DEF914500E69400 /* XCRemoteSwiftPackageReference "WaitWhile" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mattneub/WaitWhile";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -503,6 +515,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3F0BBD1F2DE0A9D000D60735 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */;
 			productName = SnapshotTesting;
+		};
+		3FE2612C2DEF914500E69400 /* WaitWhile */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3FE2612B2DEF914500E69400 /* XCRemoteSwiftPackageReference "WaitWhile" */;
+			productName = WaitWhile;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

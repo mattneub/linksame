@@ -5,6 +5,10 @@ import Foundation
 final class MockPersistence: PersistenceType {
     var methodsCalled = [String]()
     var dict: [DefaultKey: Any]?
+    var int = 0
+    var string: [String] = []
+    var keys = [DefaultKey]()
+    var value: Any?
 
     func register(_ dictionary: [DefaultKey: Any]) {
         methodsCalled.append(#function)
@@ -23,12 +27,18 @@ final class MockPersistence: PersistenceType {
     
     func loadInt(forKey key: DefaultKey) -> Int {
         methodsCalled.append(#function)
-        return 0
+        self.keys.append(key)
+        return int
     }
     
     func loadString(forKey key: DefaultKey) -> String {
         methodsCalled.append(#function)
-        return ""
+        self.keys.append(key)
+        if self.string.count > 0 {
+            return self.string.removeFirst()
+        } else {
+            return ""
+        }
     }
     
     func loadData(forKey key: DefaultKey) -> Data? {
@@ -38,6 +48,8 @@ final class MockPersistence: PersistenceType {
     
     func save(_ value: Any, forKey key: DefaultKey) {
         methodsCalled.append(#function)
+        self.value = value
+        self.keys.append(key)
     }
     
     func loadAsDictionary(_ keys: [DefaultKey]) -> [DefaultKey: Any] {

@@ -8,63 +8,13 @@ let nc = NotificationCenter.default
 // determination of hardware environment
 @MainActor
 var onPhone : Bool {
-    return UIScreen.main.traitCollection.userInterfaceIdiom == .phone
+    return services.screen.traitCollection.userInterfaceIdiom == .phone
 }
 
 @MainActor
 var on3xScreen : Bool {
-    return UIScreen.main.traitCollection.displayScale > 2.5
+    return services.screen.traitCollection.displayScale > 2.5
 }
-
-// keys used in user defaults, determination of board size, game configurations, tile pictures
-
-struct Default {
-    static let size = "Size"
-    static let style = "Style"
-    static let lastStage = "Stages"
-    static let scores = "Scoresv2"
-    static let boardData = "boardDatav2"
-    static let gameEnded = "gameEnded"
-}
-
-@MainActor
-struct Sizes {
-    static let easy = "Easy"
-    static let normal = "Normal"
-    static let hard = "Hard"
-    static func sizes () -> [String] {
-        return [easy, normal, hard]
-    }
-    private static var easySize : (Int,Int) {
-        var result : (Int,Int) = onPhone ? (10,6) : (12,7)
-        if on3xScreen { result = (12,7) }
-        return result
-    }
-    static func boardSize (_ s:String) -> (Int,Int) {
-        let d = [
-            easy:self.easySize,
-            normal:(14,8),
-            hard:(16,9)
-        ]
-        return d[s] ?? d[easy]!
-    }
-}
-
-struct Styles {
-    static let animals = "Animals"
-    static let snacks = "Snacks"
-    static func styles () -> [String] {
-        return [animals, snacks]
-    }
-    static func pieces (_ s: String) -> (Int,Int) {
-        let d = [
-            animals: (11,110),
-            snacks: (21,210)
-        ]
-        return d[s] ?? d[snacks]!
-    }
-}
-
 
 // =========================================
 /// The sole global instance of the services.

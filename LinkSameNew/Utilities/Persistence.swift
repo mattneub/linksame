@@ -1,6 +1,7 @@
 import Foundation
 
-/// Keys used by the app to express the name of a default.
+/// Keys used by the app to express the name of a default. The first three are also text that appears
+/// to the user in the interface.
 enum DefaultKey: String {
     case size = "Size"
     case style = "Style"
@@ -46,37 +47,12 @@ protocol PersistenceType {
     func saveIndividually(_ dictionary: [DefaultKey: Any])
 }
 
-/// Protocol listing the UserDefaults methods used by the Persistence struct.
-/// Exists so that UserDefaults can be mocked.
-protocol DefaultsType {
-    func register(defaults: [String: Any])
-
-    func dictionary(forKey: String) -> [String: Any]?
-
-    func bool(forKey: String) -> Bool
-
-    func integer(forKey: String) -> Int
-
-    func string(forKey: String) -> String?
-
-    func data(forKey: String) -> Data?
-
-    func set(_: Any?, forKey: String)
-
-    func dictionaryWithValues(forKeys: [String]) -> [String: Any]
-
-    func setValuesForKeys(_: [String: Any])
-}
-
-/// Extension that conforms UserDefaults to the DefaultsType protocol.
-extension UserDefaults: DefaultsType {}
-
 /// Gateway to persistent storage.
 @MainActor
 struct Persistence: PersistenceType {
-    /// The DefaultsType object to talk to when fetching and storing. A mock can be injected here
+    /// The UserDefaultsType object to talk to when fetching and storing. A mock can be injected here
     /// when testing.
-    static var defaults: any DefaultsType = UserDefaults.standard
+    static var defaults: any UserDefaultsType = UserDefaults.standard
 
     func register(_ dictionary: [DefaultKey: Any]) {
         Self.defaults.register(defaults: dictionary.mapKeys { $0.rawValue })

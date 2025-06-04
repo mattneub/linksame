@@ -1,3 +1,5 @@
+import UIKit
+
 /// Globally available externalities.
 @MainActor
 final class Services {
@@ -6,4 +8,5 @@ final class Services {
     private init() {}
 
     var persistence: any PersistenceType = Persistence()
+    var screen: any ScreenType = UIScreen.main
 }

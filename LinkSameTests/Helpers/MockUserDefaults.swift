@@ -1,7 +1,7 @@
 @testable import LinkSame
 import Foundation
 
-final class MockDefaults: DefaultsType {
+final class MockUserDefaults: UserDefaultsType {
     var key: String?
     var methodsCalled = [String]()
     var bool: Bool? = nil
