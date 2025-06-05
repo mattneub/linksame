@@ -2,7 +2,7 @@ import UIKit
 import Swift
 
 /// The chief presenter.
-final class NewGameController : UIViewController, ReceiverPresenter {
+final class NewGameViewController: UIViewController, ReceiverPresenter {
     /// Object that serves as data source and delegate for our picker view.
     /// Should be a constant but needs to be a `var` for testing.
     var pickerViewDataSourceDelegate: any NewGamePickerViewDataSourceDelegateType = NewGamePickerViewDataSourceDelegate()
@@ -10,6 +10,9 @@ final class NewGameController : UIViewController, ReceiverPresenter {
     /// Object that serves as data source and delegate for our table view.
     /// Should be a constant but needs to be a `var` for testing.
     var tableViewDataSourceDelegate: any NewGameTableViewDataSourceDelegateType = NewGameTableViewDataSourceDelegate()
+
+    /// Retained instance of popover presentation delegate, set by the coordinator on creation.
+    var popoverPresentationDelegate: (any UIPopoverPresentationControllerDelegate)?
 
     /// Table view that will give the user a choice of styles (and, on iPad, sizes).
     lazy var tableView = UITableView(frame: .zero, style: .plain).applying {

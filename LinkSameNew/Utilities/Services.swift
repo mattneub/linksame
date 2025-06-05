@@ -7,6 +7,7 @@ final class Services {
     static var shared: Services = Services.init()
     private init() {}
 
+    var bundle: any BundleType = Bundle.main
     var persistence: any PersistenceType = Persistence()
     var screen: any ScreenType = UIScreen.main
 }

@@ -132,5 +132,6 @@ struct NewGameProcessorTests {
         #expect(state.tableViewSections[0].rows == ["Animals", "Snacks"])
         #expect(state.tableViewSections[1].title == "Size")
         #expect(state.tableViewSections[1].rows == ["Easy", "Normal", "Hard"])
+        screen.traitCollection = .init(userInterfaceIdiom: .phone)
     }
 }

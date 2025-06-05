@@ -4,8 +4,8 @@ import Testing
 import WaitWhile
 
 @MainActor
-struct NewGameControllerTests {
-    let subject = NewGameController()
+struct NewGameViewControllerTests {
+    let subject = NewGameViewController()
     fileprivate let mockPickerDelegate = MockPickerDelegate()
     fileprivate let mockTableDelegate = MockTableDelegate()
     let processor = MockProcessor<NewGameAction, NewGameState, NewGameEffect>()

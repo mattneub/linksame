@@ -578,29 +578,6 @@ final class LinkSameViewController : UIViewController, NewGamePopoverDismissalBu
     }
 }
 
-extension LinkSameViewController : UIPopoverPresentationControllerDelegate {
-    func adaptivePresentationStyle(
-        for controller: UIPresentationController) -> UIModalPresentationStyle {
-        return .fullScreen
-    }
-    func presentationController(
-        _ controller: UIPresentationController,
-        viewControllerForAdaptivePresentationStyle style: UIModalPresentationStyle)
-        -> UIViewController? {
-            let vc = controller.presentedViewController
-            if vc.view is WKWebView {
-                let nav = UINavigationController(rootViewController: vc)
-                vc.navigationItem.rightBarButtonItem = UIBarButtonItem(
-                    title: "Done", style: .plain, target: self, action: #selector(dismissHelp))
-                // whoa, nice
-                nav.navigationBar.scrollEdgeAppearance = nav.navigationBar.standardAppearance
-                nav.navigationBar.compactScrollEdgeAppearance = nav.navigationBar.compactAppearance
-                return nav
-            }
-            return nil
-    }
-}
-
 extension LinkSameViewController { // buttons in popover
     
     @IBAction private func doNew(_ sender: (any UIPopoverPresentationControllerSourceItem)?) {
@@ -608,10 +585,10 @@ extension LinkSameViewController { // buttons in popover
             self.toggleHint(nil)
         }
         self.board.unhilite()
-        coordinator?.showNewGameController(
+        coordinator?.showNewGame(
             sourceItem: sender,
-            dismissalDelegate: self,
-            popoverPresentationDelegate: self
+            popoverPresentationDelegate: NewGamePopoverDelegate(),
+            dismissalDelegate: self
         )
         // save defaults so we can restore them later if user cancels
         self.oldDefs = services.persistence.loadAsDictionary([.style, .size, .lastStage])
@@ -651,40 +628,12 @@ extension LinkSameViewController { // buttons in popover
         // and changing the interface mode changes the interface accordingly
     }
     
-    @IBAction private func doHelp(_ sender: Any?) {
-        // create help from scratch
-        let vc = UIViewController()
-        let wv = WKWebView()
-        
-        wv.backgroundColor = .white // new, fix background
-        let path = Bundle.main.path(forResource: "linkhelp", ofType: "html")!
-        var s = try! String.init(contentsOfFile: path, encoding: .utf8)
-        s = s.replacingOccurrences(of: "FIXME2", with: onPhone ? "30" : "5") // margin
-        s = s.replacingOccurrences(of: "FIXME", with: onPhone ? "8" : "12") // text size
-        wv.loadHTMLString(s, baseURL: nil)
-        // print(s)
-        vc.view = wv
-        vc.modalPresentationStyle = .popover
-        vc.preferredContentSize = CGSize(width: 450, height: 800) // setting ppc's popoverContentSize failed
-        if let pop = vc.popoverPresentationController {
-            pop.delegate = self // adapt! on iPhone, we need a way to dismiss
-        }
-        self.present(vc, animated: true) {
-            vc.popoverPresentationController?.passthroughViews = nil
-        }
-        if let pop = vc.popoverPresentationController {
-            pop.permittedArrowDirections = .any
-            if let sender = sender as? UIBarButtonItem {
-                pop.barButtonItem = sender
-            }
-            pop.backgroundColor = UIColor.white // new - fix arrow
-        }
+    @IBAction private func doHelp(_ sender: (any UIPopoverPresentationControllerSourceItem)?) {
+        coordinator?.showHelp(
+            sourceItem: sender,
+            popoverPresentationDelegate: HelpPopoverDelegate()
+        )
     }
-    
-    @objc private func dismissHelp(_:Any) {
-        self.dismiss(animated: true)
-    }
-    
 }
 
 extension LinkSameViewController : UIToolbarDelegate {
