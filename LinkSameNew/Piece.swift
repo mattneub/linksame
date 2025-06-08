@@ -89,8 +89,9 @@ final class Piece: UIView, Encodable, @preconcurrency Decodable {
         // grapple with what would happen if rect were smaller than pic.size
         let inset : CGFloat = 4
         let maxrect = rect.insetBy(dx: inset, dy: inset)
-        var drawrect = maxrect.insetBy(dx: 10, dy: 10) // experiment: make bigger for Easy ipad size
-        if pic.size.width > maxrect.width || pic.size.height > maxrect.height {
+        var drawrect = AVMakeRect(aspectRatio: pic.size, insideRect: maxrect.insetBy(dx: 10, dy: 10))
+        // experiment: make bigger than original image, up to this limit, esp. for Easy ipad size
+        if pic.size.width > drawrect.width || pic.size.height > drawrect.height {
             let smallerrect = AVMakeRect(aspectRatio: pic.size, insideRect: maxrect)
             drawrect = maxrect.centeredRectOfSize(smallerrect.size)
         }
