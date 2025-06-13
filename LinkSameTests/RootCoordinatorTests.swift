@@ -95,4 +95,13 @@ struct RootCoordinatorTests {
         #expect(rootViewController.presentedViewController == nil)
         #expect(presentedViewController.presentingViewController == nil)
     }
+
+    @Test("makeBoardProcessor: creates Board module, configures it, returns Board processor")
+    func makeBoardProcessor() async throws {
+        let result = subject.makeBoardProcessor(gridSize: (3, 2))
+        let processor = try #require(result as? BoardProcessor)
+        let grid = processor.grid
+        #expect(grid.columns == 3)
+        #expect(grid.rows == 2)
+    }
 }

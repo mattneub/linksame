@@ -36,3 +36,22 @@ final class TransitionProvider: NSObject, @preconcurrency CAAnimationDelegate {
         continuation?.resume(returning: ())
     }
 }
+
+/// Protocol that expresses the public face of our TransitionProvider, so we can mock it for testing.
+@MainActor
+protocol TransitionProviderType: NSObject {
+    func performTransition(transition: CATransition, layer: CALayer) async
+}
+
+extension TransitionProvider: TransitionProviderType {}
+
+/// Factory class that can be asked for a new instance of our TransitionProvider.
+/// This is so that in tests we can substitute an instance of a mock.
+/// (That is why this class is not `final`; the tests subclass it.)
+///
+@MainActor
+class TransitionProviderMaker {
+    func makeTransitionProvider() -> any TransitionProviderType {
+        return TransitionProvider()
+    }
+}

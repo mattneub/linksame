@@ -7,7 +7,10 @@ final class Services {
     static var shared: Services = Services.init()
     private init() {}
 
+    var application: any ApplicationType = UIApplication.shared
     var bundle: any BundleType = Bundle.main
+    var lifetime: any LifetimeType = Lifetime()
     var persistence: any PersistenceType = Persistence()
     var screen: any ScreenType = UIScreen.main
+    var transitionProviderMaker: TransitionProviderMaker = TransitionProviderMaker()
 }

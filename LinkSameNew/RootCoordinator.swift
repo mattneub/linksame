@@ -16,10 +16,13 @@ protocol RootCoordinatorType: AnyObject {
     )
 
     func dismiss()
+
+    func makeBoardProcessor(gridSize: (Int, Int)) -> any BoardProcessorType
 }
 
 @MainActor
 final class RootCoordinator: RootCoordinatorType {
+    var linkSameProcessor: (any Processor<LinkSameAction, LinkSameState, LinkSameEffect>)?
     var newGameProcessor: (any Processor<NewGameAction, NewGameState, NewGameEffect>)?
     var helpProcessor: (any Processor<HelpAction, HelpState, Void>)?
 
@@ -28,9 +31,13 @@ final class RootCoordinator: RootCoordinatorType {
 
     func createInitialInterface(window: UIWindow) {
         let viewController = LinkSameViewController()
+        let processor = LinkSameProcessor()
+        viewController.processor = processor
+        processor.presenter = viewController
+        self.linkSameProcessor = processor
         window.rootViewController = viewController
         self.rootViewController = viewController
-        viewController.coordinator = self
+        processor.coordinator = self
         window.backgroundColor = .white
     }
 
@@ -97,6 +104,10 @@ final class RootCoordinator: RootCoordinatorType {
 
     func dismiss() {
         rootViewController?.dismiss(animated: unlessTesting(true))
+    }
+
+    func makeBoardProcessor(gridSize: (Int, Int)) -> any BoardProcessorType {
+        BoardProcessor(gridSize: gridSize)
     }
 
 }

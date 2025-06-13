@@ -30,3 +30,10 @@ extension UIApplication {
     }
 }
 
+/// Protocol describing the public interface to UIApplication, so we can mock it.
+@MainActor
+protocol ApplicationType {
+    static func userInteraction(_ interactionOn: Bool)
+}
+extension UIApplication: ApplicationType {}
+

@@ -2,6 +2,14 @@
 import UIKit
 import QuartzCore
 
+/// Public face of the BoardProcessor, so we can mock it for testing.
+@MainActor
+protocol BoardProcessorType: AnyObject { // TODO: But I might change this to communicate via an action enum; let's see how things go
+    var stageNumber: Int { get set }
+    var view: BoardView { get }
+    func createAndDealDeck()
+}
+
 /*
  Board has strong reference to View
  Board has strong reference to Grid
@@ -17,45 +25,14 @@ import QuartzCore
  Board has strong reference to LegalPathShower
  */
 
-// a Grid is a Board helper
-// it is just a nested array of Piece objects, which can be nil
-// that way, the Board can ask for piece at given coordinates
-// it is up to the Board to maintain consistency between:
-// * where a Piece is in the Grid
-// * where that same Piece is in the Board
-// * where that same Piece thinks it is (its x and y)
-
+/// The BoardProcessor serves the LinkSameProcessor. It doesn't know how the whole game works,
+/// but it does know how the game is _played_: it understands the physical mechanism of the game
+/// (taps on pieces), and it understands the notion of a legal move and what happens in response.
+/// Its view is where the pieces are drawn.
+/// Its pathView (actually, the sublayer of its pathView) is where hints and confirmations are drawn.
 @MainActor
-struct Grid : Codable {
-    private var grid : [[Piece?]]
-    let xct : Int
-    let yct : Int
-    init(_ x:Int, _ y:Int) {
-        self.xct = x
-        self.yct = y
-        // and now set up the empty grid with nils
-        // hold my beer and watch this!
-        self.grid = Array(repeating: Array(repeating: nil, count: yct), count: xct)
-    }
-    subscript(i:Int) -> [Piece?] {
-        get {
-            return self.grid[i]
-        }
-        set(val) {
-            self.grid[i] = val
-        }
-    }
-}
+final class BoardProcessor: BoardProcessorType, @preconcurrency Codable {
 
-// the Board is not a view (in a way, I suppose it's a kind of view controller!)
-// it _vends_ a view, its `view`, and in that view it maintains Pieces as its subviews and manipulates them
-// it understands the _physical_ mechanism of the game and the notion of a legal move and what happens in response
-// it detects taps
-// it draws hints in its `pathView` (actually, in the sublayer of its `pathView`)
-
-@MainActor
-final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
-    
     private let TOPMARGIN : CGFloat = (1.0/8.0)
     private let BOTTOMMARGIN : CGFloat = (1.0/8.0)
     private let LEFTMARGIN : CGFloat = (1.0/8.0)
@@ -73,13 +50,13 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     typealias Point = (x:Int, y:Int)
     typealias Path = [Point]
     
-    let view: UIView
+    let view: BoardView // TODO: make BoardView a presenter, make this weak
     var stageNumber = 0
     var showingHint : Bool { return self.legalPathShower.isIlluminating }
     private var hilitedPieces = [Piece]()
-    private var xct : Int { return self.grid.xct }
-    private var yct : Int { return self.grid.yct }
-    private var grid : Grid // can't live without a grid, but it is mutable
+    private var columns : Int { return self.grid.columns }
+    private var rows : Int { return self.grid.rows }
+    var grid : Grid // can't live without a grid, but it is mutable
     private var hintPath : Path?
     private var deckAtStartOfStage = [String]() // in case we are asked to restore this
     
@@ -99,20 +76,20 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
 
     private lazy var pieceSize : CGSize = {
         // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
-        assert((self.xct > 0 && self.yct > 0), "Meaningless to ask for piece size with no grid dimensions.")
+        assert((self.columns > 0 && self.rows > 0), "Meaningless to ask for piece size with no grid dimensions.")
         // print("calculating piece size")
         // divide view bounds, allow 1 extra plus margins
         let pieceWidth : CGFloat =
-            self.view.bounds.size.width / (CGFloat(self.xct) + OUTER + LEFTMARGIN + RIGHTMARGIN)
+            self.view.bounds.size.width / (CGFloat(self.columns) + OUTER + LEFTMARGIN + RIGHTMARGIN)
         let pieceHeight : CGFloat =
-            self.view.bounds.size.height / (CGFloat(self.yct) + OUTER + TOPMARGIN + BOTTOMMARGIN)
+            self.view.bounds.size.height / (CGFloat(self.rows) + OUTER + TOPMARGIN + BOTTOMMARGIN)
         return CGSize(width: pieceWidth, height: pieceHeight)
     }()
     
-    init (boardFrame:CGRect, gridSize:(Int,Int)) {
-        self.view = UIView(frame:boardFrame)
-        self.grid = Grid(gridSize.0, gridSize.1)
-        super.init()
+    init (gridSize: (Int, Int)) {
+        self.view = BoardView(frame: .zero)
+        self.grid = Grid(columns: gridSize.0, rows: gridSize.1)
+        // super.init()
     }
     
     enum CodingKeys : String, CodingKey {
@@ -134,15 +111,15 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         self.stageNumber = try! con.decode(Int.self, forKey: .stage)
         self.deckAtStartOfStage = try! con.decode([String].self, forKey: .deckAtStartOfStage)
         let frame = try! con.decode(CGRect.self, forKey: .frame)
-        self.view = UIView(frame:frame)
+        self.view = BoardView(frame: frame)
         // instead of just setting the decoded grid as our grid,
         // use it to create a new grid and populate it and our view
         let grid = try! con.decode(Grid.self, forKey: .grid)
-        self.grid = Grid(grid.xct, grid.yct)
-        super.init() // has to go here so we can say `self`
-        for i in 0..<grid.xct {
-            for j in 0..<grid.yct {
-                if let p = grid[i][j] {
+        self.grid = Grid(columns: grid.columns, rows: grid.rows)
+        // super.init() // has to go here so we can say `self`
+        for i in 0..<grid.columns {
+            for j in 0..<grid.rows {
+                if let p = grid[column: i, row: j] {
                     self.addPieceAt((i,j), withPicture: p.picName)
                 }
             }
@@ -163,7 +140,7 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
             }
         }
         // determine which additional pieces to use, finish deck of piece names
-        let (w,h) = (self.xct, self.yct)
+        let (w,h) = (self.columns, self.rows)
         let howmany : Int = ((w * h) / 4) - 9
         for _ in 0..<4 {
             for i in start2..<start2+howmany {
@@ -190,15 +167,15 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     func restartStage() throws {
         // deal stored deck; remove existing pieces as we go
         // attempt to deal with crashes, hard to see what could be crashing except maybe removeLast
-        guard self.deckAtStartOfStage.count == self.xct * self.yct else {
+        guard self.deckAtStartOfStage.count == self.columns * self.rows else {
             enum DeckSizeError : Error {
                 case oops
             }
             throw DeckSizeError.oops
         }
         var deck = self.deckAtStartOfStage
-        for i in 0..<self.xct {
-            for j in 0..<self.yct {
+        for i in 0..<self.columns {
+            for j in 0..<self.rows {
                 if let oldPiece = self.piece(at:(i,j)) {
                     self.removePiece(oldPiece)
                 }
@@ -211,11 +188,11 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     // shuffle existing pieces; could be because user asked to shuffle, could be we're out of legal moves
     func redeal () {
         repeat {
-            UIApplication.userInteraction(false)
+            type(of: services.application).userInteraction(false)
             // gather up all pieces (as names), shuffle them, deal them into their current slots
             var deck = [String]()
-            for i in 0 ..< self.xct {
-                for j in 0 ..< self.yct {
+            for i in 0 ..< self.columns {
+                for j in 0 ..< self.rows {
                     let piece = self.piece(at:(i,j))
                     if piece == nil {
                         continue
@@ -227,9 +204,9 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
             deck.shuffle()
             deck.shuffle()
             deck.shuffle()
-            UIApplication.userInteraction(true)
-            for i in 0 ..< self.xct {
-                for j in 0 ..< self.yct {
+            type(of: services.application).userInteraction(true)
+            for i in 0 ..< self.columns {
+                for j in 0 ..< self.rows {
                     let piece = self.piece(at:(i,j))
                     if let piece = piece {
                         // very lightweight; we just assign the name, let the piece worry about the picture
@@ -269,8 +246,8 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
                 print("farewell from PathView")
             }
         }
-        unowned private let board : Board
-        fileprivate init(board:Board) {self.board = board}
+        unowned private let board : BoardProcessor
+        fileprivate init(board:BoardProcessor) {self.board = board}
         private var pathToIlluminate : Path?
         fileprivate private(set) var isIlluminating = false {
             didSet {
@@ -322,13 +299,13 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     private func piece(at p:Point) -> Piece? {
         let (i,j) = p
         // it is legal to ask for piece one slot outside boundaries, but not further
-        assert(i >= -1 && i <= self.xct, "Piece requested out of bounds (x)")
-        assert(j >= -1 && j <= self.yct, "Piece requested out of bounds (y)")
+        assert(i >= -1 && i <= self.columns, "Piece requested out of bounds (x)")
+        assert(j >= -1 && j <= self.rows, "Piece requested out of bounds (y)")
         // report slot outside boundaries as empty
-        if (i == -1 || i == self.xct) { return nil }
-        if (j == -1 || j == self.yct) { return nil }
+        if (i == -1 || i == self.columns) { return nil }
+        if (j == -1 || j == self.rows) { return nil }
         // report actual value within boundaries
-        return self.grid[i][j]
+        return self.grid[column: i, row: j]
     }
     
     // put a piece in a slot and into interface
@@ -343,7 +320,7 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         self.view.insertSubview(piece, belowSubview: self.pathView) // this is the cleverest line of code in the whole app :)
         // also place the Piece in the grid, and tell it where it is
         let (i,j) = p
-        self.grid[i][j] = piece
+        self.grid[column: i, row: j] = piece
         (piece.x, piece.y) = (i,j)
         // print("Point was \(p), pic was \(picTitle)\nCreated \(piece)")
         // set up tap detection
@@ -406,7 +383,7 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     // utility to remove a piece from the interface and from the grid (i.e. replace it by nil)
     
     private func removePiece(_ p:Piece) {
-        self.grid[p.x][p.y] = nil
+        self.grid[column: p.x, row: p.y] = nil
         p.removeFromSuperview()
     }
     
@@ -414,8 +391,8 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     
     private func gameOver () -> Bool {
         // return true // testing game end
-        for x in 0..<self.xct {
-            for y in 0..<self.yct {
+        for x in 0..<self.columns {
+            for y in 0..<self.rows {
                 if self.piece(at:(x,y)) != nil {
                     return false
                 }
@@ -428,8 +405,8 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     
     private func originOf(_ p:Point) -> CGPoint {
         let (i,j) = p
-        assert(i >= -1 && i <= self.xct, "Position requested out of bounds (x)")
-        assert(j >= -1 && j <= self.yct, "Position requested out of bounds (y)")
+        assert(i >= -1 && i <= self.columns, "Position requested out of bounds (x)")
+        assert(j >= -1 && j <= self.rows, "Position requested out of bounds (y)")
         // divide view bounds, allow 2 extra on all sides
         let pieceWidth = self.pieceSize.width
         let pieceHeight = self.pieceSize.height
@@ -461,9 +438,9 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
             movenda += [pnew]
         }
 
-        UIApplication.userInteraction(false)
+        type(of: services.application).userInteraction(false)
         // notify (so score can be incremented)
-        nc.post(name: Board.userMoved, object: self)
+        nc.post(name: BoardProcessor.userMoved, object: self)
         // actually remove the pieces (we happen to know there must be exactly two)
         for piece in self.hilitedPieces {
             self.removePiece(piece)
@@ -473,8 +450,8 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         if self.gameOver() {
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(0.1)) // nicer with a little delay
-                UIApplication.userInteraction(true)
-                nc.post(name: Board.gameOver, object: self, userInfo: ["stage":self.stageNumber])
+                type(of: services.application).userInteraction(true)
+                nc.post(name: BoardProcessor.gameOver, object: self, userInfo: ["stage":self.stageNumber])
             }
             return
         }
@@ -488,9 +465,9 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         case 1: // gravity down
             // fallthrough // debugging later cases
             // for (var x = 0; x < self.xct; x++) {
-            for x in 0..<self.xct {
+            for x in 0..<self.columns {
                 // for (var y = self.yct - 1; y > 0; y--) {
-                for y in self.yct>>>0 { // not an exact match for my original C version, but simpler
+                for y in self.rows>>>0 { // not an exact match for my original C version, but simpler
                     let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var yt = y-1; yt >= 0; yt--) {
@@ -508,9 +485,9 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         case 2: // gravity right
             // fallthrough // debugging later cases
             // for (var y = 0; y < self.yct; y++) {
-            for y in 0..<self.yct {
+            for y in 0..<self.rows {
                 // for (var x = self.xct - 1; x > 0; x--) {
-                for x in self.xct>>>0 {
+                for x in self.columns>>>0 {
                     let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var xt = x-1; xt >= 0; xt--) {
@@ -527,10 +504,10 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
             }
         case 3: // gravity toward central horiz line
             // fallthrough // debugging later cases
-            let center = self.yct/2 // integer div, deliberate
+            let center = self.rows/2 // integer div, deliberate
             // exactly like 1 except we have to do it twice in two directions
             // for (var x = 0; x < self.xct; x++) {
-            for x in 0..<self.xct {
+            for x in 0..<self.columns {
                 // for (var y = center - 1; y > 0; y--) {
                 for y in center>>>0 {
                     let piece = self.piece(at:(x,y))
@@ -547,11 +524,11 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
                     }
                 }
                 // for (var y = center; y <= self.yct - 1; y++) {
-                for y in center..<self.yct {
+                for y in center..<self.rows {
                     let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var yt = y+1; yt < self.yct; yt++) {
-                        for yt in y+1..<self.yct {
+                        for yt in y+1..<self.rows {
                             let piece2 = self.piece(at:(x,yt))
                             if piece2 == nil {
                                 continue
@@ -565,9 +542,9 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         case 4: // gravity toward central vertical line
             // fallthrough // debugging later cases
             // exactly like 3 except the other orientation
-            let center = self.xct/2 // integer div, deliberate
+            let center = self.columns/2 // integer div, deliberate
             // for (var y = 0; y < self.yct; y++) {
-            for y in 0..<self.yct {
+            for y in 0..<self.rows {
                 // for (var x = center-1; x > 0; x--) {
                 for x in center>>>0 {
                     let piece = self.piece(at:(x,y))
@@ -584,11 +561,11 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
                     }
                 }
                 // for (var x = center; x <= self.xct - 1; x++) {
-                for x in center..<self.xct {
+                for x in center..<self.columns {
                     let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var xt = x+1; xt < self.xct; xt++) {
-                        for xt in x+1..<self.xct {
+                        for xt in x+1..<self.columns {
                             let piece2 = self.piece(at:(xt,y))
                             if piece2 == nil {
                                 continue
@@ -602,11 +579,11 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         case 5: // gravity away from central horiz line
             // fallthrough // debugging later cases
             // exactly like 3 except we walk from the outside to the center
-            let center = self.yct/2 // integer div, deliberate
+            let center = self.rows/2 // integer div, deliberate
             // for (var x = 0; x < self.xct; x++) {
-            for x in 0..<self.xct {
+            for x in 0..<self.columns {
                 // for (var y = self.yct-1; y > center; y--) {
-                for y in self.yct>>>center { // not identical to C loop, moved pivot
+                for y in self.rows>>>center { // not identical to C loop, moved pivot
                     let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var yt = y-1; yt >= center; yt--) {
@@ -639,11 +616,11 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         case 6: // gravity away from central vertical line
             // fallthrough // debugging later cases
             // exactly like 4 except we start at the outside
-            let center = self.xct/2 // integer div, deliberate
+            let center = self.columns/2 // integer div, deliberate
             // for (var y = 0; y < self.yct; y++) {
-            for y in 0..<self.yct {
+            for y in 0..<self.rows {
                 // for (var x = self.xct-1; x > center; x--) {
-                for x in self.xct>>>center {
+                for x in self.columns>>>center {
                     let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var xt = x-1; xt >= center; xt--) {
@@ -676,11 +653,11 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         case 7: // gravity down in one half, gravity up in the other half
             // fallthrough // debugging later cases
             // like doing 1 in two pieces with the second piece in reverse direction
-            let center = self.xct/2;
+            let center = self.columns/2;
             // for (var x = 0; x < center; x++) {
             for x in 0..<center {
                 // for (var y = self.yct - 1; y > 0; y--) {
-                for y in self.yct>>>0 {
+                for y in self.rows>>>0 {
                     let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var yt = y-1; yt >= 0; yt--) {
@@ -696,13 +673,13 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
                 }
             }
             // for (var x = center; x < self.xct; x++) {
-            for x in center..<self.xct {
+            for x in center..<self.columns {
                 // for (var y = 0; y < self.yct-1; y++) {
-                for y in 0..<self.yct {
+                for y in 0..<self.rows {
                     let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var yt = y+1; yt < self.yct; yt++) {
-                        for yt in y..<self.yct {
+                        for yt in y..<self.rows {
                             let piece2 = self.piece(at:(x,yt))
                             if piece2 == nil {
                                 continue
@@ -715,11 +692,11 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
             }
         case 8: // gravity left in one half, gravity right in other half
             // like doing 2 in two pieces with second in reverse direction
-            let center = self.yct/2
+            let center = self.rows/2
             // for (var y = 0; y < center; y++) {
             for y in 0..<center {
                 // for (var x = self.xct - 1; x > 0; x--) {
-                for x in self.xct>>>0 {
+                for x in self.columns>>>0 {
                     let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var xt = x-1; xt >= 0; xt--) {
@@ -735,13 +712,13 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
                 }
             }
             // for (var y = center; y < self.yct; y++) {
-            for y in center..<self.yct {
+            for y in center..<self.rows {
                 // for (var x = 0; x < self.xct-1; x++) {
-                for x in 0..<self.xct {
+                for x in 0..<self.columns {
                     let piece = self.piece(at:(x,y))
                     if piece == nil {
                         // for (var xt = x+1; xt < self.xct; xt++) {
-                        for xt in x..<self.xct {
+                        for xt in x..<self.columns {
                             let piece2 = self.piece(at:(xt,y))
                             if piece2 == nil {
                                 continue
@@ -788,7 +765,7 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
                 self.redeal()
             }
             // we do this after the slide animation is over, so we can get two animations in row, cool
-            UIApplication.userInteraction(true)
+            type(of: services.application).userInteraction(true)
         }
     }
     
@@ -844,10 +821,10 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
                 }
             }
         }
-        for y in -1...self.yct {
+        for y in -1...self.rows {
             addPathIfValid((pt1.x,y),(pt2.x,y))
         }
-        for x in -1...self.xct {
+        for x in -1...self.columns {
             addPathIfValid((x,pt1.y),(x,pt2.y))
         }
         if marr.count > 0 { // got at least one! find the shortest and submit it
@@ -881,12 +858,12 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         for piece in self.hilitedPieces {
             assert(piece.superview == self.view, "Pieces to check must be displayed on board")
         }
-        UIApplication.userInteraction(false)
+        type(of: services.application).userInteraction(false)
         let p1 = self.hilitedPieces[0]
         let p2 = self.hilitedPieces[1]
         if p1.picName != p2.picName {
             self.unhilite()
-            UIApplication.userInteraction(true)
+            type(of: services.application).userInteraction(true)
             return
         }
         if let path = self.checkPair(p1, and:p2) {
@@ -896,11 +873,11 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
                 try? await Task.sleep(for: .seconds(0.2))
                 self.legalPathShower.unilluminate()
                 try? await Task.sleep(for: .seconds(0.1))
-                UIApplication.userInteraction(true)
+                type(of: services.application).userInteraction(true)
                 self.reallyRemovePair()
             }
         } else {
-            UIApplication.userInteraction(true)
+            type(of: services.application).userInteraction(true)
             self.unhilite()
         }
     }
@@ -910,12 +887,12 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     // when that list has two items, check them for validity
 
     @objc private func handleTap(_ g:UIGestureRecognizer) {
-        UIApplication.userInteraction(false)
+        type(of: services.application).userInteraction(false)
         let p = g.view as! Piece
         let hilited = p.isHilited
         if !hilited {
             if self.hilitedPieces.count > 1 {
-                UIApplication.userInteraction(true)
+                type(of: services.application).userInteraction(true)
                 return
             }
             self.hilitedPieces += [p]
@@ -926,10 +903,10 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
         if self.hilitedPieces.count == 2 {
             // print("========")
             // print("about to check hilited pair \(self.hilitedPieces)")
-            UIApplication.userInteraction(true)
+            type(of: services.application).userInteraction(true)
             self.checkHilitedPair()
         } else {
-            UIApplication.userInteraction(true)
+            type(of: services.application).userInteraction(true)
         }
     }
     
@@ -948,7 +925,7 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     // tap gesture on pathView
     
     @objc private func tappedPathView(_ : UIGestureRecognizer) {
-        nc.post(name: Board.userTappedPath, object: self)
+        nc.post(name: BoardProcessor.userTappedPath, object: self)
     }
     
     // utility to run thru the entire grid and make sure there is at least one legal path somewhere
@@ -958,15 +935,15 @@ final class Board : NSObject, CALayerDelegate, @preconcurrency Codable {
     // the path is simply the path returned from checkPair
     
     private func legalPath () -> Path? {
-        for x in 0..<self.xct {
-            for y in 0..<self.yct {
+        for x in 0..<self.columns {
+            for y in 0..<self.rows {
                 let piece = self.piece(at:(x,y))
                 if piece == nil {
                     continue
                 }
                 let picName = piece!.picName
-                for xx in 0..<self.xct {
-                    for yy in 0..<self.yct {
+                for xx in 0..<self.columns {
+                    for yy in 0..<self.rows {
                         let piece2 = self.piece(at:(xx,yy))
                         if piece2 == nil {
                             continue

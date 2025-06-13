@@ -54,11 +54,12 @@ final class MockPersistence: PersistenceType {
     
     func loadAsDictionary(_ keys: [DefaultKey]) -> [DefaultKey: Any] {
         methodsCalled.append(#function)
-        return [:]
+        return dict ?? [:]
     }
     
     func saveIndividually(_ dictionary: [DefaultKey: Any]) {
         methodsCalled.append(#function)
+        self.dict = dictionary
     }
     
 

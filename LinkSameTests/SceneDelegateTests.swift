@@ -16,4 +16,24 @@ struct SceneDelegateTests {
         #expect(mockRootCoordinator.methodsCalled == ["createInitialInterface(window:)"])
         #expect(mockRootCoordinator.window === window)
     }
+
+    @Test("sceneDidBecomeActive: calls lifetime didBecomeActive")
+    func didBecomeActive() throws {
+        let lifetime = MockLifetime()
+        services.lifetime = lifetime
+        let subject = SceneDelegate()
+        let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        subject.sceneDidBecomeActive(scene)
+        #expect(lifetime.methodsCalled == ["didBecomeActive()"])
+    }
+
+    @Test("scenedidEnterBackground: calls lifetime didEnterBackground")
+    func didEnterBackground() throws {
+        let lifetime = MockLifetime()
+        services.lifetime = lifetime
+        let subject = SceneDelegate()
+        let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        subject.sceneDidEnterBackground(scene)
+        #expect(lifetime.methodsCalled == ["didEnterBackground()"])
+    }
 }

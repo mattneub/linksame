@@ -8,6 +8,8 @@ final class MockRootCoordinator: RootCoordinatorType {
     weak var window: UIWindow?
     var sourceItem: (any UIPopoverPresentationControllerSourceItem)?
     var dismissalDelegate: (any NewGamePopoverDismissalButtonDelegate)?
+    var popoverPresentationDelegate: (any UIPopoverPresentationControllerDelegate)?
+    var gridSize: (Int, Int)?
 
     func createInitialInterface(window: UIWindow) {
         methodsCalled.append(#function)
@@ -22,6 +24,7 @@ final class MockRootCoordinator: RootCoordinatorType {
         methodsCalled.append(#function)
         self.sourceItem = sourceItem
         self.dismissalDelegate = dismissalDelegate
+        self.popoverPresentationDelegate = popoverPresentationDelegate
     }
 
     func showHelp(
@@ -29,9 +32,18 @@ final class MockRootCoordinator: RootCoordinatorType {
         popoverPresentationDelegate: UIPopoverPresentationControllerDelegate?
     ) {
         methodsCalled.append(#function)
+        self.sourceItem = sourceItem
+        self.popoverPresentationDelegate = popoverPresentationDelegate
     }
 
     func dismiss() {
         methodsCalled.append(#function)
     }
+
+    func makeBoardProcessor(gridSize: (Int, Int)) -> any BoardProcessorType {
+        methodsCalled.append(#function)
+        self.gridSize = gridSize
+        return MockBoardProcessor()
+    }
+
 }

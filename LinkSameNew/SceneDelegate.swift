@@ -25,5 +25,26 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         rootCoordinator.createInitialInterface(window: window)
         window.makeKeyAndVisible()
     }
+
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        services.lifetime.didBecomeActive()
+    }
+
+    func sceneWillResignActive(_ scene: UIScene) {
+    }
+
+    var firstTimeEnteringForeground = true
+
+    func sceneWillEnterForeground(_ scene: UIScene) {
+//        if firstTimeEnteringForeground {
+//            firstTimeEnteringForeground = false
+//            return
+//        }
+    }
+
+    func sceneDidEnterBackground(_ scene: UIScene) {
+        services.lifetime.didEnterBackground()
+    }
+
 }
 
