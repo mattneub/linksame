@@ -20,13 +20,14 @@ struct LinkSameProcessorTests {
 
     @Test("receive cancelNewGame: calls coordinator dismiss, saves prepopover defaults to real defaults, set prepover defaults to nil")
     func cancelNewGame() async {
-        subject.state.defaultsBeforeShowingNewGamePopover = [.size: "Size", .style: "Style"]
+        subject.state.defaultsBeforeShowingNewGamePopover = PopoverDefaults(lastStage: 7, size: "Size", style: "Style")
         await subject.receive(.cancelNewGame)
         #expect(coordinator.methodsCalled == ["dismiss()"])
         #expect(persistence.methodsCalled == ["saveIndividually(_:)"])
-        #expect(persistence.dict?.keys.count == 2)
+        #expect(persistence.dict?.keys.count == 3)
         #expect(persistence.dict?[.size] as? String == "Size")
         #expect(persistence.dict?[.style] as? String == "Style")
+        #expect(persistence.dict?[.lastStage] as? Int == 7)
     }
 
     @Test("receive didInitialLayout: gets board size from persistence, or Easy on phone; asks coordinator to make board processor")
@@ -127,14 +128,12 @@ struct LinkSameProcessorTests {
         #expect(coordinator.popoverPresentationDelegate is NewGamePopoverDelegate)
         #expect(coordinator.dismissalDelegate === presenter)
         let defs = try #require(subject.state.defaultsBeforeShowingNewGamePopover)
-        #expect(defs[.style] as? String == "Animals")
-        #expect(defs[.size] as? String == "Hard")
-        #expect(defs[.lastStage] as? Int == 7)
+        #expect(defs == PopoverDefaults(lastStage: 7, size: "Hard", style: "Animals"))
     }
 
     @Test("receive startNewGame: calls coordinator dismiss, nilifies copy of defaults, sets and presents state interface mode")
     func startNewGame() async {
-        subject.state.defaultsBeforeShowingNewGamePopover = [.style: "Animals"]
+        subject.state.defaultsBeforeShowingNewGamePopover = .init(lastStage: 7, size: "Size", style: "Style")
         subject.state.interfaceMode = .practice
         await subject.receive(.startNewGame)
         #expect(coordinator.methodsCalled == ["dismiss()"])

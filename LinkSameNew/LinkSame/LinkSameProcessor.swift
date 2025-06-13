@@ -26,8 +26,8 @@ final class LinkSameProcessor: Processor {
         switch action {
         case .cancelNewGame:
             coordinator?.dismiss()
-            if let defaultsBeforeShowingNewGamePopover = state.defaultsBeforeShowingNewGamePopover {
-                services.persistence.saveIndividually(defaultsBeforeShowingNewGamePopover)
+            if let popoverDefaults = state.defaultsBeforeShowingNewGamePopover {
+                services.persistence.saveIndividually(popoverDefaults.toDefaultsDictionary)
                 state.defaultsBeforeShowingNewGamePopover = nil
             }
         case .didInitialLayout:
@@ -46,7 +46,9 @@ final class LinkSameProcessor: Processor {
                 dismissalDelegate: presenter as? any NewGamePopoverDismissalButtonDelegate
             )
             // store these defaults so we can restore them later if user cancels
-            state.defaultsBeforeShowingNewGamePopover = services.persistence.loadAsDictionary([.style, .size, .lastStage])
+            state.defaultsBeforeShowingNewGamePopover = PopoverDefaults(
+                defaultsDictionary: services.persistence.loadAsDictionary([.style, .size, .lastStage])
+            )
         case .startNewGame:
             coordinator?.dismiss()
             state.defaultsBeforeShowingNewGamePopover = nil // crucial or we'll fall one behind
