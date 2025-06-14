@@ -7,6 +7,8 @@ struct LinkSameState: Equatable {
     var defaultsBeforeShowingNewGamePopover: PopoverDefaults?
     /// Whether the game mode should be timed or practice.
     var interfaceMode: InterfaceMode = .timed
+    /// Content of the stage label.
+    var stageLabelText = ""
 
     /// Possible game modes on iPad; the int values are the respective indexes of the segmented control
     enum InterfaceMode: Int {

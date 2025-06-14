@@ -156,12 +156,20 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
         timedPractice?.selectedSegmentIndex = state.interfaceMode.rawValue
         timedPractice?.isEnabled = timed
         restartStageButton?.isEnabled = timed
+
+        // stage label
+        if state.stageLabelText != stageLabel.text {
+            stageLabel.text = state.stageLabelText
+            stageLabel.sizeToFit()
+        }
     }
 
     func receive(_ effect: LinkSameEffect) async {
         switch effect {
         case .animateBoardTransition(let transition):
             await animateBoardTransition(transition)
+        case .animateStageLabel:
+            await services.view.transitionAsync(with: self.stageLabel, duration: 0.4, options: .transitionFlipFromLeft)
         case .putBoardViewIntoInterface(let boardView):
             self.backgroundView.subviews.forEach { $0.removeFromSuperview() }
             self.backgroundView.addSubview(boardView)
@@ -195,7 +203,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
             // self.interfaceMode = state.timed ? .timed : .practice
             Task {
                 await self.animateBoardTransition(.fade)
-                self.populateStageLabel() // with no animation
+                // self.populateStageLabel() // with no animation
             }
         } else { // otherwise, create new game from scratch
             self.startNewGame()
@@ -229,7 +237,6 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
     private func animateBoardTransition(_ transition: BoardTransition) async {
         guard let boardView = self.boardView else { return }
         boardView.layer.isHidden = true
-        type(of: services.application).userInteraction(false)
         CATransaction.flush() // crucial! interface must settle before transition
         let t = CATransition()
         if transition == .slide { // default is .fade, fade in
@@ -243,21 +250,8 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
         let transitionProvider = services.transitionProviderMaker.makeTransitionProvider()
         boardView.layer.isHidden = false
         await transitionProvider.performTransition(transition: t, layer: boardView.layer)
-        self.populateStageLabel()
-        await UIView.transition(with: self.stageLabel, duration: 0.4, options: .transitionFlipFromLeft)
-        type(of: services.application).userInteraction(true)
     }
     
-    private func populateStageLabel() {
-//        let s = """
-//        Stage \(self.board.stageNumber + 1) \
-//        of \(services.persistence.loadInt(forKey: .lastStage) + 1)
-//        """
-        let s = "" // TODO: This will all get fixed when this is moved to the processor
-        self.stageLabel?.text = s
-        self.stageLabel?.sizeToFit()
-    }
-
     // called from startNewGame (n is nil), which itself is called by Done button and at launch
     // called when we get Board.gameOver (n is Notification, passed along)
     // in latter case, might mean go on to next stage or might mean entire game is over

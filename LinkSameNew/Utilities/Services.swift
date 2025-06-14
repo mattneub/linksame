@@ -13,4 +13,5 @@ final class Services {
     var persistence: any PersistenceType = Persistence()
     var screen: any ScreenType = UIScreen.main
     var transitionProviderMaker: TransitionProviderMaker = TransitionProviderMaker()
+    var view: UIView.Type = UIView.self
 }

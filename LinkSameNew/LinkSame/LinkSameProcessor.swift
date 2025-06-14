@@ -105,18 +105,24 @@ final class LinkSameProcessor: Processor {
         // put its `view` into the interface, replacing the one that may be there already
         await presenter?.receive(.putBoardViewIntoInterface(board.view))
 
-        board.stageNumber = 0 // default, we might change this in a moment
-        // self.board.stage = 8 // testing, comment out!
+        board.stageNumber = 0
+        // self.board.stage = 8 // testing game end behavior, comment out!
 
-        let stage = Stage()
-        // TODO: need to restore this somehow
-        // self.interfaceMode = .timed // every new game is a timed game
+        self.stage = Stage() // TODO: Not doing anything with this yet
+
+        // build and display board
         board.createAndDealDeck()
         let boardTransition: BoardTransition = .fade
         await presenter?.receive(.animateBoardTransition(boardTransition))
         saveBoardState()
 
-        self.stage = stage
+        // show stage label
+        state.interfaceMode = .timed // TODO: assuming every new game is a timed game
+        let stageNumber = self.boardProcessor?.stageNumber ?? 0
+        let maxStages = services.persistence.loadInt(forKey: .lastStage)
+        state.stageLabelText = "Stage \(stageNumber + 1) of \(maxStages + 1)"
+        await presenter?.present(state)
+        await presenter?.receive(.animateStageLabel)
 
         await presenter?.receive(.userInteraction(true))
     }

@@ -749,7 +749,7 @@ final class BoardProcessor: BoardProcessorType, @preconcurrency Codable {
         // and that is what the user will see when the animation starts
 
         Task { @MainActor in
-            await UIView.animate(withDuration: 0.15, delay: 0.1, options: .curveLinear) {
+            await services.view.animateAsync(withDuration: 0.15, delay: 0.1, options: .curveLinear) {
                 while movenda.count > 0 {
                     let p = movenda.removeLast()
                     var f = p.frame

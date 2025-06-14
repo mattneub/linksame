@@ -37,7 +37,7 @@ struct LinkSameProcessorTests {
             traits.displayScale = 2
         }
         await subject.receive(.didInitialLayout)
-        #expect(persistence.methodsCalled.count == 0) // on iPhone we don't bother to talk to persistence
+        #expect(!persistence.keys.contains(.size)) // on iPhone we don't ask persistence for size
         #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (10, 6)) // on iPhone, persistence size is ignored, we only do Easy
@@ -51,7 +51,7 @@ struct LinkSameProcessorTests {
             traits.displayScale = 3
         }
         await subject.receive(.didInitialLayout)
-        #expect(persistence.methodsCalled.count == 0) // on iPhone we don't bother to talk to persistence
+        #expect(!persistence.keys.contains(.size)) // on iPhone we don't ask persistence for size
         #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (12, 7)) // on iPhone, persistence size is ignored, we only do Easy
@@ -66,13 +66,21 @@ struct LinkSameProcessorTests {
             traits.displayScale = 2
         }
         await subject.receive(.didInitialLayout)
-        #expect(persistence.methodsCalled.count == 1)
         #expect(persistence.methodsCalled.first == "loadString(forKey:)")
         #expect(persistence.keys.first == .size)
         #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (16, 9)) // hard size
         #expect(subject.boardProcessor != nil)
+    }
+
+    @Test("receive didInitialLayout: configures state interface mode and stage label text")
+    func didInitialLayoutState() async throws {
+        persistence.int = 4
+        await subject.receive(.didInitialLayout)
+        let state = try #require(presenter.statePresented)
+        #expect(state.interfaceMode == .timed)
+        #expect(state.stageLabelText == "Stage 1 of 5")
     }
 
     @Test("receive didInitialLayout: sends .userInteraction, .putBoard, .animatedBoardTransition, sets stageNumber, makes stage, tells board create deck")
@@ -84,11 +92,12 @@ struct LinkSameProcessorTests {
         }
         await subject.receive(.didInitialLayout)
         let board = try #require(subject.boardProcessor as? MockBoardProcessor)
-        #expect(presenter.thingsReceived.count == 4)
+        #expect(presenter.thingsReceived.count == 5)
         #expect(presenter.thingsReceived[0] == .userInteraction(false))
         #expect(presenter.thingsReceived[1] == .putBoardViewIntoInterface(board.view))
         #expect(presenter.thingsReceived[2] == .animateBoardTransition(.fade))
-        #expect(presenter.thingsReceived[3] == .userInteraction(true))
+        #expect(presenter.thingsReceived[3] == .animateStageLabel)
+        #expect(presenter.thingsReceived[4] == .userInteraction(true))
         #expect(board.stageNumber == 0)
         #expect(board.methodsCalled.first == "createAndDealDeck()")
         #expect(subject.stage != nil)

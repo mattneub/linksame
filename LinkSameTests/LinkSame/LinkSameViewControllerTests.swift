@@ -108,6 +108,14 @@ struct LinkSameViewControllerTests {
         #expect(subject.restartStageButton.isEnabled == true)
     }
 
+    @Test("present: stageLabelText configures stageLabel")
+    func presentStageLabelText() async {
+        screen.traitCollection = .init(userInterfaceIdiom: .pad)
+        subject.loadViewIfNeeded()
+        await subject.present(LinkSameState(stageLabelText: "howdy"))
+        #expect(subject.stageLabel?.text == "howdy")
+    }
+
     @Test("receive animateBoardTransition: shows the board view, performs the transition")
     func animateBoardTransition() async throws {
         makeWindow(viewController: subject)
@@ -126,8 +134,16 @@ struct LinkSameViewControllerTests {
         #expect(transition.duration == 0.7)
         #expect(transition.fillMode == .backwards)
         #expect(transition.timingFunction == CAMediaTimingFunction(name: .linear))
-        #expect(MockApplication.methodsCalled == ["userInteraction(_:)", "userInteraction(_:)"])
-        #expect(MockApplication.bools == [false, true])
+    }
+
+    @Test("receive animateStageLabel: performs label transition animation")
+    func animateStageLabel() async throws {
+        services.view = MockUIView.self
+        MockUIView.methodsCalled = []
+        makeWindow(viewController: subject)
+        subject.loadViewIfNeeded()
+        await subject.receive(.animateStageLabel)
+        #expect(MockUIView.methodsCalled == ["transitionAsync(with:duration:options:)"])
     }
 
     @Test("receive: putBoard puts the board view into the interface")
