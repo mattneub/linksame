@@ -110,9 +110,9 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
 //                    self.toggleHint(nil)
 //                }
                 // dismiss popover if any; counts as cancelling, so restore defaults if needed
-                Task {
-                    await self.processor?.receive(.cancelNewGame)
-                }
+//                Task {
+//                    await self.processor?.receive(.cancelNewGame)
+//                }
 //                self.dismiss(animated: false)
 //                if let defs = self.oldDefs {
 //                    services.persistence.saveIndividually(defs)

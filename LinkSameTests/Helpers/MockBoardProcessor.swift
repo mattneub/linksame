@@ -7,6 +7,8 @@ final class MockBoardProcessor: BoardProcessorType {
     var methodsCalled = [String]()
     var _stageNumber = -1
     var _view = MockBoardView()
+    var grid = Grid(columns: 1, rows: 1)
+    var deckAtStartOfStage = [String]()
 
     var stageNumber: Int {
         get {
@@ -23,5 +25,11 @@ final class MockBoardProcessor: BoardProcessorType {
 
     func createAndDealDeck() {
         methodsCalled.append(#function)
+    }
+
+    func populateFrom(oldGrid: Grid, deckAtStartOfStage: [String]) {
+        methodsCalled.append(#function)
+        self.grid = oldGrid
+        self.deckAtStartOfStage = deckAtStartOfStage
     }
 }

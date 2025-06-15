@@ -31,6 +31,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneWillResignActive(_ scene: UIScene) {
+        services.lifetime.willResignActive()
     }
 
     var firstTimeEnteringForeground = true

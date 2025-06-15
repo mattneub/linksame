@@ -18,6 +18,15 @@ struct LinkSameProcessorTests {
         services.screen = screen
     }
 
+    @Test("stageLabelText: returns expected value")
+    func stageLabelText() {
+        let boardProcessor = MockBoardProcessor()
+        subject.boardProcessor = boardProcessor
+        boardProcessor.stageNumber = 7
+        persistence.int = 8
+        #expect(subject.stageLabelText == "Stage 8 of 9") // adds 1 to each of those values
+    }
+
     @Test("receive cancelNewGame: calls coordinator dismiss, saves prepopover defaults to real defaults, set prepover defaults to nil")
     func cancelNewGame() async {
         subject.state.defaultsBeforeShowingNewGamePopover = PopoverDefaults(lastStage: 7, size: "Size", style: "Style")
@@ -30,8 +39,8 @@ struct LinkSameProcessorTests {
         #expect(persistence.dict?[.lastStage] as? Int == 7)
     }
 
-    @Test("receive didInitialLayout: gets board size from persistence, or Easy on phone; asks coordinator to make board processor")
-    func didInitialLayout() async throws {
+    @Test("receive didInitialLayout: with no saved data, gets board size from persistence, or Easy on phone; asks coordinator to make board processor")
+    func didInitialLayoutNoSavedData() async throws {
         screen.traitCollection = UITraitCollection { traits in // how to say, nowadays
             traits.userInterfaceIdiom = .phone
             traits.displayScale = 2
@@ -44,8 +53,8 @@ struct LinkSameProcessorTests {
         #expect(subject.boardProcessor != nil)
     }
 
-    @Test("receive didInitialLayout: gets board size from persistence, or Easy on phone (3x); asks coordinator to make board processor")
-    func didInitialLayout3x() async throws {
+    @Test("receive didInitialLayout: with no saved data, gets board size from persistence, or Easy on phone (3x); asks coordinator to make board processor")
+    func didInitialLayoutNoSavedData3x() async throws {
         screen.traitCollection = UITraitCollection { traits in
             traits.userInterfaceIdiom = .phone
             traits.displayScale = 3
@@ -58,24 +67,39 @@ struct LinkSameProcessorTests {
         #expect(subject.boardProcessor != nil)
     }
 
-    @Test("receive didInitialLayout: gets board size from persistence on iPad; asks coordinator to make board processor")
-    func didInitialLayoutPad() async throws {
+    @Test("receive didInitialLayout: with no saved data, gets board size from persistence on iPad; asks coordinator to make board processor")
+    func didInitialLayoutNoSavedDataPad() async throws {
         persistence.string = ["Hard"]
         screen.traitCollection = UITraitCollection { traits in
             traits.userInterfaceIdiom = .pad
             traits.displayScale = 2
         }
         await subject.receive(.didInitialLayout)
-        #expect(persistence.methodsCalled.first == "loadString(forKey:)")
-        #expect(persistence.keys.first == .size)
+        #expect(persistence.methodsCalled.contains("loadString(forKey:)"))
+        #expect(persistence.keys.contains(.size))
         #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (16, 9)) // hard size
         #expect(subject.boardProcessor != nil)
     }
 
-    @Test("receive didInitialLayout: configures state interface mode and stage label text")
-    func didInitialLayoutState() async throws {
+    @Test("receive didInitialLayout: with saved data, gets board size from saved data, asks coordinator to make board processor")
+    func didInitialLayoutSavedData() async throws {
+        let boardSaveableData = BoardSaveableData(stage: 5, frame: .zero, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"])
+        let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
+        let data = try PropertyListEncoder().encode(persistentState)
+        persistence.data = data
+        await subject.receive(.didInitialLayout)
+        #expect(persistence.methodsCalled.first == "loadData(forKey:)")
+        #expect(persistence.keys.first == .boardData)
+        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
+        let gridSize = try #require(coordinator.gridSize)
+        #expect(gridSize == (3, 2))
+        #expect(subject.boardProcessor != nil)
+    }
+
+    @Test("receive didInitialLayout: with no saved data configures state interface mode and stage label text")
+    func didInitialLayoutStateNoSavedData() async throws {
         persistence.int = 4
         await subject.receive(.didInitialLayout)
         let state = try #require(presenter.statePresented)
@@ -83,8 +107,21 @@ struct LinkSameProcessorTests {
         #expect(state.stageLabelText == "Stage 1 of 5")
     }
 
-    @Test("receive didInitialLayout: sends .userInteraction, .putBoard, .animatedBoardTransition, sets stageNumber, makes stage, tells board create deck")
-    func didInitialLayoutThenWhat() async throws {
+    @Test("receive didInitialLyout with saved data configures state interface mode and stage label text")
+    func didInitialLayoutStateSavedData() async throws {
+        let boardSaveableData = BoardSaveableData(stage: 5, frame: .zero, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"])
+        let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
+        let data = try PropertyListEncoder().encode(persistentState)
+        persistence.data = data
+        persistence.int = 4
+        await subject.receive(.didInitialLayout)
+        let state = try #require(presenter.statePresented)
+        #expect(state.interfaceMode == .practice)
+        #expect(state.stageLabelText == "Stage 6 of 5")
+    }
+
+    @Test("receive didInitialLayout: with no saved data sends .userInteraction, .putBoard, .animatedBoardTransition, sets stageNumber, makes stage, tells board create deck")
+    func didInitialLayoutThenWhatNoSavedData() async throws {
         persistence.string = ["Hard"]
         screen.traitCollection = UITraitCollection { traits in
             traits.userInterfaceIdiom = .pad
@@ -100,22 +137,49 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[4] == .userInteraction(true))
         #expect(board.stageNumber == 0)
         #expect(board.methodsCalled.first == "createAndDealDeck()")
-        #expect(subject.stage != nil)
+        let stage = try #require(subject.stage)
+        #expect(stage.score == 0)
+        // and we save board state
+        #expect(persistence.methodsCalled.last == "save(_:forKey:)")
+        #expect(persistence.keys.last == .boardData)
+        let value = try #require(persistence.value as? Data)
+        let _ = try PropertyListDecoder().decode(PersistentState.self, from: value)
+    }
+
+    @Test("receive didInitialLayout: with saved data sends .userInteraction, .putBoard, .animatedBoardTransition, sets stageNumber, makes stage, tells board create deck")
+    func didInitialLayoutThenWhatSavedData() async throws {
+        let boardSaveableData = BoardSaveableData(stage: 5, frame: .zero, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"])
+        let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
+        let data = try PropertyListEncoder().encode(persistentState)
+        persistence.data = data
+        await subject.receive(.didInitialLayout)
+        let board = try #require(subject.boardProcessor as? MockBoardProcessor)
+        #expect(presenter.thingsReceived.count == 5)
+        #expect(presenter.thingsReceived[0] == .userInteraction(false))
+        #expect(presenter.thingsReceived[1] == .putBoardViewIntoInterface(board.view))
+        #expect(presenter.thingsReceived[2] == .animateBoardTransition(.fade))
+        #expect(presenter.thingsReceived[3] == .animateStageLabel)
+        #expect(presenter.thingsReceived[4] == .userInteraction(true))
+        #expect(board.stageNumber == 5)
+        #expect(board.methodsCalled.first == "populateFrom(oldGrid:deckAtStartOfStage:)")
+        #expect(board.grid == Grid(columns: 3, rows: 2))
+        #expect(board.deckAtStartOfStage == ["howdy"])
+        let stage = try #require(subject.stage)
+        #expect(stage.score == 42)
     }
 
     @Test("receive saveBoardState: saves the board state to persistence")
     func saveBoardState() async throws {
-        subject.boardProcessor = BoardProcessor(gridSize: (1,1))
-        subject.stage = Stage()
-        subject.stage?.score = 1
+        let boardProcessor = MockBoardProcessor()
+        subject.boardProcessor = boardProcessor
+        boardProcessor.grid = Grid(columns: 1, rows: 1)
+        subject.stage = Stage(score: 1)
         await subject.receive(.saveBoardState)
-        try? await Task.sleep(for: .seconds(0.1))
-        services.lifetime.didEnterBackgroundPublisher.send()
         await #while(persistence.methodsCalled.isEmpty)
         #expect(persistence.methodsCalled == ["save(_:forKey:)"])
         #expect(persistence.keys == [.boardData])
-        let value = try #require(persistence.value)
-        #expect(value is Data)
+        let value = try #require(persistence.value as? Data)
+        let _ = try PropertyListDecoder().decode(PersistentState.self, from: value)
     }
 
     @Test("receive showHelp: tells the coordinator to showHelp")
@@ -179,17 +243,18 @@ struct LinkSameProcessorTests {
     @Test("after .viewDidLoad, lifetime didEnterBackground if state interface mode is .practice saves the board state to persistence")
     func didEnterBackgroundPractice() async throws {
         subject.state.interfaceMode = .practice
-        subject.boardProcessor = BoardProcessor(gridSize: (1,1))
-        subject.stage = Stage()
-        subject.stage?.score = 1
+        let boardProcessor = MockBoardProcessor()
+        subject.boardProcessor = boardProcessor
+        boardProcessor.grid = Grid(columns: 1, rows: 1)
+        subject.stage = Stage(score: 1)
         await subject.receive(.viewDidLoad)
         try? await Task.sleep(for: .seconds(0.1))
         services.lifetime.didEnterBackgroundPublisher.send()
         await #while(persistence.methodsCalled.isEmpty)
         #expect(persistence.methodsCalled == ["save(_:forKey:)"])
         #expect(persistence.keys == [.boardData])
-        let value = try #require(persistence.value)
-        #expect(value is Data)
+        let value = try #require(persistence.value as? Data)
+        let _ = try PropertyListDecoder().decode(PersistentState.self, from: value)
     }
 }
 

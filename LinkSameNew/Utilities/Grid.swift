@@ -8,7 +8,7 @@
 /// * where that same Piece thinks it is (its x and y)
 ///
 @MainActor
-struct Grid: Codable {
+struct Grid: Equatable, Codable {
     private(set) var grid: [[Piece?]]
     let columns: Int
     let rows: Int

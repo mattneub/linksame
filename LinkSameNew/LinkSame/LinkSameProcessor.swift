@@ -22,16 +22,24 @@ final class LinkSameProcessor: Processor {
     /// Storage for our never-ending task containing eternal for-loops. See the Lifetime object.
     var subscriptionsTask: Task<(), Never>?
 
+    var stageLabelText: String {
+        let stageNumber = self.boardProcessor?.stageNumber ?? 0
+        let maxStages = services.persistence.loadInt(forKey: .lastStage)
+        return "Stage \(stageNumber + 1) of \(maxStages + 1)"
+    }
+
     func receive(_ action: LinkSameAction) async {
         switch action {
         case .cancelNewGame:
             coordinator?.dismiss()
-            if let popoverDefaults = state.defaultsBeforeShowingNewGamePopover {
-                services.persistence.saveIndividually(popoverDefaults.toDefaultsDictionary)
-                state.defaultsBeforeShowingNewGamePopover = nil
+            restorePopoverDefaults()
+        case .didInitialLayout: // sent only once, so this means we are launching
+            if let savedStateData = services.persistence.loadData(forKey: .boardData),
+               let savedState = try? PropertyListDecoder().decode(PersistentState.self, from: savedStateData) {
+                await setUpGameFromSavedState(savedState)
+            } else {
+                await setUpGameFromScratch()
             }
-        case .didInitialLayout:
-            await setUpGameFromScratch()
         case .saveBoardState:
             saveBoardState()
         case .showHelp(sender: let sender):
@@ -45,10 +53,7 @@ final class LinkSameProcessor: Processor {
                 popoverPresentationDelegate: NewGamePopoverDelegate(), // TODO: might have to keep a reference of course
                 dismissalDelegate: presenter as? any NewGamePopoverDismissalButtonDelegate
             )
-            // store these defaults so we can restore them later if user cancels
-            state.defaultsBeforeShowingNewGamePopover = PopoverDefaults(
-                defaultsDictionary: services.persistence.loadAsDictionary([.style, .size, .lastStage])
-            )
+            savePopoverDefaults()
         case .startNewGame:
             coordinator?.dismiss()
             state.defaultsBeforeShowingNewGamePopover = nil // crucial or we'll fall one behind
@@ -83,6 +88,11 @@ final class LinkSameProcessor: Processor {
                     await self.didBecomeActive()
                 }
             }
+            group.addTask { @Sendable @MainActor in
+                for await _ in services.lifetime.willResignActivePublisher.values {
+                    await self.willResignActive()
+                }
+            }
         }
     }
 
@@ -105,22 +115,60 @@ final class LinkSameProcessor: Processor {
         // put its `view` into the interface, replacing the one that may be there already
         await presenter?.receive(.putBoardViewIntoInterface(board.view))
 
-        board.stageNumber = 0
+        boardProcessor?.stageNumber = 0
         // self.board.stage = 8 // testing game end behavior, comment out!
 
-        self.stage = Stage() // TODO: Not doing anything with this yet
+        self.stage = Stage(score: 0)
 
         // build and display board
-        board.createAndDealDeck()
+        boardProcessor?.createAndDealDeck()
         let boardTransition: BoardTransition = .fade
         await presenter?.receive(.animateBoardTransition(boardTransition))
-        saveBoardState()
 
         // show stage label
         state.interfaceMode = .timed // TODO: assuming every new game is a timed game
-        let stageNumber = self.boardProcessor?.stageNumber ?? 0
-        let maxStages = services.persistence.loadInt(forKey: .lastStage)
-        state.stageLabelText = "Stage \(stageNumber + 1) of \(maxStages + 1)"
+        state.stageLabelText = stageLabelText
+        await presenter?.present(state)
+        await presenter?.receive(.animateStageLabel)
+
+        await presenter?.receive(.userInteraction(true))
+
+        saveBoardState() // last of all, now that everything is configured
+    }
+
+    /// Set up the entire game from persistent state that was found in user defaults.
+    /// The board's grid, the pieces, the stage, the score all come from this.
+    func setUpGameFromSavedState(_ savedState: PersistentState) async {
+        // structure is: -------
+        // let board: BoardSaveableData
+        // let score: Int
+        // let timed: Bool
+        // where BoardSaveableData is: -------
+        // let stage: Int
+        // let frame: CGRect [but I think this can be cut]
+        // let grid: Grid
+        // let deckAtStartOfStage: [String]
+        let boardData = savedState.board
+        let grid = boardData.grid
+        guard let board = coordinator?.makeBoardProcessor(gridSize: (grid.columns, grid.rows)) else {
+            return
+        }
+        await presenter?.receive(.userInteraction(false))
+
+        self.boardProcessor = board
+
+        // put its `view` into the interface, replacing the one that may be there already
+        await presenter?.receive(.putBoardViewIntoInterface(board.view))
+
+        boardProcessor?.stageNumber = boardData.stage
+        boardProcessor?.populateFrom(oldGrid: grid, deckAtStartOfStage: boardData.deckAtStartOfStage)
+
+        self.stage = Stage(score: savedState.score)
+
+        await presenter?.receive(.animateBoardTransition(.fade))
+
+        state.interfaceMode = savedState.timed ? .timed : .practice
+        state.stageLabelText = stageLabelText
         await presenter?.present(state)
         await presenter?.receive(.animateStageLabel)
 
@@ -155,11 +203,37 @@ final class LinkSameProcessor: Processor {
         print("did become active")
     }
 
+    /// The app is about to become inactive; respond.
+    func willResignActive() async {
+        // In case we are showing any presented stuff, dismiss it.
+        coordinator?.dismiss()
+        // And in case what was showing was the New Game popover, that counts as cancellation
+        // so restore the defaults.
+        restorePopoverDefaults()
+    }
+
+    /// As the New Game popover appears, save off the defaults that the user can change there,
+    /// so that if the user cancels after making some changes, we can restore them.
+    func savePopoverDefaults() {
+        state.defaultsBeforeShowingNewGamePopover = PopoverDefaults(
+            defaultsDictionary: services.persistence.loadAsDictionary([.style, .size, .lastStage])
+        )
+    }
+
+    /// If we stored any old popover defaults (because we showed the New Game popover), restore them.
+    func restorePopoverDefaults() {
+        if let popoverDefaults = state.defaultsBeforeShowingNewGamePopover {
+            services.persistence.saveIndividually(popoverDefaults.toDefaultsDictionary)
+            state.defaultsBeforeShowingNewGamePopover = nil
+        }
+    }
+
     func saveBoardState() {
-        guard let board = boardProcessor as? BoardProcessor else { return } // TODO: need to fix entirely what gets saved here
+        guard let board = boardProcessor else { return }
+        let boardData = BoardSaveableData(boardProcessor: board)
         guard let score = stage?.score else { return }
         let state = PersistentState(
-            board: board,
+            board: boardData,
             score: score,
             timed: state.interfaceMode == .timed
         )
@@ -172,7 +246,7 @@ final class LinkSameProcessor: Processor {
 /// Reducer representing a clump of saveable game state.
 @MainActor
 struct PersistentState: Codable {
-    let board: BoardProcessor
+    let board: BoardSaveableData
     let score: Int
     let timed: Bool
 }

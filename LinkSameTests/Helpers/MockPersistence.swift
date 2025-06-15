@@ -9,6 +9,7 @@ final class MockPersistence: PersistenceType {
     var string: [String] = []
     var keys = [DefaultKey]()
     var value: Any?
+    var data: Data?
 
     func register(_ dictionary: [DefaultKey: Any]) {
         methodsCalled.append(#function)
@@ -17,11 +18,13 @@ final class MockPersistence: PersistenceType {
     
     func loadDictionary<ValueType>(forKey key: DefaultKey) -> [String: ValueType]? {
         methodsCalled.append(#function)
+        self.keys.append(key)
         return nil
     }
     
     func loadBool(forKey key: DefaultKey) -> Bool {
         methodsCalled.append(#function)
+        self.keys.append(key)
         return false
     }
     
@@ -43,7 +46,8 @@ final class MockPersistence: PersistenceType {
     
     func loadData(forKey key: DefaultKey) -> Data? {
         methodsCalled.append(#function)
-        return nil
+        self.keys.append(key)
+        return self.data
     }
     
     func save(_ value: Any, forKey key: DefaultKey) {

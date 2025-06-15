@@ -7,7 +7,10 @@ import QuartzCore
 protocol BoardProcessorType: AnyObject { // TODO: But I might change this to communicate via an action enum; let's see how things go
     var stageNumber: Int { get set }
     var view: BoardView { get }
+    var grid: Grid { get }
+    var deckAtStartOfStage: [String] { get }
     func createAndDealDeck()
+    func populateFrom(oldGrid: Grid, deckAtStartOfStage: [String])
 }
 
 /*
@@ -31,7 +34,7 @@ protocol BoardProcessorType: AnyObject { // TODO: But I might change this to com
 /// Its view is where the pieces are drawn.
 /// Its pathView (actually, the sublayer of its pathView) is where hints and confirmations are drawn.
 @MainActor
-final class BoardProcessor: BoardProcessorType, @preconcurrency Codable {
+final class BoardProcessor: BoardProcessorType {
 
     private let TOPMARGIN : CGFloat = (1.0/8.0)
     private let BOTTOMMARGIN : CGFloat = (1.0/8.0)
@@ -58,7 +61,7 @@ final class BoardProcessor: BoardProcessorType, @preconcurrency Codable {
     private var rows : Int { return self.grid.rows }
     var grid : Grid // can't live without a grid, but it is mutable
     private var hintPath : Path?
-    private var deckAtStartOfStage = [String]() // in case we are asked to restore this
+    var deckAtStartOfStage = [String]() // in case we are asked to restore this
     
     // view that holds the path drawing, goes in front of all pieces
     // we need this so we can switch touch fall-thru on and off
@@ -163,7 +166,19 @@ final class BoardProcessor: BoardProcessorType, @preconcurrency Codable {
         
         self.hintPath = self.legalPath() // generate initial hint
     }
-    
+
+    func populateFrom(oldGrid: Grid, deckAtStartOfStage oldDeck: [String]) {
+        for i in 0..<oldGrid.columns {
+            for j in 0..<oldGrid.rows {
+                if let p = oldGrid[column: i, row: j] {
+                    self.addPieceAt((i,j), withPicture: p.picName) // thus updating the grid too
+                } // and otherwise it will just be nil
+            }
+        }
+        self.deckAtStartOfStage = oldDeck
+        self.hintPath = self.legalPath() // generate initial hint
+    }
+
     func restartStage() throws {
         // deal stored deck; remove existing pieces as we go
         // attempt to deal with crashes, hard to see what could be crashing except maybe removeLast
@@ -996,4 +1011,23 @@ final class BoardProcessor: BoardProcessorType, @preconcurrency Codable {
     }
     
 
+}
+
+/// Reducer that carries pertinent BoardProcessor data into and out of persistence.
+nonisolated
+struct BoardSaveableData: Codable {
+    // NOTE: These names are important! They are the coding keys we were using previously,
+    // when there was a coding keys enum, so they must remain for backwards compatibility
+    let stage: Int
+    let frame: CGRect // TODO: But I don't think we actually need this, keep an eye out
+    let grid: Grid
+    let deckAtStartOfStage: [String]
+}
+extension BoardSaveableData {
+    @MainActor init(boardProcessor board: any BoardProcessorType) {
+        self.stage = board.stageNumber
+        self.frame = board.view.frame
+        self.grid = board.grid
+        self.deckAtStartOfStage = board.deckAtStartOfStage
+    }
 }

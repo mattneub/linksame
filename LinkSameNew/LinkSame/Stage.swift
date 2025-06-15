@@ -45,7 +45,7 @@ final class Stage {
     private var timer: CancelableTimer? // no timer initially (user has not moved yet)
     private var lastTime: Date = Date.distantPast
 
-    init(score: Int = 0) { // initial score for this stage
+    init(score: Int) { // initial score for this stage
         self.score = score
         self.scoreAtStartOfStage = score // might need this if we restart this stage later
         print("new Stage object!", self)

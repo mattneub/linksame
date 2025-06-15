@@ -45,4 +45,23 @@ struct LifetimeTests {
         #expect(valueReceived == true)
         task.cancel()
     }
+
+    @Test("willResignActive: sends on the willResignActivePublisher")
+    func willResignActive() async {
+        let values = subject.willResignActivePublisher.values
+        var valueReceived = false
+        Task {
+            try? await Task.sleep(for: .seconds(0.1))
+            subject.willResignActive()
+        }
+        let task = Task.detached {
+            for await _ in values {
+                valueReceived = true
+            }
+        }
+        #expect(valueReceived == false)
+        await #while(valueReceived == false)
+        #expect(valueReceived == true)
+        task.cancel()
+    }
 }
