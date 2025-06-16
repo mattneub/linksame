@@ -3,9 +3,11 @@ import Combine
 
 @MainActor
 final class MockLifetime: LifetimeType {
+
     var willResignActivePublisher = PassthroughSubject<Void, Never>()
     var didBecomeActivePublisher = PassthroughSubject<Void, Never>()
     var didEnterBackgroundPublisher = PassthroughSubject<Void, Never>()
+    var willEnterForegroundPublisher = PassthroughSubject<Void, Never>()
     var methodsCalled = [String]()
 
     func didBecomeActive() {
@@ -13,6 +15,10 @@ final class MockLifetime: LifetimeType {
     }
     
     func didEnterBackground() {
+        methodsCalled.append(#function)
+    }
+
+    func willEnterForeground() {
         methodsCalled.append(#function)
     }
 

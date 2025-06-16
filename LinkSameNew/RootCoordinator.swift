@@ -2,6 +2,9 @@ import UIKit
 
 @MainActor
 protocol RootCoordinatorType: AnyObject {
+    // Exposed because the scene delegate needs to talk to it directly.
+    var linkSameProcessor: (any Processor<LinkSameAction, LinkSameState, LinkSameEffect>)? { get }
+
     func createInitialInterface(window: UIWindow)
 
     func showNewGame(

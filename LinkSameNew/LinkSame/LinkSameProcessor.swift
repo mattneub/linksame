@@ -14,7 +14,7 @@ final class LinkSameProcessor: Processor {
     var state = LinkSameState()
 
     /// Stage object that will help manage timer and score while a stage is being played.
-    var stage: Stage?
+    var stage: (any StageType)?
 
     /// Board processor that will manage the board view where the game action takes place.
     var boardProcessor: (any BoardProcessorType)?
@@ -93,6 +93,11 @@ final class LinkSameProcessor: Processor {
                     await self.willResignActive()
                 }
             }
+            group.addTask { @Sendable @MainActor in
+                for await _ in services.lifetime.willEnterForegroundPublisher.values {
+                    await self.willEnterForeground()
+                }
+            }
         }
     }
 
@@ -169,6 +174,7 @@ final class LinkSameProcessor: Processor {
 
         state.interfaceMode = savedState.timed ? .timed : .practice
         state.stageLabelText = stageLabelText
+        state.boardViewHidden = false
         await presenter?.present(state)
         await presenter?.receive(.animateStageLabel)
 
@@ -178,13 +184,15 @@ final class LinkSameProcessor: Processor {
     /// The app is entering the background; respond.
     func didEnterBackground() async {
         switch state.interfaceMode {
-        case .timed:
+        case .timed: break
             // In a timed game, we do not save the board state; a half-played game is thrown away.
             // Rather, the board state was saved when the stage started, and so when we come back
             // to the front, we will resume the stage from the beginning.
             // However, we do hide the board view so it doesn't appear in the app switcher snapshot.
-            state.boardViewHidden = true
-            await presenter?.present(state)
+            // But we can't do that in an `async` context; it's too late for the snapshot.
+            // So we do it in our BoardHider protocol.
+            // state.boardViewHidden = true
+            // await presenter?.present(state)
         case .practice:
             // In a practice game, we do save the board state, and we allow it to appear in the
             // app switcher snapshot.
@@ -196,11 +204,43 @@ final class LinkSameProcessor: Processor {
     func didBecomeActive() async {
         // eliminate spurious call when user pulls down the notification center
         try? await Task.sleep(for: .seconds(0.05))
-        if UIApplication.shared.applicationState == .inactive {
+        if services.application.applicationState == .inactive {
             return
         }
-        // TODO: Do something real here.
-        print("did become active")
+        // Distinguish return from suspension from mere reactivation from deactivation.
+        let comingBack = state.comingBackFromBackground
+        state.comingBackFromBackground = false
+
+        // Take care of corner case where user saw Game Over alert but didn't dismiss it
+        // (and so it was automatically dismissed when we deactivated).
+        if services.persistence.loadBool(forKey: .gameEnded) {
+            services.persistence.save(false, forKey: .gameEnded)
+            await setUpGameFromScratch()
+            return
+        }
+
+        if comingBack { // we were backgrounded
+            // Well, this situation is exactly as if we had just launched: either there is saved
+            // data or there isn't, and either way we want to set up the game based on that.
+            // So we just repeat the `receive` code for `.didInitialLayout`.
+            if let savedStateData = services.persistence.loadData(forKey: .boardData),
+               let savedState = try? PropertyListDecoder().decode(PersistentState.self, from: savedStateData) {
+                await setUpGameFromSavedState(savedState)
+            } else {
+                await setUpGameFromScratch()
+            }
+        } else {
+            stage?.didBecomeActive()
+        }
+    }
+
+    /// The app is about to enter the foreground; respond.
+    func willEnterForeground() async {
+        // Tricky situation here: we are going to get `didBecomeActive` immediately after this.
+        // Well, we don't want to do the same set of stuff twice in a row.
+        // So merely note down that we are coming back from the background,
+        // and let `didBecomeActive` handle the whole thing.
+        state.comingBackFromBackground = true
     }
 
     /// The app is about to become inactive; respond.
@@ -249,4 +289,21 @@ struct PersistentState: Codable {
     let board: BoardSaveableData
     let score: Int
     let timed: Bool
+}
+
+/// Protocol that declares a non-async method to be called when we enter the background.
+@MainActor protocol BoardHider {
+    func didEnterBackgroundNonAsync()
+}
+
+/// Extension that implements the protocol. In order to hide the board view in time for it to be
+/// hidden from the app switcher snapshot mechanism, we must avoid the whole `async` architecture
+/// and just reach right in and hide the darned view.
+extension LinkSameProcessor: BoardHider {
+    func didEnterBackgroundNonAsync() {
+        if state.interfaceMode == .timed {
+            state.boardViewHidden = true
+            boardProcessor?.view.isHidden = true
+        }
+    }
 }

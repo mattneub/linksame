@@ -3,6 +3,9 @@
 struct LinkSameState: Equatable {
     /// Whether the board view should be hidden or displayed.
     var boardViewHidden = false
+    /// Temporary notation so that in `didBecomeActive` we know whether we went all the way into the
+    /// background previously or not.
+    var comingBackFromBackground = false
     /// Temporary copy of the particular defaults that user might change in the new game popover.
     var defaultsBeforeShowingNewGamePopover: PopoverDefaults?
     /// Whether the game mode should be timed or practice.
@@ -16,27 +19,3 @@ struct LinkSameState: Equatable {
         case practice = 1
     }
 }
-
-/// Reducer that turns a dictionary of popover defaults to a struct and vice versa.
-struct PopoverDefaults: Equatable {
-    let lastStage: Int
-    let size: String
-    let style: String
-}
-extension PopoverDefaults {
-    /// Given a defaults dictionary, initialize the struct.
-    init?(defaultsDictionary dict: [DefaultKey: Any]) {
-        guard let lastStage = dict[.lastStage] as? Int else { return nil }
-        guard let size = dict[.size] as? String else { return nil }
-        guard let style = dict[.style] as? String else { return nil }
-        self.lastStage = lastStage
-        self.size = size
-        self.style = style
-    }
-
-    /// Given the struct, produce a defaults dictionary.
-    var toDefaultsDictionary: [DefaultKey: Any] {
-        [.lastStage: lastStage, .size: size, .style: style]
-    }
-}
-

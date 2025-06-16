@@ -46,6 +46,25 @@ struct LifetimeTests {
         task.cancel()
     }
 
+    @Test("willEnterForeground: sends on the willEnterForegroundPublisher")
+    func willEnterForeground() async {
+        let values = subject.willEnterForegroundPublisher.values
+        var valueReceived = false
+        Task {
+            try? await Task.sleep(for: .seconds(0.1))
+            subject.willEnterForeground()
+        }
+        let task = Task.detached {
+            for await _ in values {
+                valueReceived = true
+            }
+        }
+        #expect(valueReceived == false)
+        await #while(valueReceived == false)
+        #expect(valueReceived == true)
+        task.cancel()
+    }
+
     @Test("willResignActive: sends on the willResignActivePublisher")
     func willResignActive() async {
         let values = subject.willResignActivePublisher.values

@@ -34,12 +34,19 @@ func calcBonus(_ diff: Double) -> Int {
     return Int(bonus)
 }
 
+/// Protocol describing the public face of our Stage object, so we can mock it for testing.
+@MainActor
+protocol StageType {
+    var score: Int { get set }
+    func didBecomeActive()
+}
+
 /// The Stage object brings together the score, the timer, and control over the score display in the interface.
 /// The idea is to make a new Stage object every time a new timed stage begins,
 /// and then communicate with it only in terms of game-related events.
 ///
 @MainActor
-final class Stage {
+final class Stage: StageType {
     var score: Int
     let scoreAtStartOfStage: Int
     private var timer: CancelableTimer? // no timer initially (user has not moved yet)
@@ -83,11 +90,11 @@ final class Stage {
         Task {
             await self.timer?.cancel()
         }
-        if !self.didResign {
-            self.didResign = true
-            nc.addObserver(self, selector: #selector(didBecomeActive),
-                           name: UIApplication.didBecomeActiveNotification, object: nil)
-        }
+//        if !self.didResign {
+//            self.didResign = true
+//            nc.addObserver(self, selector: #selector(didBecomeActive),
+//                           name: UIApplication.didBecomeActiveNotification, object: nil)
+//        }
     }
     private func restartTimer() { // private utility: start counting down from 10
         self.timer = CancelableTimer(interval: 10) { [weak self] in
@@ -104,12 +111,13 @@ final class Stage {
 //        restartTimer()
     }
 
-    @objc private func didBecomeActive() { // notification
-        // okay, so it turns out we can "become active" spuriously when user pulls down notification center
-        // however, this is no big deal because we perfectly symmetrical;
-        // we will start the timer and then an instant later cancel it again
+    /// Called by the processor to let us know that we have become active after becoming inactive
+    /// (i.e. not backgrounded, which is a whole different affair). This is regarded as a temporary
+    /// interruption in the game, so carry on timing.
+    func didBecomeActive() {
         self.restartTimer()
     }
+
     @objc private func gameEnded() { // notification from Board
         Task {
             await self.timer?.cancel()

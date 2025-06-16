@@ -3,6 +3,7 @@ import UIKit
 
 @MainActor
 final class MockRootCoordinator: RootCoordinatorType {
+    var linkSameProcessor: (any Processor<LinkSameAction, LinkSameState, LinkSameEffect>)?
 
     var methodsCalled = [String]()
     weak var window: UIWindow?
@@ -19,7 +20,7 @@ final class MockRootCoordinator: RootCoordinatorType {
     func showNewGame(
         sourceItem: (any UIPopoverPresentationControllerSourceItem)?,
         popoverPresentationDelegate: UIPopoverPresentationControllerDelegate?,
-        dismissalDelegate: (any LinkSame.NewGamePopoverDismissalButtonDelegate)?
+        dismissalDelegate: (any NewGamePopoverDismissalButtonDelegate)?
     ) {
         methodsCalled.append(#function)
         self.sourceItem = sourceItem

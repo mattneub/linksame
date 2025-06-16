@@ -3,6 +3,7 @@ import UIKit
 
 @MainActor
 final class MockApplication: ApplicationType {
+    var applicationState: UIApplication.State = .active
     static var methodsCalled = [String]()
     static var bools = [Bool]()
 

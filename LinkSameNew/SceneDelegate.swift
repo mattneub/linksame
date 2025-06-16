@@ -34,16 +34,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         services.lifetime.willResignActive()
     }
 
-    var firstTimeEnteringForeground = true
-
     func sceneWillEnterForeground(_ scene: UIScene) {
-//        if firstTimeEnteringForeground {
-//            firstTimeEnteringForeground = false
-//            return
-//        }
+        services.lifetime.willEnterForeground()
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {
+        // Hide the board view from the app switcher screenshot.
+        // I feel bad about this, but the problem is that by the time the processor gets the
+        // message via the Lifetime object, it is too late to hide the board view! So I have to
+        // bypass the whole module architecture and just reach in directly and hide it, kaboom.
+        if let processor = rootCoordinator.linkSameProcessor as? any BoardHider {
+            processor.didEnterBackgroundNonAsync()
+        }
         services.lifetime.didEnterBackground()
     }
 

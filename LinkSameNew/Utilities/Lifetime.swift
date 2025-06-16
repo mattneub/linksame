@@ -6,11 +6,13 @@ protocol LifetimeType {
     // Publishers that anyone can subscribe to.
     var didBecomeActivePublisher: PassthroughSubject<Void, Never> {get}
     var didEnterBackgroundPublisher: PassthroughSubject<Void, Never> {get}
+    var willEnterForegroundPublisher: PassthroughSubject<Void, Never> {get}
     var willResignActivePublisher: PassthroughSubject<Void, Never> {get}
 
     // Methods that the scene delegate can call.
     func didBecomeActive()
     func didEnterBackground()
+    func willEnterForeground()
     func willResignActive()
 }
 
@@ -21,6 +23,7 @@ protocol LifetimeType {
 final class Lifetime {
     let didBecomeActivePublisher = PassthroughSubject<Void, Never>()
     let didEnterBackgroundPublisher = PassthroughSubject<Void, Never>()
+    let willEnterForegroundPublisher = PassthroughSubject<Void, Never>()
     let willResignActivePublisher = PassthroughSubject<Void, Never>()
 
     func didBecomeActive() {
@@ -29,6 +32,10 @@ final class Lifetime {
 
     func didEnterBackground() {
         didEnterBackgroundPublisher.send()
+    }
+
+    func willEnterForeground() {
+        willEnterForegroundPublisher.send()
     }
 
     func willResignActive() {

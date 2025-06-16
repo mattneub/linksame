@@ -118,24 +118,24 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
 //                    services.persistence.saveIndividually(defs)
 //                    self.oldDefs = nil
 //                }
-                if !self.didObserveActivate {
-                    self.didObserveActivate = true
-                    // register for activate notification only after have deactivated for the first time
-                    nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { _ in
-                        // okay, we've got a huge problem: if the user pulls down the notification center...
-                        // we will get a spurious didBecomeActive just before we get a spurious second willResign
-                        // to work around this and not do all this work at the wrong moment,
-                        // we "debounce"
-                        Task { @MainActor in
-                            try? await Task.sleep(for: .seconds(0.05))
-                            if UIApplication.shared.applicationState == .inactive {
-                                return // debounce, this is a spurious notification
-                            }
-                            // if we get here, it's for real
-                            self.didBecomeActive()
-                        }
-                    }
-                }
+//                if !self.didObserveActivate {
+//                    self.didObserveActivate = true
+//                    // register for activate notification only after have deactivated for the first time
+//                    nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { _ in
+//                        // okay, we've got a huge problem: if the user pulls down the notification center...
+//                        // we will get a spurious didBecomeActive just before we get a spurious second willResign
+//                        // to work around this and not do all this work at the wrong moment,
+//                        // we "debounce"
+//                        Task { @MainActor in
+//                            try? await Task.sleep(for: .seconds(0.05))
+//                            if UIApplication.shared.applicationState == .inactive {
+//                                return // debounce, this is a spurious notification
+//                            }
+//                            // if we get here, it's for real
+//                            self.didBecomeActive()
+//                        }
+//                    }
+//                }
             }
         }
         nc.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { _ in
@@ -209,7 +209,8 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
             self.startNewGame()
         }
     }
-    
+
+    /*
     // this is what we do when we become active, NOT on launch, NOT spurious
     private func didBecomeActive() { // notification
         // show the board view, just in case it was hidden on suspension
@@ -233,7 +234,8 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
         // and if merely reactivating from deactive and not between stages,
         // do nothing and let Stage restart timer
     }
-    
+     */
+
     private func animateBoardTransition(_ transition: BoardTransition) async {
         guard let boardView = self.boardView else { return }
         boardView.layer.isHidden = true

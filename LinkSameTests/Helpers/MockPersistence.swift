@@ -7,9 +7,11 @@ final class MockPersistence: PersistenceType {
     var dict: [DefaultKey: Any]?
     var int = 0
     var string: [String] = []
-    var keys = [DefaultKey]()
-    var value: Any?
+    var loadKeys = [DefaultKey]()
+    var saveKeys = [DefaultKey]()
+    var values = [Any]()
     var data: Data?
+    var bool = false
 
     func register(_ dictionary: [DefaultKey: Any]) {
         methodsCalled.append(#function)
@@ -18,25 +20,25 @@ final class MockPersistence: PersistenceType {
     
     func loadDictionary<ValueType>(forKey key: DefaultKey) -> [String: ValueType]? {
         methodsCalled.append(#function)
-        self.keys.append(key)
+        self.loadKeys.append(key)
         return nil
     }
     
     func loadBool(forKey key: DefaultKey) -> Bool {
         methodsCalled.append(#function)
-        self.keys.append(key)
-        return false
+        self.loadKeys.append(key)
+        return bool
     }
     
     func loadInt(forKey key: DefaultKey) -> Int {
         methodsCalled.append(#function)
-        self.keys.append(key)
+        self.loadKeys.append(key)
         return int
     }
     
     func loadString(forKey key: DefaultKey) -> String {
         methodsCalled.append(#function)
-        self.keys.append(key)
+        self.loadKeys.append(key)
         if self.string.count > 0 {
             return self.string.removeFirst()
         } else {
@@ -46,14 +48,14 @@ final class MockPersistence: PersistenceType {
     
     func loadData(forKey key: DefaultKey) -> Data? {
         methodsCalled.append(#function)
-        self.keys.append(key)
+        self.loadKeys.append(key)
         return self.data
     }
     
     func save(_ value: Any, forKey key: DefaultKey) {
         methodsCalled.append(#function)
-        self.value = value
-        self.keys.append(key)
+        self.values.append(value)
+        self.saveKeys.append(key)
     }
     
     func loadAsDictionary(_ keys: [DefaultKey]) -> [DefaultKey: Any] {
@@ -65,6 +67,4 @@ final class MockPersistence: PersistenceType {
         methodsCalled.append(#function)
         self.dict = dictionary
     }
-    
-
 }
