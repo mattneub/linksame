@@ -4,6 +4,8 @@ import UIKit
 /// the coordinator at creation time.
 class BoardView: UIView, ReceiverPresenter {
 
+    weak var processor: (any Processor<BoardAction, BoardState, BoardEffect>)?
+
     /// Constants defining the outer boundary of the piece drawing area in terms of the piece size.
     /// OUTER is the _total_ additional boundary on _both_ sides of the drawing area; so, on the iPhone
     /// where space is tight, the value 1.0 represents _half_ a piece width on all four sides — i.e. just
@@ -44,6 +46,11 @@ class BoardView: UIView, ReceiverPresenter {
         return pathView
     }()
 
+    /// Currently displayed pieces.
+    var pieces: [Piece] {
+        subviews(ofType: Piece.self)
+    }
+
     /// Initializer. Called by the coordinator at creation time.
     /// - Parameters:
     ///   - columns: Number of columns for drawing pieces.
@@ -73,13 +80,26 @@ class BoardView: UIView, ReceiverPresenter {
     }
 
     func present(_ state: BoardState) async {
-
+        // highlighted pieces
+        for piece in pieces {
+            if state.hilitedPieces.contains(piece) {
+                if !piece.isHilited {
+                    piece.toggleHilite()
+                }
+            } else {
+                if piece.isHilited {
+                    piece.toggleHilite()
+                }
+            }
+        }
     }
 
     func receive(_ effect: BoardEffect) async {
         switch effect {
         case .insert(let piece):
             insert(piece: piece)
+        case .userInteraction(let onOff):
+            type(of: services.application).userInteraction(onOff)
         }
     }
 
@@ -99,11 +119,11 @@ class BoardView: UIView, ReceiverPresenter {
         // Give the piece tap detection.
         let count = piece.gestureRecognizers?.count ?? 0
         if count == 0 {
-            let tap = MyTapGestureRecognizer(target: self, action: #selector(handleTap))
+            let tap = MyTapGestureRecognizer(target: self, action: #selector(tappedPiece))
             piece.addGestureRecognizer(tap)
             // Extra gesture recognizer just for me personally while testing.
             if ProcessInfo.processInfo.environment["TESTING"] != nil {
-                let tap2 = UITapGestureRecognizer(target: self, action: #selector(handleDeveloperDoubleTap))
+                let tap2 = UITapGestureRecognizer(target: self, action: #selector(developerDoubleTappedPiece))
                 tap2.numberOfTapsRequired = 2
                 piece.addGestureRecognizer(tap2)
             }
@@ -136,8 +156,18 @@ class BoardView: UIView, ReceiverPresenter {
     }
 
     @objc func tappedPathView() {}
-    @objc func handleTap() {}
-    @objc func handleDeveloperDoubleTap() {}
+
+    @objc func tappedPiece(_ gestureRecognizer: UITapGestureRecognizer) {
+        guard let piece = gestureRecognizer.view as? Piece else {
+            return
+        }
+        Task {
+            await processor?.receive(.tapped(piece))
+        }
+    }
+
+    @objc func developerDoubleTappedPiece() {}
+
 
 
 }

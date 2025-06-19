@@ -6,9 +6,13 @@ import WaitWhile
 @MainActor
 struct BoardViewTests {
     let screen = MockScreen()
+    let processor = MockProcessor<BoardAction, BoardState, BoardEffect>()
 
     init() {
         services.screen = screen
+        services.application = MockApplication()
+        MockApplication.methodsCalled.removeAll()
+        MockApplication.bools.removeAll()
     }
 
     @Test("pieceSize: works as expected")
@@ -100,6 +104,40 @@ struct BoardViewTests {
         #expect(subview.frame == CGRect(origin: .zero, size: .init(width: 200, height: 200)))
     }
 
+    @Test("pieces: reports Piece subviews")
+    func pieces() {
+        let piece1 = Piece(picName: "piece1", column: 0, row: 0)
+        let piece2 = Piece(picName: "piece2", column: 0, row: 0)
+        let subject = BoardView(columns: 2, rows: 2)
+        #expect(subject.pieces.isEmpty)
+        subject.addSubview(piece1)
+        subject.addSubview(piece2)
+        #expect(subject.pieces.count == 2)
+        #expect(subject.pieces.contains(piece1))
+        #expect(subject.pieces.contains(piece2))
+    }
+
+    @Test("present: obeys state hilited pieces")
+    func presentHilited() async {
+        let piece1 = Piece(picName: "piece1", column: 0, row: 0)
+        let piece2 = Piece(picName: "piece2", column: 0, row: 0)
+        let piece3 = Piece(picName: "piece3", column: 0, row: 0)
+        let piece4 = Piece(picName: "piece4", column: 0, row: 0)
+        let subject = BoardView(columns: 2, rows: 2)
+        subject.addSubview(piece1)
+        subject.addSubview(piece2)
+        subject.addSubview(piece3)
+        subject.addSubview(piece4)
+        piece1.toggleHilite()
+        piece2.toggleHilite()
+        let state = BoardState(hilitedPieces: [piece2, piece3])
+        await subject.present(state)
+        #expect(piece1.isHilited == false)
+        #expect(piece2.isHilited == true)
+        #expect(piece3.isHilited == true)
+        #expect(piece4.isHilited == false)
+    }
+
     @Test("Receive insert: inserts piece at expected location")
     func insert() async throws {
         screen.traitCollection = UITraitCollection { traits in
@@ -121,7 +159,7 @@ struct BoardViewTests {
         // piece is tappable
         let tap = try #require(piece.gestureRecognizers?.first as? MyTapGestureRecognizer)
         #expect(tap.target as? UIView === subject)
-        #expect(tap.action == #selector(subject.handleTap))
+        #expect(tap.action == #selector(subject.tappedPiece))
     }
 
     @Test("Receive insert: inserts piece at expected location on ipad. Bigger margins, allow room for toolbar.")
@@ -146,6 +184,36 @@ struct BoardViewTests {
         // piece is tappable
         let tap = try #require(piece.gestureRecognizers?.first as? MyTapGestureRecognizer)
         #expect(tap.target as? UIView === subject)
-        #expect(tap.action == #selector(subject.handleTap))
+        #expect(tap.action == #selector(subject.tappedPiece))
+    }
+
+    @Test("receive userInteraction: calls application userInteraction")
+    func userInteraction() async {
+        let subject = BoardView(columns: 2, rows: 2)
+        await subject.receive(.userInteraction(false))
+        #expect(MockApplication.methodsCalled == ["userInteraction(_:)"])
+        #expect(MockApplication.bools == [false])
+        await subject.receive(.userInteraction(true))
+        #expect(MockApplication.methodsCalled == ["userInteraction(_:)", "userInteraction(_:)"])
+        #expect(MockApplication.bools == [false, true])
+    }
+
+    @Test("tappedPiece: send processor .tapped(piece)")
+    func tappedPiece() async throws {
+        let subject = BoardView(columns: 2, rows: 2)
+        subject.frame = CGRect(origin: .zero, size: .init(width: 272, height: 272))
+        subject.layoutIfNeeded()
+        subject.processor = processor
+        let piece = Piece(picName: "howdy", column: 1, row: 1)
+        await subject.receive(.insert(piece: piece))
+        let gestureRecognizer = try #require(piece.gestureRecognizers?.first as? MyTapGestureRecognizer)
+        subject.perform(gestureRecognizer.action, with: gestureRecognizer) // whew!
+        await #while(processor.thingsReceived.isEmpty)
+        let action = processor.thingsReceived[0]
+        if case let .tapped(what) = action {
+            #expect(what === piece)
+        } else {
+            throw NSError(domain: "oops", code: 0)
+        }
     }
 }

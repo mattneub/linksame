@@ -1,2 +1,4 @@
 /// Messages from the presenter to the processor.
-enum BoardAction {}
+enum BoardAction {
+    case tapped(Piece)
+}

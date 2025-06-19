@@ -7,9 +7,11 @@ import WaitWhile
 struct BoardProcessorTests {
     let persistence = MockPersistence()
     let boardView = MockReceiverPresenter<BoardEffect, BoardState>()
+    let subject = BoardProcessor(gridSize: (columns: 2, rows: 3))
 
     init() {
         services.persistence = persistence
+        subject.presenter = boardView
     }
 
     @Test("initializer: creates grid")
@@ -146,5 +148,48 @@ struct BoardProcessorTests {
         }
         #expect(subject.grid[column: 0, row: 0] == nil) // good enough, no need to check them all
         #expect(subject.deckAtStartOfStage == [.init(picName: "hello")])
+    }
+
+    @Test("receive tapped: if hilitedPieces contains piece, it is removed; present state")
+    func receiveTappedHilited() async throws {
+        let piece = Piece(picName: "howdy", column: 0, row: 0)
+        subject.state.hilitedPieces = [piece]
+        await subject.receive(.tapped(piece))
+        #expect(boardView.statesPresented.count == 1)
+        #expect(boardView.statesPresented[0].hilitedPieces.isEmpty)
+        await #while(boardView.thingsReceived.count < 2)
+        #expect(boardView.thingsReceived.count == 2)
+        if case .userInteraction(let flag) = boardView.thingsReceived[0] {
+            #expect(flag == false)
+        } else {
+            throw NSError(domain: "oops", code: 0)
+        }
+        if case .userInteraction(let flag) = boardView.thingsReceived[1] {
+            #expect(flag == true)
+        } else {
+            throw NSError(domain: "oops", code: 0)
+        }
+    }
+
+    @Test("receive tapped: if hilitedPieces does not contain piece, it is added; present state")
+    func receiveTappedNotHilited() async throws {
+        let piece = Piece(picName: "howdy", column: 0, row: 0)
+        subject.state.hilitedPieces = []
+        await subject.receive(.tapped(piece))
+        #expect(boardView.statesPresented.count == 1)
+        #expect(boardView.statesPresented[0].hilitedPieces[0] == piece)
+        await #while(boardView.thingsReceived.count < 2)
+        #expect(boardView.thingsReceived.count == 2)
+        if case .userInteraction(let flag) = boardView.thingsReceived[0] {
+            #expect(flag == false)
+        } else {
+            throw NSError(domain: "oops", code: 0)
+        }
+        if case .userInteraction(let flag) = boardView.thingsReceived[1] {
+            #expect(flag == true)
+        } else {
+            throw NSError(domain: "oops", code: 0)
+        }
+        // TODO: test that if we now contain two hilited pieces, we do a pair check
     }
 }

@@ -51,9 +51,11 @@ final class BoardProcessor: BoardProcessorType, Processor {
     /// Reference to the presenter; set by the coordinator on creation.
     weak var presenter: (any ReceiverPresenter<BoardEffect, BoardState>)?
 
+    /// State to be presented to the presenter for display in the interface.
+    var state = BoardState()
+
     var stageNumber = 0
     var showingHint : Bool { return self.legalPathShower.isIlluminating }
-    private var hilitedPieces = [Piece]()
 
     /// The Grid, acting as the source of truth for where the pieces are.
     /// We always have one; its dimensions are determined at creation time.
@@ -77,8 +79,11 @@ final class BoardProcessor: BoardProcessorType, Processor {
         self.grid = Grid(columns: gridSize.columns, rows: gridSize.rows)
     }
 
-    func receive(_ action: BoardAction) {
-        
+    func receive(_ action: BoardAction) async {
+        switch action {
+        case .tapped(let piece):
+            await userTapped(piece: piece)
+        }
     }
 
     /// The "deck" here is just a list of picture names. Create it based on the style and the size
@@ -297,8 +302,8 @@ final class BoardProcessor: BoardProcessorType, Processor {
     // make no assumptions about how many are in list!
     
     func unhilite() {
-        while self.hilitedPieces.count > 0 {
-            let p = self.hilitedPieces.removeLast()
+        while state.hilitedPieces.count > 0 {
+            let p = state.hilitedPieces.removeLast()
             p.toggleHilite()
         }
     }
@@ -383,10 +388,10 @@ final class BoardProcessor: BoardProcessorType, Processor {
         // notify (so score can be incremented)
         // nc.post(name: BoardProcessor.userMoved, object: self)
         // actually remove the pieces (we happen to know there must be exactly two)
-        for piece in self.hilitedPieces {
+        for piece in state.hilitedPieces {
             self.removePiece(piece)
         }
-        self.hilitedPieces.removeAll()
+        state.hilitedPieces.removeAll()
         // game over? if so, notify along with current stage and we're out of here!
         if self.gameOver() {
             Task { @MainActor in
@@ -796,13 +801,15 @@ final class BoardProcessor: BoardProcessorType, Processor {
     }
     
     private func checkHilitedPair() async {
-        assert(self.hilitedPieces.count == 2, "Must have a pair to check")
-        for piece in self.hilitedPieces {
+        print("should check hilited pair")
+        return () // do nothing for now
+        assert(state.hilitedPieces.count == 2, "Must have a pair to check")
+        for piece in state.hilitedPieces {
             assert(piece.window != nil, "Pieces to check must be displayed on board")
         }
         type(of: services.application).userInteraction(false)
-        let p1 = self.hilitedPieces[0]
-        let p2 = self.hilitedPieces[1]
+        let p1 = state.hilitedPieces[0]
+        let p2 = state.hilitedPieces[1]
         if p1.picName != p2.picName {
             self.unhilite()
             type(of: services.application).userInteraction(true)
@@ -828,29 +835,23 @@ final class BoardProcessor: BoardProcessorType, Processor {
     // maintain an ivar pointing to hilited pieces
     // when that list has two items, check them for validity
 
-    @objc private func handleTap(_ g:UIGestureRecognizer) {
-        Task {
-            type(of: services.application).userInteraction(false)
-            let p = g.view as! Piece
-            let hilited = p.isHilited
-            if !hilited {
-                if self.hilitedPieces.count > 1 {
-                    type(of: services.application).userInteraction(true)
-                    return
-                }
-                self.hilitedPieces += [p]
-            } else {
-                self.hilitedPieces.remove(object:p) // see utility at top
+    private func userTapped(piece: Piece) async {
+        assert(state.hilitedPieces.count < 2, "tap when two pieces are already hilited")
+        await presenter?.receive(.userInteraction(false))
+        defer {
+            Task {
+                await presenter?.receive(.userInteraction(true))
             }
-            p.toggleHilite()
-            if self.hilitedPieces.count == 2 {
-                // print("========")
-                // print("about to check hilited pair \(self.hilitedPieces)")
-                type(of: services.application).userInteraction(true)
-                await checkHilitedPair()
-            } else {
-                type(of: services.application).userInteraction(true)
-            }
+        }
+        let hilited = state.hilitedPieces.contains(piece)
+        if !hilited {
+            state.hilitedPieces.append(piece)
+        } else {
+            state.hilitedPieces.remove(object: piece)
+        }
+        await presenter?.present(state)
+        if state.hilitedPieces.count == 2 {
+            await checkHilitedPair()
         }
     }
     
@@ -862,7 +863,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 if p.isHilited {
                     p.toggleHilite()
                 }
-                self.hilitedPieces = [self.piece(at: path.first!)!, self.piece(at: path.last!)!]
+                state.hilitedPieces = [self.piece(at: path.first!)!, self.piece(at: path.last!)!]
                 await checkHilitedPair()
             }
         }

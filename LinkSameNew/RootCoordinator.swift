@@ -113,6 +113,7 @@ final class RootCoordinator: RootCoordinatorType {
         (linkSameProcessor as? LinkSameProcessor)?.boardProcessor = boardProcessor
         let boardView = BoardView(columns: gridSize.0, rows: gridSize.1)
         boardProcessor.presenter = boardView
+        boardView.processor = boardProcessor
         if let viewController = rootViewController as? LinkSameViewController {
             viewController.backgroundView.subviews.forEach { $0.removeFromSuperview() }
             viewController.backgroundView.addSubview(boardView)
