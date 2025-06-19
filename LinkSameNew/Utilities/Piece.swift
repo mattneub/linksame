@@ -8,47 +8,51 @@ import AVFoundation
 
 final class Piece: UIView, Encodable, @preconcurrency Decodable {
 
-    // define equality as identity
-    static func == (lhs:Piece, rhs:Piece) -> Bool {
+    // TODO: Look into this. I could supply an equivalency method, or I could redefine equality.
+    /// Define equality as identity. If you want to know whether two pieces are _equivalent_
+    /// you just have to test their properties yourself.
+    static func == (lhs: Piece, rhs: Piece) -> Bool {
         return lhs === rhs
     }
 
-    // what image we display
-    nonisolated(unsafe) var picName : String
+    /// What image we display.
+    nonisolated(unsafe) var picName: String
 
-    // where we are slotted
-    nonisolated(unsafe) var x : Int = 0
-    nonisolated(unsafe) var y : Int = 0
+    /// Where we are slotted.
+    nonisolated(unsafe) var column: Int
+    nonisolated(unsafe) var row: Int
 
-    private var hilite : Bool = false
-    var isHilited : Bool {
+    private var hilite: Bool = false
+    var isHilited: Bool {
         return self.hilite
     }
 
     override var description : String {
-        return "picname: \(picName); x: \(x); y: \(y)"
+        return "picname: \(picName); column: \(column); row: \(row)"
     }
 
-    init(picName:String, frame:CGRect) {
+    init(picName: String, column: Int, row: Int) {
         self.picName = picName
-        super.init(frame:frame)
+        self.column = column
+        self.row = row
+        super.init(frame: .zero)
     }
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    enum CodingKeys : String, CodingKey {
-        case x
-        case y
+    enum CodingKeys: String, CodingKey {
+        case column = "x" // keep old coded name
+        case row = "y" // keep old coded name
         case picName
     }
-    
+
     // because we are subclass of class with designated initializer, must implement `init(from:)` ourselves
     init(from decoder: any Decoder) throws {
         let con = try! decoder.container(keyedBy: CodingKeys.self)
-        self.x = try! con.decode(Int.self, forKey: .x)
-        self.y = try! con.decode(Int.self, forKey: .y)
+        self.column = try! con.decode(Int.self, forKey: .column)
+        self.row = try! con.decode(Int.self, forKey: .row)
         self.picName = try! con.decode(String.self, forKey: .picName)
         super.init(frame:.zero)
     }
@@ -66,12 +70,12 @@ final class Piece: UIView, Encodable, @preconcurrency Decodable {
         con.fill(perireal.insetBy(dx: -1, dy: -1)) // outset to ensure full coverage
         
         // frame: draw shade all the way round, then light round two sides
-        let shadow = UIColor(red:0.670, green:0.537, blue:0.270, alpha:1.000)
+        let shadow = UIColor(red: 0.670, green: 0.537, blue: 0.270, alpha: 1.000)
         con.setStrokeColor(shadow.cgColor)
         let peri = perireal.insetBy(dx: 1, dy: 1)
         con.setLineWidth(1.5)
         con.stroke(peri)
-        let lite = UIColor(red:1.000, green:0.999, blue:0.999, alpha:1.000)
+        let lite = UIColor(red: 1.000, green: 0.999, blue: 0.999, alpha: 1.000)
         con.setStrokeColor(lite.cgColor)
         let points = [
             CGPoint(x: peri.minX, y: peri.maxY),
@@ -81,13 +85,11 @@ final class Piece: UIView, Encodable, @preconcurrency Decodable {
         ]
         con.strokeLineSegments(between: points)
         
-//        let path = Bundle.main.path(forResource: self.picName, ofType: "png", inDirectory:"foods")!
-//        let pic = UIImage(contentsOfFile:path)!
         // get picture; little-known fact, we can have the caching of UIImage(named:) for folder-contained image
         let pic = UIImage(named:"foods/\(self.picName)")!
         // draw centered
         // grapple with what would happen if rect were smaller than pic.size
-        let inset : CGFloat = 4
+        let inset: CGFloat = 4
         let maxrect = rect.insetBy(dx: inset, dy: inset)
         var drawrect = AVMakeRect(aspectRatio: pic.size, insideRect: maxrect.insetBy(dx: 10, dy: 10))
         // experiment: make bigger than original image, up to this limit, esp. for Easy ipad size
@@ -102,5 +104,9 @@ final class Piece: UIView, Encodable, @preconcurrency Decodable {
         self.hilite = !self.hilite
         self.setNeedsDisplay()
     }
-    
+}
+
+/// Reducer for maintaining key information about a Piece.
+struct PieceReducer: Equatable, Codable {
+    let picName: String
 }

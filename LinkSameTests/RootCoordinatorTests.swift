@@ -96,12 +96,41 @@ struct RootCoordinatorTests {
         #expect(presentedViewController.presentingViewController == nil)
     }
 
-    @Test("makeBoardProcessor: creates Board module, configures it, returns Board processor")
+    @Test("makeBoardProcessor: creates Board module")
     func makeBoardProcessor() async throws {
-        let result = subject.makeBoardProcessor(gridSize: (3, 2))
-        let processor = try #require(result as? BoardProcessor)
-        let grid = processor.grid
+        let window = makeWindow()
+        subject.createInitialInterface(window: window)
+        subject.makeBoardProcessor(gridSize: (3, 2))
+        let linkSameProcessor = try #require(subject.linkSameProcessor as? LinkSameProcessor)
+        let boardProcessor = try #require(linkSameProcessor.boardProcessor as? BoardProcessor)
+        let boardView = try #require(boardProcessor.presenter as? BoardView)
+        let linkSameViewController = try #require(subject.rootViewController as? LinkSameViewController)
+        #expect(boardView.translatesAutoresizingMaskIntoConstraints == false)
+        let constraints = linkSameViewController.backgroundView.constraints.filter { $0.secondItem as? UIView === boardView }
+        #expect(constraints.count == 4)
+        #expect(constraints.allSatisfy { $0.firstItem as? UIView === linkSameViewController.backgroundView })
+        #expect(constraints.allSatisfy { $0.secondItem as? UIView === boardView })
+        let firsts = constraints.map { $0.firstAttribute }
+        let expected: [NSLayoutConstraint.Attribute] = [.top, .bottom, .leading, .trailing]
+        #expect(Set(firsts) == Set(expected))
+        #expect(constraints.allSatisfy { $0.firstAttribute == $0.secondAttribute })
+        let grid = boardProcessor.grid
         #expect(grid.columns == 3)
         #expect(grid.rows == 2)
+        #expect(boardView.columns == 3)
+        #expect(boardView.rows == 2)
+    }
+
+    @Test("hideBoardView: hides board view")
+    func hideBoardView() throws {
+        let window = makeWindow()
+        subject.createInitialInterface(window: window)
+        subject.makeBoardProcessor(gridSize: (3, 2))
+        let linkSameProcessor = try #require(subject.linkSameProcessor as? LinkSameProcessor)
+        let boardProcessor = try #require(linkSameProcessor.boardProcessor as? BoardProcessor)
+        let boardView = try #require(boardProcessor.presenter as? BoardView)
+        #expect(boardView.isHidden == false)
+        subject.hideBoardView()
+        #expect(boardView.isHidden == true)
     }
 }

@@ -2,9 +2,6 @@ import UIKit
 
 @MainActor
 protocol RootCoordinatorType: AnyObject {
-    // Exposed because the scene delegate needs to talk to it directly.
-    var linkSameProcessor: (any Processor<LinkSameAction, LinkSameState, LinkSameEffect>)? { get }
-
     func createInitialInterface(window: UIWindow)
 
     func showNewGame(
@@ -20,7 +17,9 @@ protocol RootCoordinatorType: AnyObject {
 
     func dismiss()
 
-    func makeBoardProcessor(gridSize: (Int, Int)) -> any BoardProcessorType
+    func makeBoardProcessor(gridSize: (Int, Int))
+
+    func hideBoardView()
 }
 
 @MainActor
@@ -109,8 +108,30 @@ final class RootCoordinator: RootCoordinatorType {
         rootViewController?.dismiss(animated: unlessTesting(true))
     }
 
-    func makeBoardProcessor(gridSize: (Int, Int)) -> any BoardProcessorType {
-        BoardProcessor(gridSize: gridSize)
+    func makeBoardProcessor(gridSize: (Int, Int)) {
+        let boardProcessor = BoardProcessor(gridSize: gridSize)
+        (linkSameProcessor as? LinkSameProcessor)?.boardProcessor = boardProcessor
+        let boardView = BoardView(columns: gridSize.0, rows: gridSize.1)
+        boardProcessor.presenter = boardView
+        if let viewController = rootViewController as? LinkSameViewController {
+            viewController.backgroundView.subviews.forEach { $0.removeFromSuperview() }
+            viewController.backgroundView.addSubview(boardView)
+            boardView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                viewController.backgroundView.topAnchor.constraint(equalTo: boardView.topAnchor),
+                viewController.backgroundView.bottomAnchor.constraint(equalTo: boardView.bottomAnchor),
+                viewController.backgroundView.leadingAnchor.constraint(equalTo: boardView.leadingAnchor),
+                viewController.backgroundView.trailingAnchor.constraint(equalTo: boardView.trailingAnchor),
+            ])
+            // important: we need the boardView to attain its actual size, immediately
+            viewController.backgroundView.layoutIfNeeded()
+        }
+    }
+
+    func hideBoardView() {
+        // TODO: I am not dealing with the rule that says only to do this if interface mode is timed
+        // and indeed I might not even bother
+        rootViewController?.view.subviews(ofType: BoardView.self).first?.isHidden = true
     }
 
 }

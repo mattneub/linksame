@@ -2,17 +2,19 @@
 import UIKit
 import QuartzCore
 
-/// Public face of the BoardProcessor, so we can mock it for testing.
+// TODO: NOTE - I might change this to communicate via an action enum; let's see how things go.
+/// Public face of the BoardProcessor, so we can mock it for testing. This defines the messages
+/// that the LinkSameProcessor can send to the BoardProcessor.
 @MainActor
-protocol BoardProcessorType: AnyObject { // TODO: But I might change this to communicate via an action enum; let's see how things go
+protocol BoardProcessorType: AnyObject {
     var stageNumber: Int { get set }
-    var view: BoardView { get }
     var grid: Grid { get }
-    var deckAtStartOfStage: [String] { get }
-    func createAndDealDeck()
-    func populateFrom(oldGrid: Grid, deckAtStartOfStage: [String])
+    var deckAtStartOfStage: [PieceReducer] { get }
+    func createAndDealDeck() async throws
+    func populateFrom(oldGrid: Grid, deckAtStartOfStage: [PieceReducer]) async
 }
 
+// TODO: eventually get rid of this comment
 /*
  Board has strong reference to View
  Board has strong reference to Grid
@@ -31,188 +33,142 @@ protocol BoardProcessorType: AnyObject { // TODO: But I might change this to com
 /// The BoardProcessor serves the LinkSameProcessor. It doesn't know how the whole game works,
 /// but it does know how the game is _played_: it understands the physical mechanism of the game
 /// (taps on pieces), and it understands the notion of a legal move and what happens in response.
-/// Its view is where the pieces are drawn.
-/// Its pathView (actually, the sublayer of its pathView) is where hints and confirmations are drawn.
+/// Most important, it maintains the Grid which is the source of truth for where the pieces are.
+/// Its presenter is the view where the pieces are actually drawn.
 @MainActor
-final class BoardProcessor: BoardProcessorType {
+final class BoardProcessor: BoardProcessorType, Processor {
 
-    private let TOPMARGIN : CGFloat = (1.0/8.0)
-    private let BOTTOMMARGIN : CGFloat = (1.0/8.0)
-    private let LEFTMARGIN : CGFloat = (1.0/8.0)
-    private let RIGHTMARGIN : CGFloat = (1.0/8.0)
-    private var OUTER : CGFloat {
-        var result : CGFloat = onPhone ? 1.0 : 2.0
-        if on3xScreen { result = 2.0 }
-        return result
-    }
-    
-    static let gameOver = Notification.Name("gameOver")
-    static let userMoved = Notification.Name("userMoved")
-    static let userTappedPath = Notification.Name("userTappedPath")
-    
-    typealias Point = (x:Int, y:Int)
-    typealias Path = [Point]
-    
-    let view: BoardView // TODO: make BoardView a presenter, make this weak
+//    static let gameOver = Notification.Name("gameOver")
+//    static let userMoved = Notification.Name("userMoved")
+//    static let userTappedPath = Notification.Name("userTappedPath")
+
+    /// The address of a slot within the grid.
+    typealias Slot = (column: Int, row: Int)
+
+    /// Expression of the concept of a path between a succession of slots.
+    typealias Path = [Slot]
+
+    /// Reference to the presenter; set by the coordinator on creation.
+    weak var presenter: (any ReceiverPresenter<BoardEffect, BoardState>)?
+
     var stageNumber = 0
     var showingHint : Bool { return self.legalPathShower.isIlluminating }
     private var hilitedPieces = [Piece]()
-    private var columns : Int { return self.grid.columns }
-    private var rows : Int { return self.grid.rows }
-    var grid : Grid // can't live without a grid, but it is mutable
+
+    /// The Grid, acting as the source of truth for where the pieces are.
+    /// We always have one; its dimensions are determined at creation time.
+    var grid: Grid
+
+    /// Shortcut for accessing the dimensions of the grid.
+    var columns: Int { grid.columns }
+    var rows: Int { grid.rows }
+
     private var hintPath : Path?
-    var deckAtStartOfStage = [String]() // in case we are asked to restore this
-    
-    // view that holds the path drawing, goes in front of all pieces
-    // we need this so we can switch touch fall-thru on and off
-    private lazy var pathView : UIView = {
-        let v = LegalPathShower.PathView(pathShower: self.legalPathShower)
-        v.isUserInteractionEnabled = false // clicks just fall right thru
-        self.view.addSubview(v)
-        self.pathView = v
-        let t = UITapGestureRecognizer(target: self, action: #selector(tappedPathView))
-        v.addGestureRecognizer(t)
-        v.frame = self.view.bounds
-        v.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        return v
-    }()
 
-    private lazy var pieceSize : CGSize = {
-        // assert(self.view != nil, "Meaningless to ask for piece size with no view.")
-        assert((self.columns > 0 && self.rows > 0), "Meaningless to ask for piece size with no grid dimensions.")
-        // print("calculating piece size")
-        // divide view bounds, allow 1 extra plus margins
-        let pieceWidth : CGFloat =
-            self.view.bounds.size.width / (CGFloat(self.columns) + OUTER + LEFTMARGIN + RIGHTMARGIN)
-        let pieceHeight : CGFloat =
-            self.view.bounds.size.height / (CGFloat(self.rows) + OUTER + TOPMARGIN + BOTTOMMARGIN)
-        return CGSize(width: pieceWidth, height: pieceHeight)
-    }()
-    
-    init (gridSize: (Int, Int)) {
-        self.view = BoardView(frame: .zero)
-        self.grid = Grid(columns: gridSize.0, rows: gridSize.1)
-        // super.init()
-    }
-    
-    enum CodingKeys : String, CodingKey {
-        case grid
-        case stage
-        case frame
-        case deckAtStartOfStage
-    }
-    func encode(to encoder: any Encoder) throws {
-        var con = encoder.container(keyedBy: CodingKeys.self)
-        try! con.encode(self.stageNumber, forKey: .stage)
-        try! con.encode(self.view.frame, forKey: .frame)
-        try! con.encode(self.grid, forKey: .grid)
-        try! con.encode(self.deckAtStartOfStage, forKey: .deckAtStartOfStage)
+    /// Variable where we maintain the contents of the "deck" at the start of each stage,
+    /// in case we are asked to restart the stage. The "deck" consists of just a list of pictures,
+    /// because we know where the corresponding pieces go: just fill the grid.
+    var deckAtStartOfStage = [PieceReducer]()
+
+    /// Initializer.
+    /// - Parameter gridSize: The size of our grid, which will be created, empty, at initialization.
+    ///   We cannot live without a grid, and a grid cannot live without a size, which is immutable.
+    init(gridSize: (columns: Int, rows: Int)) {
+        self.grid = Grid(columns: gridSize.columns, rows: gridSize.rows)
     }
 
-    init(from decoder: any Decoder) throws {
-        let con = try! decoder.container(keyedBy: CodingKeys.self)
-        self.stageNumber = try! con.decode(Int.self, forKey: .stage)
-        self.deckAtStartOfStage = try! con.decode([String].self, forKey: .deckAtStartOfStage)
-        let frame = try! con.decode(CGRect.self, forKey: .frame)
-        self.view = BoardView(frame: frame)
-        // instead of just setting the decoded grid as our grid,
-        // use it to create a new grid and populate it and our view
-        let grid = try! con.decode(Grid.self, forKey: .grid)
-        self.grid = Grid(columns: grid.columns, rows: grid.rows)
-        // super.init() // has to go here so we can say `self`
-        for i in 0..<grid.columns {
-            for j in 0..<grid.rows {
-                if let p = grid[column: i, row: j] {
-                    self.addPieceAt((i,j), withPicture: p.picName)
-                }
-            }
-        }
-        // aaaaaand we still have to make our hint path
-        self.hintPath = self.legalPath() // generate initial hint
+    func receive(_ action: BoardAction) {
+        
     }
-    
-    // the "deck" is just a list of piece names
-    func createAndDealDeck() {
+
+    /// The "deck" here is just a list of picture names. Create it based on the style and the size
+    /// of the grid, shuffle it, save a copy in case we have to restart the stage,
+    /// deal it into the grid, and make every piece appear in the interface.
+    func createAndDealDeck() async throws {
         // determine which pieces to use
-        let (start1,start2) = Styles.pieces(services.persistence.loadString(forKey: .style))
-        // create deck of piece names
+        let (start1, start2) = Styles.pieces(services.persistence.loadString(forKey: .style))
+        // base set of pictures, always used in its entirety
         var deck = [String]()
+        // four copies of each picture
         for _ in 0..<4 {
-            for i in start1..<start1+9 {
+            for i in start1 ..< start1 + 9 {
                 deck += [String(i)]
             }
         }
         // determine which additional pieces to use, finish deck of piece names
-        let (w,h) = (self.columns, self.rows)
-        let howmany : Int = ((w * h) / 4) - 9
+        let howmany = ((columns * rows) / 4) - 9 // total separate images needed, minus the 9 base images
         for _ in 0..<4 {
-            for i in start2..<start2+howmany {
+            for i in start2 ..< start2 + howmany {
                 deck += [String(i)]
             }
         }
+        // done! shuffle
         for _ in 0..<4 {
             deck.shuffle()
         }
-        
         // store a copy so we can restart the stage if we have to
-        self.deckAtStartOfStage = deck
-        
+        self.deckAtStartOfStage = deck.map { PieceReducer(picName: $0) }
         // create actual pieces and we're all set!
-        for i in 0..<w {
-            for j in 0..<h {
-                self.addPieceAt((i,j), withPicture: deck.removeLast()) // heh heh, pops and returns
+        for column in 0 ..< columns {
+            for row in 0 ..< rows {
+                guard !deck.isEmpty else {
+                    throw DeckSizeError.oops
+                }
+                await addPieceAt((column: column, row: row), withPicture: deck.removeLast())
             }
         }
-        
         self.hintPath = self.legalPath() // generate initial hint
     }
 
-    func populateFrom(oldGrid: Grid, deckAtStartOfStage oldDeck: [String]) {
-        for i in 0..<oldGrid.columns {
-            for j in 0..<oldGrid.rows {
-                if let p = oldGrid[column: i, row: j] {
-                    self.addPieceAt((i,j), withPicture: p.picName) // thus updating the grid too
+    /// Given a grid and a deck, make our grid look like the old grid, making all the same
+    /// pieces appear in the interface, and keep a copy of the deck in case we have to restart
+    /// the stage.
+    func populateFrom(oldGrid: Grid, deckAtStartOfStage oldDeck: [PieceReducer]) async {
+        for column in 0 ..< oldGrid.columns {
+            for row in 0 ..< oldGrid.rows {
+                if let oldPiece = oldGrid[column: column, row: row] {
+                    await addPieceAt((column: column, row: row), withPicture: oldPiece.picName)
                 } // and otherwise it will just be nil
+                // TODO: seem to be just assuming that the physical layout is empty
             }
         }
         self.deckAtStartOfStage = oldDeck
         self.hintPath = self.legalPath() // generate initial hint
     }
 
-    func restartStage() throws {
+    func restartStage() async throws {
         // deal stored deck; remove existing pieces as we go
         // attempt to deal with crashes, hard to see what could be crashing except maybe removeLast
-        guard self.deckAtStartOfStage.count == self.columns * self.rows else {
-            enum DeckSizeError : Error {
-                case oops
-            }
+        guard deckAtStartOfStage.count == columns * rows else {
             throw DeckSizeError.oops
         }
-        var deck = self.deckAtStartOfStage
-        for i in 0..<self.columns {
-            for j in 0..<self.rows {
-                if let oldPiece = self.piece(at:(i,j)) {
+        var deck = deckAtStartOfStage // do not change deckAtStartOfStage, we might need it again!
+        for column in 0 ..< self.columns {
+            for row in 0 ..< self.rows {
+                // TODO: This looks like it should be otiose: addPiece should remove if a piece is already slotted in
+                if let oldPiece = self.piece(at: (column: column, row: row)) {
                     self.removePiece(oldPiece)
                 }
-                self.addPieceAt((i,j), withPicture: deck.removeLast()) // heh heh, pops and returns
+                guard !deck.isEmpty else {
+                    throw DeckSizeError.oops
+                }
+                await addPieceAt((column: column, row: row), withPicture: deck.removeLast().picName)
             }
         }
         self.hintPath = self.legalPath() // generate initial hint
     }
 
     // shuffle existing pieces; could be because user asked to shuffle, could be we're out of legal moves
-    func redeal () {
+    func redeal() {
         repeat {
             type(of: services.application).userInteraction(false)
-            // gather up all pieces (as names), shuffle them, deal them into their current slots
+            // gather up all displayed pieces (as picture names), shuffle them, deal them into their current slots
             var deck = [String]()
-            for i in 0 ..< self.columns {
-                for j in 0 ..< self.rows {
-                    let piece = self.piece(at:(i,j))
-                    if piece == nil {
-                        continue
+            for column in 0 ..< columns {
+                for row in 0 ..< rows {
+                    if let piece = self.piece(at: (column: column, row: row)) {
+                        deck.append(piece.picName)
                     }
-                    deck += [piece!.picName]
                 }
             }
             deck.shuffle()
@@ -220,11 +176,10 @@ final class BoardProcessor: BoardProcessorType {
             deck.shuffle()
             deck.shuffle()
             type(of: services.application).userInteraction(true)
-            for i in 0 ..< self.columns {
-                for j in 0 ..< self.rows {
-                    let piece = self.piece(at:(i,j))
-                    if let piece = piece {
-                        // very lightweight; we just assign the name, let the piece worry about the picture
+            for column in 0 ..< columns {
+                for row in 0 ..< rows {
+                    if let piece = self.piece(at: (column: column, row: row)) {
+                        // TODO: move this to view, I think
                         UIView.transition(
                             with: piece, duration: 0.7, options: .transitionFlipFromLeft, animations: {
                                 piece.picName = deck.removeLast()
@@ -234,6 +189,7 @@ final class BoardProcessor: BoardProcessorType {
                 }
             }
         } while self.legalPath() == nil // both creates and tests for existence of legal path
+        // TODO: and don't I need to update the hint path?
     }
     
     // okay, so previously I had this functionality spread over two methods
@@ -266,15 +222,16 @@ final class BoardProcessor: BoardProcessorType {
         private var pathToIlluminate : Path?
         fileprivate private(set) var isIlluminating = false {
             didSet {
-                switch self.isIlluminating {
-                case false:
-                    self.pathToIlluminate = nil
-                    self.board.pathView.isUserInteractionEnabled = false // make touches just fall thru once again
-                    self.board.pathView.setNeedsDisplay()
-                case true:
-                    self.board.pathView.isUserInteractionEnabled = true // block touches
-                    self.board.pathView.setNeedsDisplay()
-                }
+                // TODO: Restore this, just commenting out so I can compile
+//                switch self.isIlluminating {
+//                case false:
+//                    self.pathToIlluminate = nil
+//                    self.board.pathView.isUserInteractionEnabled = false // make touches just fall thru once again
+//                    self.board.pathView.setNeedsDisplay()
+//                case true:
+//                    self.board.pathView.isUserInteractionEnabled = true // block touches
+//                    self.board.pathView.setNeedsDisplay()
+//                }
             }
         }
         fileprivate func illuminate(path:Path) {
@@ -291,18 +248,19 @@ final class BoardProcessor: BoardProcessorType {
             // okay, we have a path
             // connect the dots; however, the dots we want to connect are the *centers* of the pieces...
             // whereas we are given piece *origins*, so calculate offsets
-            let sz = self.board.pieceSize
-            let offx = sz.width/2.0
-            let offy = sz.height/2.0
-            con.setLineJoin(.round)
-            con.setStrokeColor(red: 0.4, green: 0.4, blue: 1.0, alpha: 1.0)
-            con.setLineWidth(3.0)
-            con.beginPath()
-            con.addLines(between: arr.map {piece in
-                let origin = self.board.originOf(piece)
-                return CGPoint(x: origin.x + offx, y: origin.y + offy)
-            })
-            con.strokePath()
+            // TODO: restore this, just commenting out so I can compile
+//            let sz = self.board.pieceSize
+//            let offx = sz.width/2.0
+//            let offy = sz.height/2.0
+//            con.setLineJoin(.round)
+//            con.setStrokeColor(red: 0.4, green: 0.4, blue: 1.0, alpha: 1.0)
+//            con.setLineWidth(3.0)
+//            con.beginPath()
+//            con.addLines(between: arr.map {piece in
+//                let origin = self.board.originOf(piece)
+//                return CGPoint(x: origin.x + offx, y: origin.y + offy)
+//            })
+//            con.strokePath()
         }
         deinit {
             print("farewell from LegalPathShower")
@@ -311,42 +269,26 @@ final class BoardProcessor: BoardProcessorType {
     
     private lazy var legalPathShower = LegalPathShower(board:self)
     
-    private func piece(at p:Point) -> Piece? {
-        let (i,j) = p
+    private func piece(at slot: Slot) -> Piece? {
+        let (column, row) = slot
         // it is legal to ask for piece one slot outside boundaries, but not further
-        assert(i >= -1 && i <= self.columns, "Piece requested out of bounds (x)")
-        assert(j >= -1 && j <= self.rows, "Piece requested out of bounds (y)")
-        // report slot outside boundaries as empty
-        if (i == -1 || i == self.columns) { return nil }
-        if (j == -1 || j == self.rows) { return nil }
-        // report actual value within boundaries
-        return self.grid[column: i, row: j]
+        assert(column >= -1 && column <= self.columns, "Piece requested out of bounds (column)")
+        assert(row >= -1 && row <= self.rows, "Piece requested out of bounds (row)")
+        // outside boundaries, report slot as empty
+        if (column == -1 || column == self.columns) { return nil }
+        if (row == -1 || row == self.rows) { return nil }
+        // inside boundaries, report actual piece at slot
+        return grid[column: column, row: row]
     }
     
     // put a piece in a slot and into interface
-    
-    private func addPieceAt(_ p:Point, withPicture picTitle:String) {
-        let sz = self.pieceSize
-        let orig = self.originOf(p)
-        let f = CGRect(origin: orig, size: sz)
-        let piece = Piece(picName:picTitle, frame:f)
-        // place the Piece in the interface
-        // we are conscious that we must not accidentally draw on top of the transparency view
-        self.view.insertSubview(piece, belowSubview: self.pathView) // this is the cleverest line of code in the whole app :)
-        // also place the Piece in the grid, and tell it where it is
-        let (i,j) = p
-        self.grid[column: i, row: j] = piece
-        (piece.x, piece.y) = (i,j)
-        // print("Point was \(p), pic was \(picTitle)\nCreated \(piece)")
-        // set up tap detection
-        let t = UITapGestureRecognizer(target: self, action: #selector(handleTap))
-        piece.addGestureRecognizer(t)
-        // wow, that was easy
-        if ProcessInfo.processInfo.environment["TESTING"] != nil {
-            let t2 = UITapGestureRecognizer(target: self, action: #selector(handleDeveloperDoubleTap))
-            t2.numberOfTapsRequired = 2
-            piece.addGestureRecognizer(t2)
-        }
+    private func addPieceAt(_ slot: Slot, withPicture picTitle: String) async {
+        let (column, row) = slot
+        let piece = Piece(picName: picTitle, column: column, row: row)
+        // place the Piece in the grid, and tell it where it is
+        grid[column: column, row: row] = piece
+        // now ask the view to put it into the interface
+        await presenter?.receive(.insert(piece: piece))
     }
     
     // as pieces are highlighted, we store them in an ivar
@@ -363,31 +305,31 @@ final class BoardProcessor: BoardProcessorType {
     
     // utility to determine whether the line from p1 to p2 consists entirely of nil
     
-    private func lineIsClearFrom(_ p1:(x:Int,y:Int), to p2:(x:Int,y:Int)) -> Bool {
-        if !(p1.x == p2.x || p1.y == p2.y) {
+    private func lineIsClearFrom(_ p1: Slot, to p2: Slot) -> Bool {
+        if !(p1.column == p2.column || p1.row == p2.row) {
             return false // they are not even on the same line
         }
         // determine which dimension they share, then which way they are ordered
-        var start:Point, end:Point
-        if p1.x == p2.x {
-            if p1.y < p2.y {
-                (start,end) = (p1,p2)
+        var start: Slot, end: Slot
+        if p1.column == p2.column {
+            if p1.row < p2.row {
+                (start, end) = (p1, p2)
             } else {
-                (start,end) = (p2,p1)
+                (start, end) = (p2, p1)
             }
-            for i in start.1+1 ..< end.1 {
-                if self.piece(at:(p1.x,i)) != nil {
+            for row in start.row + 1 ..< end.row {
+                if self.piece(at: (p1.column, row)) != nil {
                     return false
                 }
             }
-        } else { // p1.y == p2.y
-            if p1.x < p2.x {
-                (start,end) = (p1,p2)
+        } else { // p1.row == p2.row
+            if p1.column < p2.column {
+                (start, end) = (p1, p2)
             } else {
-                (start,end) = (p2,p1)
+                (start, end) = (p2, p1)
             }
-            for i in start.0+1 ..< end.0 {
-                if self.piece(at:(i,p1.y)) != nil {
+            for column in start.column + 1 ..< end.column {
+                if self.piece(at: (column, p1.row)) != nil {
                     return false
                 }
             }
@@ -398,7 +340,7 @@ final class BoardProcessor: BoardProcessorType {
     // utility to remove a piece from the interface and from the grid (i.e. replace it by nil)
     
     private func removePiece(_ p:Piece) {
-        self.grid[column: p.x, row: p.y] = nil
+        self.grid[column: p.column, row: p.row] = nil
         p.removeFromSuperview()
     }
     
@@ -406,56 +348,40 @@ final class BoardProcessor: BoardProcessorType {
     
     private func gameOver () -> Bool {
         // return true // testing game end
-        for x in 0..<self.columns {
-            for y in 0..<self.rows {
-                if self.piece(at:(x,y)) != nil {
+        for column in 0..<self.columns {
+            for row in 0..<self.rows {
+                if self.piece(at: (column, row)) != nil {
                     return false
                 }
             }
         }
         return true
     }
-    
-    // given a piece's place in the grid, where should it be physically drawn on the view?
-    
-    private func originOf(_ p:Point) -> CGPoint {
-        let (i,j) = p
-        assert(i >= -1 && i <= self.columns, "Position requested out of bounds (x)")
-        assert(j >= -1 && j <= self.rows, "Position requested out of bounds (y)")
-        // divide view bounds, allow 2 extra on all sides
-        let pieceWidth = self.pieceSize.width
-        let pieceHeight = self.pieceSize.height
-        let x = ((OUTER/2.0 + LEFTMARGIN) * pieceWidth) + (CGFloat(i) * pieceWidth)
-        let y = ((OUTER/2.0 + TOPMARGIN) * pieceHeight) + (CGFloat(j) * pieceHeight)
-            + (onPhone ? 0 : 64/2) // allow for toolbar
-        return CGPoint(x: x,y: y)
-
-    }
-    
-    private func reallyRemovePair () {
+        
+    private func reallyRemovePair() async {
         var movenda = [Piece]() // we will maintain a list of all pieces that need to animate a position change
         // utility to prepare pieces for position change
         // configure the piece internally and grid-wise for its new position, 
         // but keep it physically in the old position
         // store it in movenda so we can animate it into its new position at the end of this method
-        func movePiece(_ p:Piece, to newPoint:(Int,Int)) {
-            assert(self.piece(at:newPoint) == nil, "Slot to move piece to must be empty")
+        func movePiece(_ piece: Piece, to newSlot: Slot) async {
+            assert(self.piece(at: newSlot) == nil, "Slot to move piece to must be empty")
             // move the piece within the *grid*
-            let s = p.picName
-            let oldFrame = p.frame
-            self.removePiece(p)
-            self.addPieceAt(newPoint, withPicture:s)
+            let picName = piece.picName
+            let oldFrame = piece.frame
+            self.removePiece(piece)
+            await addPieceAt(newSlot, withPicture: picName)
             // however, we are not yet redrawn, so now...
             // return piece to its previous position! but add to movenda
             // later we will animate it into correct position
-            let pnew = self.piece(at:newPoint)!
+            let pnew = self.piece(at: newSlot)!
             pnew.frame = oldFrame
             movenda += [pnew]
         }
 
         type(of: services.application).userInteraction(false)
         // notify (so score can be incremented)
-        nc.post(name: BoardProcessor.userMoved, object: self)
+        // nc.post(name: BoardProcessor.userMoved, object: self)
         // actually remove the pieces (we happen to know there must be exactly two)
         for piece in self.hilitedPieces {
             self.removePiece(piece)
@@ -466,7 +392,7 @@ final class BoardProcessor: BoardProcessorType {
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(0.1)) // nicer with a little delay
                 type(of: services.application).userInteraction(true)
-                nc.post(name: BoardProcessor.gameOver, object: self, userInfo: ["stage":self.stageNumber])
+                // nc.post(name: BoardProcessor.gameOver, object: self, userInfo: ["stage":self.stageNumber])
             }
             return
         }
@@ -491,7 +417,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -511,7 +437,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -533,7 +459,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -548,7 +474,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -570,7 +496,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -585,7 +511,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -607,7 +533,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -622,7 +548,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -644,7 +570,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -659,7 +585,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -681,7 +607,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -699,7 +625,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -720,7 +646,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -738,7 +664,7 @@ final class BoardProcessor: BoardProcessorType {
                             if piece2 == nil {
                                 continue
                             }
-                            movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to:(x,y))
                             break
                         }
                     }
@@ -766,13 +692,14 @@ final class BoardProcessor: BoardProcessorType {
         Task { @MainActor in
             await services.view.animateAsync(withDuration: 0.15, delay: 0.1, options: .curveLinear) {
                 while movenda.count > 0 {
-                    let p = movenda.removeLast()
-                    var f = p.frame
-                    f.origin = self.originOf((p.x, p.y))
-                    // print("Will change frame of piece \(p)")
-                    // print("From \(p.frame)")
-                    // print("To \(f)")
-                    p.frame = f // this is the move that will be animated
+                    // TODO: restore this, just removing so I can compile
+//                    let p = movenda.removeLast()
+//                    var f = p.frame
+//                    f.origin = self.originOf((p.x, p.y))
+//                    // print("Will change frame of piece \(p)")
+//                    // print("From \(p.frame)")
+//                    // print("To \(f)")
+//                    p.frame = f // this is the move that will be animated
                 }
             }
             self.hintPath = self.legalPath() // okay, assess the situation; either way, we need a new hint ready
@@ -790,19 +717,19 @@ final class BoardProcessor: BoardProcessorType {
     // the day I figured out how to do this is the day I realized I could write this game
     // we hand back the legal path joining the pieces, rather than a bool, so that the caller can draw the path
     
-    private func checkPair(_ p1:Piece, and p2:Piece) -> Path? {
+    private func checkPair(_ p1: Piece, and p2: Piece) -> Path? {
         // if not a pair, return nil
         // if a pair, return an array of successive xy positions showing the legal path
-        let pt1 : Point = (x:p1.x, y:p1.y)
-        let pt2 : Point = (x:p2.x, y:p2.y)
+        let pt1 : Slot = (column:p1.column, row:p1.row)
+        let pt2 : Slot = (column:p2.column, row:p2.row)
         // 1. first check: are they on the same line with nothing between them?
         if self.lineIsClearFrom(pt1, to:pt2) {
             return [pt1,pt2]
         }
         // print("failed straight line test")
         // 2. second check: are they at the corners of a rectangle with nothing on one pair of sides between them?
-        let midpt1 : Point = (p1.x, p2.y)
-        let midpt2 : Point = (p2.x, p1.y)
+        let midpt1 : Slot = (p1.column, p2.row)
+        let midpt2 : Slot = (p2.column, p1.row)
         if self.piece(at:midpt1) == nil {
             if self.lineIsClearFrom(pt1, to:midpt1) && self.lineIsClearFrom(midpt1, to:pt2) {
                 return [pt1, midpt1, pt2]
@@ -824,7 +751,7 @@ final class BoardProcessor: BoardProcessorType {
         // so, accumulate all found paths and submit only the shortest
         var marr = [Path]()
         // print("=======")
-        func addPathIfValid(_ midpt1:Point, _ midpt2:Point) {
+        func addPathIfValid(_ midpt1:Slot, _ midpt2:Slot) {
             // print("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
             // new in swift, reject if same midpoint
             if midpt1.0 == midpt2.0 && midpt1.1 == midpt2.1 {return}
@@ -837,13 +764,13 @@ final class BoardProcessor: BoardProcessorType {
             }
         }
         for y in -1...self.rows {
-            addPathIfValid((pt1.x,y),(pt2.x,y))
+            addPathIfValid((pt1.column,y),(pt2.column,y))
         }
         for x in -1...self.columns {
-            addPathIfValid((x,pt1.y),(x,pt2.y))
+            addPathIfValid((x,pt1.row),(x,pt2.row))
         }
         if marr.count > 0 { // got at least one! find the shortest and submit it
-            func distance(_ pt1:Point, _ pt2:Point) -> Double {
+            func distance(_ pt1:Slot, _ pt2:Slot) -> Double {
                 // utility to learn physical distance between two points (thank you, M. Descartes)
                 let deltax = pt1.0 - pt2.0
                 let deltay = pt1.1 - pt2.1
@@ -868,10 +795,10 @@ final class BoardProcessor: BoardProcessorType {
         return nil
     }
     
-    private func checkHilitedPair () {
+    private func checkHilitedPair() async {
         assert(self.hilitedPieces.count == 2, "Must have a pair to check")
         for piece in self.hilitedPieces {
-            assert(piece.superview == self.view, "Pieces to check must be displayed on board")
+            assert(piece.window != nil, "Pieces to check must be displayed on board")
         }
         type(of: services.application).userInteraction(false)
         let p1 = self.hilitedPieces[0]
@@ -889,7 +816,7 @@ final class BoardProcessor: BoardProcessorType {
                 self.legalPathShower.unilluminate()
                 try? await Task.sleep(for: .seconds(0.1))
                 type(of: services.application).userInteraction(true)
-                self.reallyRemovePair()
+                await reallyRemovePair()
             }
         } else {
             type(of: services.application).userInteraction(true)
@@ -902,46 +829,50 @@ final class BoardProcessor: BoardProcessorType {
     // when that list has two items, check them for validity
 
     @objc private func handleTap(_ g:UIGestureRecognizer) {
-        type(of: services.application).userInteraction(false)
-        let p = g.view as! Piece
-        let hilited = p.isHilited
-        if !hilited {
-            if self.hilitedPieces.count > 1 {
-                type(of: services.application).userInteraction(true)
-                return
+        Task {
+            type(of: services.application).userInteraction(false)
+            let p = g.view as! Piece
+            let hilited = p.isHilited
+            if !hilited {
+                if self.hilitedPieces.count > 1 {
+                    type(of: services.application).userInteraction(true)
+                    return
+                }
+                self.hilitedPieces += [p]
+            } else {
+                self.hilitedPieces.remove(object:p) // see utility at top
             }
-            self.hilitedPieces += [p]
-        } else {
-            self.hilitedPieces.remove(object:p) // see utility at top
-        }
-        p.toggleHilite()
-        if self.hilitedPieces.count == 2 {
-            // print("========")
-            // print("about to check hilited pair \(self.hilitedPieces)")
-            type(of: services.application).userInteraction(true)
-            self.checkHilitedPair()
-        } else {
-            type(of: services.application).userInteraction(true)
+            p.toggleHilite()
+            if self.hilitedPieces.count == 2 {
+                // print("========")
+                // print("about to check hilited pair \(self.hilitedPieces)")
+                type(of: services.application).userInteraction(true)
+                await checkHilitedPair()
+            } else {
+                type(of: services.application).userInteraction(true)
+            }
         }
     }
     
     // short-circuit, just make a legal move yet already
     @objc private func handleDeveloperDoubleTap(_ g:UIGestureRecognizer) {
-        if let path = self.legalPath() {
-            let p = g.view as! Piece
-            if p.isHilited {
-                p.toggleHilite()
+        Task {
+            if let path = self.legalPath() {
+                let p = g.view as! Piece
+                if p.isHilited {
+                    p.toggleHilite()
+                }
+                self.hilitedPieces = [self.piece(at: path.first!)!, self.piece(at: path.last!)!]
+                await checkHilitedPair()
             }
-            self.hilitedPieces = [self.piece(at: path.first!)!, self.piece(at: path.last!)!]
-            self.checkHilitedPair()
         }
     }
     
     // tap gesture on pathView
     
-    @objc private func tappedPathView(_ : UIGestureRecognizer) {
-        nc.post(name: BoardProcessor.userTappedPath, object: self)
-    }
+//    @objc private func tappedPathView(_ : UIGestureRecognizer) {
+//        nc.post(name: BoardProcessor.userTappedPath, object: self)
+//    }
     
     // utility to run thru the entire grid and make sure there is at least one legal path somewhere
     // if the path exists, we return array representing path that joins them; otherwise nil
@@ -1009,8 +940,12 @@ final class BoardProcessor: BoardProcessorType {
     deinit {
         print("farewell from board")
     }
-    
 
+    /// Error that gives us something to throw if we get out of sync with ourselves, which should
+    /// never happen but it's better than crashing.
+    enum DeckSizeError: Error {
+        case oops
+    }
 }
 
 /// Reducer that carries pertinent BoardProcessor data into and out of persistence.
@@ -1019,14 +954,12 @@ struct BoardSaveableData: Codable {
     // NOTE: These names are important! They are the coding keys we were using previously,
     // when there was a coding keys enum, so they must remain for backwards compatibility
     let stage: Int
-    let frame: CGRect // TODO: But I don't think we actually need this, keep an eye out
     let grid: Grid
-    let deckAtStartOfStage: [String]
+    let deckAtStartOfStage: [PieceReducer]
 }
 extension BoardSaveableData {
     @MainActor init(boardProcessor board: any BoardProcessorType) {
         self.stage = board.stageNumber
-        self.frame = board.view.frame
         self.grid = board.grid
         self.deckAtStartOfStage = board.deckAtStartOfStage
     }

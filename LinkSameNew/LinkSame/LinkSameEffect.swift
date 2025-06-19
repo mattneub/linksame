@@ -6,8 +6,6 @@ enum LinkSameEffect: Equatable {
     case animateBoardTransition(BoardTransition)
     /// Animate the stage label.
     case animateStageLabel
-    /// Put the given board view into the interface.
-    case putBoardViewIntoInterface(BoardView) // TODO: It may be that the coordinator should do this?
     /// Turn user interaction off or on.
     case userInteraction(Bool)
 }

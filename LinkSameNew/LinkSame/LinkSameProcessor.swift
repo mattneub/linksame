@@ -22,6 +22,7 @@ final class LinkSameProcessor: Processor {
     /// Storage for our never-ending task containing eternal for-loops. See the Lifetime object.
     var subscriptionsTask: Task<(), Never>?
 
+    /// Utility for constructing the text displayed by the stage label.
     var stageLabelText: String {
         let stageNumber = self.boardProcessor?.stageNumber ?? 0
         let maxStages = services.persistence.loadInt(forKey: .lastStage)
@@ -34,6 +35,10 @@ final class LinkSameProcessor: Processor {
             coordinator?.dismiss()
             restorePopoverDefaults()
         case .didInitialLayout: // sent only once, so this means we are launching
+            // Nice thing about this approach is that it frees me up to change the contents of the
+            // persistent board data as I revise the app. The worst that can happen is we don't
+            // match the structure of what got saved previously, in which case the game just
+            // launches from scratch and no harm done!
             if let savedStateData = services.persistence.loadData(forKey: .boardData),
                let savedState = try? PropertyListDecoder().decode(PersistentState.self, from: savedStateData) {
                 await setUpGameFromSavedState(savedState)
@@ -109,16 +114,11 @@ final class LinkSameProcessor: Processor {
         } else {
             Sizes.boardSize(services.persistence.loadString(forKey: .size))
         }
+
         // create new board object and configure it
-        guard let board = coordinator?.makeBoardProcessor(gridSize: (boardColumns, boardRows)) else {
-            return
-        }
-        self.boardProcessor = board
+        coordinator?.makeBoardProcessor(gridSize: (boardColumns, boardRows))
 
         await presenter?.receive(.userInteraction(false))
-
-        // put its `view` into the interface, replacing the one that may be there already
-        await presenter?.receive(.putBoardViewIntoInterface(board.view))
 
         boardProcessor?.stageNumber = 0
         // self.board.stage = 8 // testing game end behavior, comment out!
@@ -126,7 +126,13 @@ final class LinkSameProcessor: Processor {
         self.stage = Stage(score: 0)
 
         // build and display board
-        boardProcessor?.createAndDealDeck()
+        // TODO: do better error handling here
+        do {
+            try await boardProcessor?.createAndDealDeck()
+        } catch {
+            print(error)
+            return
+        }
         let boardTransition: BoardTransition = .fade
         await presenter?.receive(.animateBoardTransition(boardTransition))
 
@@ -152,21 +158,15 @@ final class LinkSameProcessor: Processor {
         // let stage: Int
         // let frame: CGRect [but I think this can be cut]
         // let grid: Grid
-        // let deckAtStartOfStage: [String]
+        // let deckAtStartOfStage: [PieceReducer]
         let boardData = savedState.board
         let grid = boardData.grid
-        guard let board = coordinator?.makeBoardProcessor(gridSize: (grid.columns, grid.rows)) else {
-            return
-        }
+        coordinator?.makeBoardProcessor(gridSize: (grid.columns, grid.rows))
+
         await presenter?.receive(.userInteraction(false))
 
-        self.boardProcessor = board
-
-        // put its `view` into the interface, replacing the one that may be there already
-        await presenter?.receive(.putBoardViewIntoInterface(board.view))
-
         boardProcessor?.stageNumber = boardData.stage
-        boardProcessor?.populateFrom(oldGrid: grid, deckAtStartOfStage: boardData.deckAtStartOfStage)
+        await boardProcessor?.populateFrom(oldGrid: grid, deckAtStartOfStage: boardData.deckAtStartOfStage)
 
         self.stage = Stage(score: savedState.score)
 
@@ -291,19 +291,3 @@ struct PersistentState: Codable {
     let timed: Bool
 }
 
-/// Protocol that declares a non-async method to be called when we enter the background.
-@MainActor protocol BoardHider {
-    func didEnterBackgroundNonAsync()
-}
-
-/// Extension that implements the protocol. In order to hide the board view in time for it to be
-/// hidden from the app switcher snapshot mechanism, we must avoid the whole `async` architecture
-/// and just reach right in and hide the darned view.
-extension LinkSameProcessor: BoardHider {
-    func didEnterBackgroundNonAsync() {
-        if state.interfaceMode == .timed {
-            state.boardViewHidden = true
-            boardProcessor?.view.isHidden = true
-        }
-    }
-}

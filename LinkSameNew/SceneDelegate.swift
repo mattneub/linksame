@@ -43,9 +43,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // I feel bad about this, but the problem is that by the time the processor gets the
         // message via the Lifetime object, it is too late to hide the board view! So I have to
         // bypass the whole module architecture and just reach in directly and hide it, kaboom.
-        if let processor = rootCoordinator.linkSameProcessor as? any BoardHider {
-            processor.didEnterBackgroundNonAsync()
-        }
+        rootCoordinator.hideBoardView()
         services.lifetime.didEnterBackground()
     }
 

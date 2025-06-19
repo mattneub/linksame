@@ -41,12 +41,10 @@ struct SceneDelegateTests {
     func didEnterBackgroundHider() throws {
         let subject = SceneDelegate()
         let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
-        let hider = MockHider()
         let coordinator = MockRootCoordinator()
-        coordinator.linkSameProcessor = hider
         subject.rootCoordinator = coordinator
         subject.sceneDidEnterBackground(scene)
-        #expect(hider.methodsCalled == ["didEnterBackgroundNonAsync()"])
+        #expect(coordinator.methodsCalled == ["hideBoardView()"])
     }
 
     @Test("sceneWillEnterForeground: calls lifetime willEnterForeground")
@@ -70,11 +68,3 @@ struct SceneDelegateTests {
     }
 }
 
-final class MockHider: Processor, BoardHider {
-    var methodsCalled = [String]()
-    var presenter: (any ReceiverPresenter<LinkSameEffect, LinkSameState>)? = MockReceiverPresenter<LinkSameEffect, LinkSameState>()
-    func receive(_ action: LinkSameAction) {}
-    func didEnterBackgroundNonAsync() {
-        methodsCalled.append(#function)
-    }
-}

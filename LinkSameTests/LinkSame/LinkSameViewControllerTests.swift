@@ -81,7 +81,7 @@ struct LinkSameViewControllerTests {
     @Test("present: boardViewHidden governs visibility of boardView")
     func presentBoardViewHidden() async {
         subject.loadViewIfNeeded()
-        let boardView = MockBoardView()
+        let boardView = MockBoardView(columns: 1, rows: 1)
         subject.backgroundView.addSubview(boardView)
         boardView.isHidden = false
         await subject.present(LinkSameState(boardViewHidden: true))
@@ -120,9 +120,9 @@ struct LinkSameViewControllerTests {
     func animateBoardTransition() async throws {
         makeWindow(viewController: subject)
         subject.loadViewIfNeeded()
-        let view = MockBoardView()
-        await subject.receive(.putBoardViewIntoInterface(view))
-        subject.view.setNeedsLayout()
+        let view = MockBoardView(columns: 1, rows: 1)
+        view.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+        subject.backgroundView.addSubview(view)
         view.isHidden = true
         await subject.receive(.animateBoardTransition(.fade))
         #expect(view.isHidden == false)
@@ -144,35 +144,6 @@ struct LinkSameViewControllerTests {
         subject.loadViewIfNeeded()
         await subject.receive(.animateStageLabel)
         #expect(MockUIView.methodsCalled == ["transitionAsync(with:duration:options:)"])
-    }
-
-    @Test("receive: putBoard puts the board view into the interface")
-    func receivePutBoard() async {
-        screen.traitCollection = .init(userInterfaceIdiom: .pad)
-        makeWindow(viewController: subject)
-        subject.loadViewIfNeeded()
-        let view = MockBoardView()
-        await subject.receive(.putBoardViewIntoInterface(view))
-        subject.view.setNeedsLayout()
-        #expect(subject.boardView == view)
-        #expect(subject.backgroundView.bounds == view.bounds)
-        #expect(view.translatesAutoresizingMaskIntoConstraints == false)
-        let view2 = MockBoardView()
-        await subject.receive(.putBoardViewIntoInterface(view2))
-        subject.view.setNeedsLayout()
-        #expect(subject.boardView == view2)
-        #expect(subject.backgroundView.bounds == view2.bounds)
-        #expect(view2.translatesAutoresizingMaskIntoConstraints == false)
-        #expect(view.superview == nil)
-        let constraints = subject.backgroundView.constraints
-        print(constraints)
-        #expect(constraints.count == 4)
-        #expect(constraints.allSatisfy { $0.firstItem as? UIView === subject.backgroundView })
-        #expect(constraints.allSatisfy { $0.secondItem as? UIView === view2 })
-        let firsts = constraints.map { $0.firstAttribute }
-        let expected: [NSLayoutConstraint.Attribute] = [.top, .bottom, .leading, .trailing]
-        #expect(Set(firsts) == Set(expected))
-        #expect(constraints.allSatisfy { $0.firstAttribute == $0.secondAttribute })
     }
 
     @Test("receive userInteraction: calls application userInteraction")

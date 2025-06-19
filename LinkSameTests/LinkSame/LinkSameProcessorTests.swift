@@ -72,7 +72,6 @@ struct LinkSameProcessorTests {
         #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (10, 6)) // on iPhone, persistence size is ignored, we only do Easy
-        #expect(subject.boardProcessor != nil)
     }
 
     @Test("awakening with no saved data, gets board size from persistence, or Easy on phone (3x); asks coordinator to make board processor",
@@ -97,7 +96,6 @@ struct LinkSameProcessorTests {
         #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (12, 7)) // on iPhone, persistence size is ignored, we only do Easy
-        #expect(subject.boardProcessor != nil)
     }
 
     @Test("awakening with no saved data, gets board size from persistence on iPad; asks coordinator to make board processor",
@@ -124,14 +122,13 @@ struct LinkSameProcessorTests {
         #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (16, 9)) // hard size
-        #expect(subject.boardProcessor != nil)
     }
 
     @Test("awakening with saved data, gets board size from saved data, asks coordinator to make board processor",
           arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
     )
     func awakenSavedData(awakeningType: AwakeningType) async throws {
-        let boardSaveableData = BoardSaveableData(stage: 5, frame: .zero, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"])
+        let boardSaveableData = BoardSaveableData(stage: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
         persistence.data = data
@@ -150,7 +147,6 @@ struct LinkSameProcessorTests {
         #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (3, 2))
-        #expect(subject.boardProcessor != nil)
     }
 
     @Test("awakening with no saved data configures state interface mode and stage label text",
@@ -177,7 +173,9 @@ struct LinkSameProcessorTests {
           arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
     )
     func awakenStateSavedData(awakeningType: AwakeningType) async throws {
-        let boardSaveableData = BoardSaveableData(stage: 5, frame: .zero, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"])
+        let board = MockBoardProcessor()
+        subject.boardProcessor = board
+        let boardSaveableData = BoardSaveableData(stage: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
         persistence.data = data
@@ -201,6 +199,8 @@ struct LinkSameProcessorTests {
           arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
     )
     func awakenThenWhatNoSavedData(awakeningType: AwakeningType) async throws {
+        let board = MockBoardProcessor()
+        subject.boardProcessor = board
         persistence.string = ["Hard"]
         screen.traitCollection = UITraitCollection { traits in
             traits.userInterfaceIdiom = .pad
@@ -216,13 +216,12 @@ struct LinkSameProcessorTests {
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
         }
-        let board = try #require(subject.boardProcessor as? MockBoardProcessor)
-        #expect(presenter.thingsReceived.count == 5)
+        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
+        #expect(presenter.thingsReceived.count == 4)
         #expect(presenter.thingsReceived[0] == .userInteraction(false))
-        #expect(presenter.thingsReceived[1] == .putBoardViewIntoInterface(board.view))
-        #expect(presenter.thingsReceived[2] == .animateBoardTransition(.fade))
-        #expect(presenter.thingsReceived[3] == .animateStageLabel)
-        #expect(presenter.thingsReceived[4] == .userInteraction(true))
+        #expect(presenter.thingsReceived[1] == .animateBoardTransition(.fade))
+        #expect(presenter.thingsReceived[2] == .animateStageLabel)
+        #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board.stageNumber == 0)
         #expect(board.methodsCalled.first == "createAndDealDeck()")
         let stage = try #require(subject.stage)
@@ -238,7 +237,9 @@ struct LinkSameProcessorTests {
           arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
     )
     func awakenThenWhatSavedData(awakeningType: AwakeningType) async throws {
-        let boardSaveableData = BoardSaveableData(stage: 5, frame: .zero, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"])
+        let board = MockBoardProcessor()
+        subject.boardProcessor = board
+        let boardSaveableData = BoardSaveableData(stage: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
         persistence.data = data
@@ -251,17 +252,16 @@ struct LinkSameProcessorTests {
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
         }
-        let board = try #require(subject.boardProcessor as? MockBoardProcessor)
-        #expect(presenter.thingsReceived.count == 5)
+        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
+        #expect(presenter.thingsReceived.count == 4)
         #expect(presenter.thingsReceived[0] == .userInteraction(false))
-        #expect(presenter.thingsReceived[1] == .putBoardViewIntoInterface(board.view))
-        #expect(presenter.thingsReceived[2] == .animateBoardTransition(.fade))
-        #expect(presenter.thingsReceived[3] == .animateStageLabel)
-        #expect(presenter.thingsReceived[4] == .userInteraction(true))
+        #expect(presenter.thingsReceived[1] == .animateBoardTransition(.fade))
+        #expect(presenter.thingsReceived[2] == .animateStageLabel)
+        #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board.stageNumber == 5)
         #expect(board.methodsCalled.first == "populateFrom(oldGrid:deckAtStartOfStage:)")
         #expect(board.grid == Grid(columns: 3, rows: 2))
-        #expect(board.deckAtStartOfStage == ["howdy"])
+        #expect(board.deckAtStartOfStage == [.init(picName: "hello")])
         let stage = try #require(subject.stage)
         #expect(stage.score == 42)
     }
@@ -403,33 +403,6 @@ struct LinkSameProcessorTests {
         await #while(subject.state.comingBackFromBackground == false)
         #expect(subject.state.comingBackFromBackground == true)
     }
-
-    @Test("didEnterBackgroundNonAsync: if state interfaceMode is .timed, sets stage boardViewHidden to true, directly sets board's view to hidden")
-    func didEnterBackgroundNonAsync() {
-        do {
-            subject.state.interfaceMode = .timed
-            subject.state.boardViewHidden = false
-            let boardProcessor = MockBoardProcessor()
-            subject.boardProcessor = boardProcessor
-            let view = boardProcessor.view
-            view.isHidden = false
-            subject.didEnterBackgroundNonAsync()
-            #expect(subject.state.boardViewHidden == true)
-            #expect(view.isHidden == true)
-        }
-        do {
-            subject.state.interfaceMode = .practice
-            subject.state.boardViewHidden = false
-            let boardProcessor = MockBoardProcessor()
-            subject.boardProcessor = boardProcessor
-            let view = boardProcessor.view
-            view.isHidden = false
-            subject.didEnterBackgroundNonAsync()
-            #expect(subject.state.boardViewHidden == false)
-            #expect(view.isHidden == false)
-        }
-    }
-
 }
 
 /// We need this so that the processor sees its presenter as a dismissal delegate;

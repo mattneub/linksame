@@ -89,22 +89,22 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
         // responses to game events and application lifetime events
 
         // sent long-distance by board
-        nc.addObserver(forName: BoardProcessor.gameOver, object: nil, queue: .main) { notification in
-            let notificationStage = notification.userInfo?["stage"] as? Int
-            MainActor.assumeIsolated {
-                self.prepareNewStage(notificationStage)
-            }
-        }
-        nc.addObserver(forName: BoardProcessor.userTappedPath, object: nil, queue: .main) { _ in
+//        nc.addObserver(forName: BoardProcessor.gameOver, object: nil, queue: .main) { notification in
+//            let notificationStage = notification.userInfo?["stage"] as? Int
+//            MainActor.assumeIsolated {
+//                self.prepareNewStage(notificationStage)
+//            }
+//        }
+//        nc.addObserver(forName: BoardProcessor.userTappedPath, object: nil, queue: .main) { _ in
             // remove hint
 //            MainActor.assumeIsolated {
 //                if self.board.showingHint {
 //                    self.toggleHint(nil)
 //                }
 //            }
-        }
-        nc.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated {
+//        }
+//        nc.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
+//            MainActor.assumeIsolated {
                 // remove hint
 //                if self.board.showingHint {
 //                    self.toggleHint(nil)
@@ -136,13 +136,13 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
 //                        }
 //                    }
 //                }
-            }
-        }
-        nc.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated {
-                self.comingBackFromBackground = true
-            }
-        }
+//            }
+//        }
+//        nc.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { _ in
+//            MainActor.assumeIsolated {
+//                self.comingBackFromBackground = true
+//            }
+//        }
     }
 
     func present(_ state: LinkSameState) async {
@@ -170,17 +170,6 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
             await animateBoardTransition(transition)
         case .animateStageLabel:
             await services.view.transitionAsync(with: self.stageLabel, duration: 0.4, options: .transitionFlipFromLeft)
-        case .putBoardViewIntoInterface(let boardView):
-            self.backgroundView.subviews.forEach { $0.removeFromSuperview() }
-            self.backgroundView.addSubview(boardView)
-            boardView.translatesAutoresizingMaskIntoConstraints = false
-            boardView.frame = self.backgroundView.bounds
-            NSLayoutConstraint.activate([
-                self.backgroundView.topAnchor.constraint(equalTo: boardView.topAnchor),
-                self.backgroundView.bottomAnchor.constraint(equalTo: boardView.bottomAnchor),
-                self.backgroundView.leadingAnchor.constraint(equalTo: boardView.leadingAnchor),
-                self.backgroundView.trailingAnchor.constraint(equalTo: boardView.trailingAnchor),
-            ])
         case .userInteraction(let onOff):
             type(of: services.application).userInteraction(onOff)
         }

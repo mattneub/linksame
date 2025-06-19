@@ -3,8 +3,6 @@ import UIKit
 
 @MainActor
 final class MockRootCoordinator: RootCoordinatorType {
-    var linkSameProcessor: (any Processor<LinkSameAction, LinkSameState, LinkSameEffect>)?
-
     var methodsCalled = [String]()
     weak var window: UIWindow?
     var sourceItem: (any UIPopoverPresentationControllerSourceItem)?
@@ -41,10 +39,13 @@ final class MockRootCoordinator: RootCoordinatorType {
         methodsCalled.append(#function)
     }
 
-    func makeBoardProcessor(gridSize: (Int, Int)) -> any BoardProcessorType {
+    func makeBoardProcessor(gridSize: (Int, Int)) {
         methodsCalled.append(#function)
         self.gridSize = gridSize
-        return MockBoardProcessor()
+    }
+
+    func hideBoardView() {
+        methodsCalled.append(#function)
     }
 
 }
