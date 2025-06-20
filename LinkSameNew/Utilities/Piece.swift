@@ -6,28 +6,34 @@ import AVFoundation
 // given that, it knows how to draw and hilite itself
 // it also has properties so that it can report where it belongs in the grid
 
-final class Piece: UIView, Encodable, @preconcurrency Decodable {
+final class Piece: UIView {
 
-    // TODO: Look into this. I could supply an equivalency method, or I could redefine equality.
-    /// Define equality as identity. If you want to know whether two pieces are _equivalent_
-    /// you just have to test their properties yourself.
+    // Define equality in terms of piece reducers. In fact, define equality between piece and
+    // piece reducer, since we will often have reason to need this.
+
     static func == (lhs: Piece, rhs: Piece) -> Bool {
-        return lhs === rhs
+        return lhs.toReducer == rhs.toReducer
+    }
+    static func == (lhs: PieceReducer, rhs: Piece) -> Bool {
+        return lhs == rhs.toReducer
+    }
+    static func == (lhs: Piece, rhs: PieceReducer) -> Bool {
+        return lhs.toReducer == rhs
     }
 
     /// What image we display.
-    nonisolated(unsafe) var picName: String
+    let picName: String
 
     /// Where we are slotted.
-    nonisolated(unsafe) var column: Int
-    nonisolated(unsafe) var row: Int
+    let column: Int
+    let row: Int
 
     private var hilite: Bool = false
     var isHilited: Bool {
         return self.hilite
     }
 
-    override var description : String {
+    override var description: String {
         return "picname: \(picName); column: \(column); row: \(row)"
     }
 
@@ -37,26 +43,15 @@ final class Piece: UIView, Encodable, @preconcurrency Decodable {
         self.row = row
         super.init(frame: .zero)
     }
-    
+
+    convenience init(piece: PieceReducer) {
+        self.init(picName: piece.picName, column: piece.column, row: piece.row)
+    }
+
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    enum CodingKeys: String, CodingKey {
-        case column = "x" // keep old coded name
-        case row = "y" // keep old coded name
-        case picName
-    }
-
-    // because we are subclass of class with designated initializer, must implement `init(from:)` ourselves
-    init(from decoder: any Decoder) throws {
-        let con = try! decoder.container(keyedBy: CodingKeys.self)
-        self.column = try! con.decode(Int.self, forKey: .column)
-        self.row = try! con.decode(Int.self, forKey: .row)
-        self.picName = try! con.decode(String.self, forKey: .picName)
-        super.init(frame:.zero)
-    }
-    
     override func draw(_ rect: CGRect) {
         let perireal = CGRect(x: 0, y: 0, width: self.bounds.width, height: self.bounds.height)
         let con = UIGraphicsGetCurrentContext()!
@@ -104,9 +99,15 @@ final class Piece: UIView, Encodable, @preconcurrency Decodable {
         self.hilite = !self.hilite
         self.setNeedsDisplay()
     }
+
+    var toReducer: PieceReducer {
+        PieceReducer(picName: picName, column: column, row: row)
+    }
 }
 
 /// Reducer for maintaining key information about a Piece.
 struct PieceReducer: Equatable, Codable {
     let picName: String
+    var column: Int = -1
+    var row: Int = -1
 }

@@ -21,7 +21,7 @@ struct GridTests {
         for (columnIndex, column) in subject.grid.enumerated() {
             for (rowIndex, piece) in column.enumerated() {
                 #expect(piece == nil)
-                subject[column: columnIndex, row: rowIndex] = Piece(picName: "\(columnIndex) \(rowIndex)", column: 1, row: 1)
+                subject[column: columnIndex, row: rowIndex] = PieceReducer(picName: "\(columnIndex) \(rowIndex)", column: 1, row: 1)
             }
         }
         for columnIndex in 0..<2 {

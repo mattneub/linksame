@@ -152,7 +152,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             for row in 0 ..< self.rows {
                 // TODO: This looks like it should be otiose: addPiece should remove if a piece is already slotted in
                 if let oldPiece = self.piece(at: (column: column, row: row)) {
-                    self.removePiece(oldPiece)
+                    await self.removePiece(oldPiece)
                 }
                 guard !deck.isEmpty else {
                     throw DeckSizeError.oops
@@ -184,12 +184,12 @@ final class BoardProcessor: BoardProcessorType, Processor {
             for column in 0 ..< columns {
                 for row in 0 ..< rows {
                     if let piece = self.piece(at: (column: column, row: row)) {
-                        // TODO: move this to view, I think
-                        UIView.transition(
-                            with: piece, duration: 0.7, options: .transitionFlipFromLeft, animations: {
-                                piece.picName = deck.removeLast()
-                                piece.setNeedsDisplay()
-                        })
+                        // TODO: move this to view, I think (but in any case, restore)
+//                        UIView.transition(
+//                            with: piece, duration: 0.7, options: .transitionFlipFromLeft, animations: {
+//                                piece.picName = deck.removeLast()
+//                                piece.setNeedsDisplay()
+//                        })
                     }
                 }
             }
@@ -274,25 +274,33 @@ final class BoardProcessor: BoardProcessorType, Processor {
     
     private lazy var legalPathShower = LegalPathShower(board:self)
     
-    private func piece(at slot: Slot) -> Piece? {
+    /// Report the piece at a slot of the grid, except that adjacent to the real grid there is
+    /// an imaginary extension on all sides, consisting of empty slots, where path drawing can
+    /// take place.
+    /// - Parameter slot: The specified slot of the grid.
+    /// - Returns: A piece reducer describing the piece that is in that slot of the grid.
+    private func piece(at slot: Slot) -> PieceReducer? {
+        // TODO: Consider moving this to grid, i.e. just make it part of the subscripting.
         let (column, row) = slot
         // it is legal to ask for piece one slot outside boundaries, but not further
         assert(column >= -1 && column <= self.columns, "Piece requested out of bounds (column)")
         assert(row >= -1 && row <= self.rows, "Piece requested out of bounds (row)")
-        // outside boundaries, report slot as empty
+        // immediately outside boundaries, report slot as empty
         if (column == -1 || column == self.columns) { return nil }
         if (row == -1 || row == self.rows) { return nil }
-        // inside boundaries, report actual piece at slot
+        // inside boundaries, report actual contents of slot
         return grid[column: column, row: row]
     }
     
-    // put a piece in a slot and into interface
+    /// Create a piece and put it into a given slot _and the interface_.
+    /// It is crucial to keep these in sync.
+    /// - Parameters:
+    ///   - slot: The slot where the piece should go.
+    ///   - picTitle: The name of the picture for the piece.
     private func addPieceAt(_ slot: Slot, withPicture picTitle: String) async {
         let (column, row) = slot
-        let piece = Piece(picName: picTitle, column: column, row: row)
-        // place the Piece in the grid, and tell it where it is
+        let piece = PieceReducer(picName: picTitle, column: column, row: row)
         grid[column: column, row: row] = piece
-        // now ask the view to put it into the interface
         await presenter?.receive(.insert(piece: piece))
     }
     
@@ -301,11 +309,9 @@ final class BoardProcessor: BoardProcessorType, Processor {
     // now public, because controller might need to cancel existing highlight
     // make no assumptions about how many are in list!
     
-    func unhilite() {
-        while state.hilitedPieces.count > 0 {
-            let p = state.hilitedPieces.removeLast()
-            p.toggleHilite()
-        }
+    func unhilite() async {
+        state.hilitedPieces = []
+        await presenter?.present(state)
     }
     
     // utility to determine whether the line from p1 to p2 consists entirely of nil
@@ -342,11 +348,11 @@ final class BoardProcessor: BoardProcessorType, Processor {
         return true
     }
     
-    // utility to remove a piece from the interface and from the grid (i.e. replace it by nil)
-    
-    private func removePiece(_ p:Piece) {
-        self.grid[column: p.column, row: p.row] = nil
-        p.removeFromSuperview()
+    /// Remove a piece from the grid and the interface.
+    /// - Parameter piece: The piece to remove.
+    private func removePiece(_ piece: PieceReducer) async {
+        self.grid[column: piece.column, row: piece.row] = nil
+        await presenter?.receive(.remove(piece: piece))
     }
     
     // utility to learn whether the grid is empty, indicating that the game is over
@@ -364,23 +370,25 @@ final class BoardProcessor: BoardProcessorType, Processor {
     }
         
     private func reallyRemovePair() async {
-        var movenda = [Piece]() // we will maintain a list of all pieces that need to animate a position change
+        var movenda = [PieceReducer]() // we will maintain a list of all pieces that need to animate a position change
         // utility to prepare pieces for position change
         // configure the piece internally and grid-wise for its new position, 
         // but keep it physically in the old position
         // store it in movenda so we can animate it into its new position at the end of this method
-        func movePiece(_ piece: Piece, to newSlot: Slot) async {
+        func movePiece(_ piece: PieceReducer, to newSlot: Slot) async {
             assert(self.piece(at: newSlot) == nil, "Slot to move piece to must be empty")
             // move the piece within the *grid*
             let picName = piece.picName
-            let oldFrame = piece.frame
-            self.removePiece(piece)
+            // TODO: restore
+            // let oldFrame = piece.frame
+            await self.removePiece(piece)
             await addPieceAt(newSlot, withPicture: picName)
             // however, we are not yet redrawn, so now...
             // return piece to its previous position! but add to movenda
             // later we will animate it into correct position
             let pnew = self.piece(at: newSlot)!
-            pnew.frame = oldFrame
+            // TODO: restore
+            // pnew.frame = oldFrame
             movenda += [pnew]
         }
 
@@ -389,7 +397,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
         // nc.post(name: BoardProcessor.userMoved, object: self)
         // actually remove the pieces (we happen to know there must be exactly two)
         for piece in state.hilitedPieces {
-            self.removePiece(piece)
+            await self.removePiece(piece)
         }
         state.hilitedPieces.removeAll()
         // game over? if so, notify along with current stage and we're out of here!
@@ -722,7 +730,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
     // the day I figured out how to do this is the day I realized I could write this game
     // we hand back the legal path joining the pieces, rather than a bool, so that the caller can draw the path
     
-    private func checkPair(_ p1: Piece, and p2: Piece) -> Path? {
+    private func checkPair(_ p1: PieceReducer, and p2: PieceReducer) -> Path? {
         // if not a pair, return nil
         // if a pair, return an array of successive xy positions showing the legal path
         let pt1 : Slot = (column:p1.column, row:p1.row)
@@ -804,14 +812,14 @@ final class BoardProcessor: BoardProcessorType, Processor {
         print("should check hilited pair")
         return () // do nothing for now
         assert(state.hilitedPieces.count == 2, "Must have a pair to check")
-        for piece in state.hilitedPieces {
-            assert(piece.window != nil, "Pieces to check must be displayed on board")
-        }
+//        for piece in state.hilitedPieces {
+//            assert(piece.window != nil, "Pieces to check must be displayed on board")
+//        }
         type(of: services.application).userInteraction(false)
         let p1 = state.hilitedPieces[0]
         let p2 = state.hilitedPieces[1]
         if p1.picName != p2.picName {
-            self.unhilite()
+            await self.unhilite()
             type(of: services.application).userInteraction(true)
             return
         }
@@ -827,7 +835,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             }
         } else {
             type(of: services.application).userInteraction(true)
-            self.unhilite()
+            await self.unhilite()
         }
     }
     
@@ -835,7 +843,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
     // maintain an ivar pointing to hilited pieces
     // when that list has two items, check them for validity
 
-    private func userTapped(piece: Piece) async {
+    private func userTapped(piece: PieceReducer) async {
         assert(state.hilitedPieces.count < 2, "tap when two pieces are already hilited")
         await presenter?.receive(.userInteraction(false))
         defer {
@@ -952,15 +960,13 @@ final class BoardProcessor: BoardProcessorType, Processor {
 /// Reducer that carries pertinent BoardProcessor data into and out of persistence.
 nonisolated
 struct BoardSaveableData: Codable {
-    // NOTE: These names are important! They are the coding keys we were using previously,
-    // when there was a coding keys enum, so they must remain for backwards compatibility
-    let stage: Int
+    let stageNumber: Int
     let grid: Grid
     let deckAtStartOfStage: [PieceReducer]
 }
 extension BoardSaveableData {
     @MainActor init(boardProcessor board: any BoardProcessorType) {
-        self.stage = board.stageNumber
+        self.stageNumber = board.stageNumber
         self.grid = board.grid
         self.deckAtStartOfStage = board.deckAtStartOfStage
     }

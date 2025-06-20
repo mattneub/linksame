@@ -82,7 +82,7 @@ class BoardView: UIView, ReceiverPresenter {
     func present(_ state: BoardState) async {
         // highlighted pieces
         for piece in pieces {
-            if state.hilitedPieces.contains(piece) {
+            if state.hilitedPieces.contains(where: { $0 == piece }) {
                 if !piece.isHilited {
                     piece.toggleHilite()
                 }
@@ -98,22 +98,25 @@ class BoardView: UIView, ReceiverPresenter {
         switch effect {
         case .insert(let piece):
             insert(piece: piece)
+        case .remove(let piece):
+            remove(piece: piece)
         case .userInteraction(let onOff):
             type(of: services.application).userInteraction(onOff)
         }
     }
 
-    // TODO: If my plan works out, this will eventually be a piece reducer instead of a piece.
     /// Insert a piece into the interface at the correct frame.
-    /// - Parameter piece: The piece to insert.
-    func insert(piece: Piece) {
+    /// - Parameter piece: The piece to insert, expressed as a reducer.
+    func insert(piece: PieceReducer) {
+        // Make an actual Piece.
+        let piece = Piece(piece: piece)
         // Calculate and set the frame of the piece,
         // based on the piece's knowledge of its slot in the grid.
         let size = self.pieceSize
         let origin = self.originOf(column: piece.column, row: piece.row)
         let frame = CGRect(origin: origin, size: size)
         piece.frame = frame
-        // Place the [iece in the interface.
+        // Place the piece in the interface.
         // We are conscious that we must not accidentally place it in front of the path view!
         insertSubview(piece, belowSubview: self.pathView)
         // Give the piece tap detection.
@@ -127,6 +130,14 @@ class BoardView: UIView, ReceiverPresenter {
                 tap2.numberOfTapsRequired = 2
                 piece.addGestureRecognizer(tap2)
             }
+        }
+    }
+    
+    /// Remove the piece described by the reducer.
+    /// - Parameter piece: Reducer describing the piece to be removed.
+    func remove(piece: PieceReducer) {
+        if let realPiece = pieces.first(where: { $0 == piece }) {
+            realPiece.removeFromSuperview()
         }
     }
 
@@ -162,12 +173,9 @@ class BoardView: UIView, ReceiverPresenter {
             return
         }
         Task {
-            await processor?.receive(.tapped(piece))
+            await processor?.receive(.tapped(piece.toReducer))
         }
     }
 
     @objc func developerDoubleTappedPiece() {}
-
-
-
 }

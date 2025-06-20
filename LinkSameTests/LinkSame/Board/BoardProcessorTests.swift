@@ -41,14 +41,14 @@ struct BoardProcessorTests {
         for pic in ["21", "22", "23", "24", "25", "26", "27", "28", "29"] {
             #expect(pix.count(where: {$0 == pic}) == 4)
         }
-        var gridPieces = [Piece?]()
+        var gridPieces = [PieceReducer?]()
         // "undeal"!
         for column in 0 <<< 2 {
             for row in 0 <<< 18 {
                 gridPieces.append(subject.grid[column: column, row: row])
             }
         }
-        #expect(gridPieces.compactMap {$0}.map { $0.picName } == deck.map { $0.picName}.reversed())
+        #expect(gridPieces.compactMap {$0}.map { $0.picName } == deck.map { $0.picName }.reversed())
         // every grid piece knows its own position
         for column in 0 ..< 2 {
             for row in 0 ..< 18 {
@@ -66,13 +66,7 @@ struct BoardProcessorTests {
             }
         }
         #expect(expectedEffects.count == 36)
-        for (effect, thing) in zip(expectedEffects, boardView.thingsReceived) {
-            if case let (.insert(piece1), .insert(piece2)) = (effect, thing) {
-                #expect(piece1 == piece2)
-            } else {
-                throw NSError(domain: "oops", code: 0)
-            }
-        }
+        #expect(boardView.thingsReceived == expectedEffects)
     }
 
     @Test("createAndDealDeck: creates the deck based on persistence and grid size, sends .insert effect for each piece")
@@ -91,7 +85,7 @@ struct BoardProcessorTests {
         for pic in ["11", "12", "13", "14", "15", "16", "17", "18", "19", "110", "111"] {
             #expect(pix.count(where: {$0 == pic}) == 4)
         }
-        var gridPieces = [Piece?]()
+        var gridPieces = [PieceReducer?]()
         // "undeal"!
         for column in 0 <<< 4 {
             for row in 0 <<< 11 {
@@ -116,13 +110,7 @@ struct BoardProcessorTests {
             }
         }
         #expect(expectedEffects.count == 44)
-        for (effect, thing) in zip(expectedEffects, boardView.thingsReceived) {
-            if case let (.insert(piece1), .insert(piece2)) = (effect, thing) {
-                #expect(piece1 == piece2)
-            } else {
-                throw NSError(domain: "oops", code: 0)
-            }
-        }
+        #expect(boardView.thingsReceived == expectedEffects)
     }
 
     @Test("populate: populates grid from old grid, sets deckAtStartOfStage")
@@ -130,7 +118,7 @@ struct BoardProcessorTests {
         let subject = BoardProcessor(gridSize: (2,3))
         subject.presenter = boardView
         var grid = Grid(columns: 2, rows: 3)
-        let piece = Piece(picName: "howdy", column: 1, row: 1)
+        let piece = PieceReducer(picName: "howdy", column: 1, row: 1)
         grid[column: 1, row: 1] = piece
         await subject.populateFrom(oldGrid: grid, deckAtStartOfStage: [.init(picName: "hello")])
         let gridPiece = try #require(subject.grid[column: 1, row: 1])
@@ -138,58 +126,35 @@ struct BoardProcessorTests {
         #expect(gridPiece.column == 1) // has proper knowledge of position
         #expect(gridPiece.row == 1)
         #expect(boardView.thingsReceived.count == 1)
-        let effect = try #require(boardView.thingsReceived.first)
-        if case let .insert(piece2) = effect {
-            #expect(piece2.picName == piece.picName)
-            #expect(piece2.column == piece.column)
-            #expect(piece2.row == piece.row)
-        } else {
-            throw NSError(domain: "oops", code: 0)
-        }
+        #expect(boardView.thingsReceived.first == .insert(piece: piece))
         #expect(subject.grid[column: 0, row: 0] == nil) // good enough, no need to check them all
         #expect(subject.deckAtStartOfStage == [.init(picName: "hello")])
     }
 
     @Test("receive tapped: if hilitedPieces contains piece, it is removed; present state")
     func receiveTappedHilited() async throws {
-        let piece = Piece(picName: "howdy", column: 0, row: 0)
+        let piece = PieceReducer(picName: "howdy", column: 0, row: 0)
         subject.state.hilitedPieces = [piece]
         await subject.receive(.tapped(piece))
         #expect(boardView.statesPresented.count == 1)
         #expect(boardView.statesPresented[0].hilitedPieces.isEmpty)
         await #while(boardView.thingsReceived.count < 2)
         #expect(boardView.thingsReceived.count == 2)
-        if case .userInteraction(let flag) = boardView.thingsReceived[0] {
-            #expect(flag == false)
-        } else {
-            throw NSError(domain: "oops", code: 0)
-        }
-        if case .userInteraction(let flag) = boardView.thingsReceived[1] {
-            #expect(flag == true)
-        } else {
-            throw NSError(domain: "oops", code: 0)
-        }
+        #expect(boardView.thingsReceived[0] == .userInteraction(false))
+        #expect(boardView.thingsReceived[1] == .userInteraction(true))
     }
 
     @Test("receive tapped: if hilitedPieces does not contain piece, it is added; present state")
     func receiveTappedNotHilited() async throws {
-        let piece = Piece(picName: "howdy", column: 0, row: 0)
+        let piece = PieceReducer(picName: "howdy", column: 0, row: 0)
         subject.state.hilitedPieces = []
         await subject.receive(.tapped(piece))
         #expect(boardView.statesPresented.count == 1)
         #expect(boardView.statesPresented[0].hilitedPieces[0] == piece)
         await #while(boardView.thingsReceived.count < 2)
         #expect(boardView.thingsReceived.count == 2)
-        if case .userInteraction(let flag) = boardView.thingsReceived[0] {
-            #expect(flag == false)
-        } else {
-            throw NSError(domain: "oops", code: 0)
-        }
-        if case .userInteraction(let flag) = boardView.thingsReceived[1] {
-            #expect(flag == true)
-        } else {
-            throw NSError(domain: "oops", code: 0)
-        }
+        #expect(boardView.thingsReceived[0] == .userInteraction(false))
+        #expect(boardView.thingsReceived[1] == .userInteraction(true))
         // TODO: test that if we now contain two hilited pieces, we do a pair check
     }
 }

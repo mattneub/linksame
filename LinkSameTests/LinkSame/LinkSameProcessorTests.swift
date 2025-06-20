@@ -128,7 +128,7 @@ struct LinkSameProcessorTests {
           arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
     )
     func awakenSavedData(awakeningType: AwakeningType) async throws {
-        let boardSaveableData = BoardSaveableData(stage: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
+        let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
         persistence.data = data
@@ -175,7 +175,7 @@ struct LinkSameProcessorTests {
     func awakenStateSavedData(awakeningType: AwakeningType) async throws {
         let board = MockBoardProcessor()
         subject.boardProcessor = board
-        let boardSaveableData = BoardSaveableData(stage: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
+        let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
         persistence.data = data
@@ -239,7 +239,7 @@ struct LinkSameProcessorTests {
     func awakenThenWhatSavedData(awakeningType: AwakeningType) async throws {
         let board = MockBoardProcessor()
         subject.boardProcessor = board
-        let boardSaveableData = BoardSaveableData(stage: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
+        let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
         persistence.data = data

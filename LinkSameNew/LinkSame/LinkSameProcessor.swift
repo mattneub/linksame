@@ -165,7 +165,7 @@ final class LinkSameProcessor: Processor {
 
         await presenter?.receive(.userInteraction(false))
 
-        boardProcessor?.stageNumber = boardData.stage
+        boardProcessor?.stageNumber = boardData.stageNumber
         await boardProcessor?.populateFrom(oldGrid: grid, deckAtStartOfStage: boardData.deckAtStartOfStage)
 
         self.stage = Stage(score: savedState.score)

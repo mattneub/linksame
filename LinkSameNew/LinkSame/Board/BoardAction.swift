@@ -1,4 +1,4 @@
 /// Messages from the presenter to the processor.
-enum BoardAction {
-    case tapped(Piece)
+enum BoardAction: Equatable {
+    case tapped(PieceReducer)
 }

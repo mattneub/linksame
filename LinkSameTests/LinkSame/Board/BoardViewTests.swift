@@ -130,7 +130,7 @@ struct BoardViewTests {
         subject.addSubview(piece4)
         piece1.toggleHilite()
         piece2.toggleHilite()
-        let state = BoardState(hilitedPieces: [piece2, piece3])
+        let state = BoardState(hilitedPieces: [piece2.toReducer, piece3.toReducer])
         await subject.present(state)
         #expect(piece1.isHilited == false)
         #expect(piece2.isHilited == true)
@@ -149,15 +149,16 @@ struct BoardViewTests {
         subject.layoutIfNeeded()
         #expect(subject.pieceSize == CGSize(width: 64, height: 64))
         let subview = try #require(subject.subviews.first)
-        let piece = Piece(picName: "howdy", column: 1, row: 1)
+        let piece = PieceReducer(picName: "howdy", column: 1, row: 1)
         await subject.receive(.insert(piece: piece))
         // pieces are behind the invisible subview, so they are previous in the subviews list
-        #expect(subject.subviews[0] === piece)
+        let realPiece = try #require(subject.subviews[0] as? Piece)
+        #expect(realPiece.toReducer == piece)
         #expect(subject.subviews[1] === subview)
         // piece size is 64, so border is 8+32 = 40, so piece at 1,1 is at 104,104
-        #expect(piece.frame == CGRect(x: 104, y: 104, width: 64, height: 64))
+        #expect(realPiece.frame == CGRect(x: 104, y: 104, width: 64, height: 64))
         // piece is tappable
-        let tap = try #require(piece.gestureRecognizers?.first as? MyTapGestureRecognizer)
+        let tap = try #require(realPiece.gestureRecognizers?.first as? MyTapGestureRecognizer)
         #expect(tap.target as? UIView === subject)
         #expect(tap.action == #selector(subject.tappedPiece))
     }
@@ -173,18 +174,34 @@ struct BoardViewTests {
         subject.layoutIfNeeded()
         #expect(subject.pieceSize == CGSize(width: 64, height: 64))
         let subview = try #require(subject.subviews.first)
-        let piece = Piece(picName: "howdy", column: 1, row: 1)
+        let piece = PieceReducer(picName: "howdy", column: 1, row: 1)
         await subject.receive(.insert(piece: piece))
         // pieces are behind the invisible subview, so they are previous in the subviews list
-        #expect(subject.subviews[0] === piece)
+        let realPiece = try #require(subject.subviews[0] as? Piece)
+        #expect(realPiece.toReducer == piece)
         #expect(subject.subviews[1] === subview)
         // piece size is 64, so border is 8+64 = 72, so piece at 1,1 is at 136,136, except
         // that it is 32 down from that to allow room for toolbar.
-        #expect(piece.frame == CGRect(x: 136, y: 136+32, width: 64, height: 64))
+        #expect(realPiece.frame == CGRect(x: 136, y: 136+32, width: 64, height: 64))
         // piece is tappable
-        let tap = try #require(piece.gestureRecognizers?.first as? MyTapGestureRecognizer)
+        let tap = try #require(realPiece.gestureRecognizers?.first as? MyTapGestureRecognizer)
         #expect(tap.target as? UIView === subject)
         #expect(tap.action == #selector(subject.tappedPiece))
+    }
+
+    @Test("receive remove: removes corresponding piece from interface")
+    func remove() async {
+        let subject = BoardView(columns: 2, rows: 2)
+        let piece1 = Piece(picName: "hey", column: 1, row: 1)
+        let piece2 = Piece(picName: "ho", column: 2, row: 2)
+        subject.addSubview(piece1)
+        subject.addSubview(piece2)
+        #expect(subject.pieces.count == 2)
+        await subject.receive(.remove(piece: .init(picName: "hey", column: 2, row: 2))) // no match
+        #expect(subject.pieces.count == 2)
+        await subject.receive(.remove(piece: .init(picName: "ho", column: 2, row: 2))) // matches piece2
+        #expect(subject.pieces.count == 1)
+        #expect(subject.pieces[0].picName == "hey")
     }
 
     @Test("receive userInteraction: calls application userInteraction")
@@ -204,16 +221,11 @@ struct BoardViewTests {
         subject.frame = CGRect(origin: .zero, size: .init(width: 272, height: 272))
         subject.layoutIfNeeded()
         subject.processor = processor
-        let piece = Piece(picName: "howdy", column: 1, row: 1)
+        let piece = PieceReducer(picName: "howdy", column: 1, row: 1)
         await subject.receive(.insert(piece: piece))
-        let gestureRecognizer = try #require(piece.gestureRecognizers?.first as? MyTapGestureRecognizer)
+        let gestureRecognizer = try #require(subject.pieces.first?.gestureRecognizers?.first as? MyTapGestureRecognizer)
         subject.perform(gestureRecognizer.action, with: gestureRecognizer) // whew!
         await #while(processor.thingsReceived.isEmpty)
-        let action = processor.thingsReceived[0]
-        if case let .tapped(what) = action {
-            #expect(what === piece)
-        } else {
-            throw NSError(domain: "oops", code: 0)
-        }
+        #expect(processor.thingsReceived.first == .tapped(piece))
     }
 }
