@@ -726,115 +726,128 @@ final class BoardProcessor: BoardProcessorType, Processor {
     
 
     
-    // main game logic utility! this is how we know whether two pieces form a legal pair
-    // the day I figured out how to do this is the day I realized I could write this game
-    // we hand back the legal path joining the pieces, rather than a bool, so that the caller can draw the path
-    
+    /// This is the main game logic utility! The day I figured out how to do this is the day I
+    /// realized I could write this game. Decide whether the given pieces constitute a legal pair;
+    /// if they do, return an array of successive slot positions consituting the legal path
+    /// connecting them — and if they don't, return nil.
+    /// - Parameters:
+    ///   - p1: The first piece.
+    ///   - p2: The second piece.
+    /// - Returns: A legal path connecting the slots of the two pieces, or nil if there is no such path.
     private func checkPair(_ p1: PieceReducer, and p2: PieceReducer) -> Path? {
-        // if not a pair, return nil
-        // if a pair, return an array of successive xy positions showing the legal path
-        let pt1 : Slot = (column:p1.column, row:p1.row)
-        let pt2 : Slot = (column:p2.column, row:p2.row)
-        // 1. first check: are they on the same line with nothing between them?
-        if self.lineIsClearFrom(pt1, to:pt2) {
-            return [pt1,pt2]
+        let slot1: Slot = (column: p1.column, row: p1.row)
+        let slot2: Slot = (column: p2.column, row: p2.row)
+        // 1. First check: 1 segment. Are they on the same line with nothing between them?
+        if self.lineIsClearFrom(slot1, to: slot2) {
+            return [slot1, slot2]
         }
         // print("failed straight line test")
-        // 2. second check: are they at the corners of a rectangle with nothing on one pair of sides between them?
-        let midpt1 : Slot = (p1.column, p2.row)
-        let midpt2 : Slot = (p2.column, p1.row)
-        if self.piece(at:midpt1) == nil {
-            if self.lineIsClearFrom(pt1, to:midpt1) && self.lineIsClearFrom(midpt1, to:pt2) {
-                return [pt1, midpt1, pt2]
+        // 2. Second check: 2 segments. Are they at the corners of a rectangle
+        // with nothing on one pair of sides between them?
+        let corner1: Slot = (p1.column, p2.row)
+        let corner2: Slot = (p2.column, p1.row)
+        if self.piece(at: corner1) == nil {
+            if self.lineIsClearFrom(slot1, to: corner1) && self.lineIsClearFrom(corner1, to: slot2) {
+                return [slot1, corner1, slot2]
             }
         }
-        if self.piece(at:midpt2) == nil {
-            if self.lineIsClearFrom(pt1, to:midpt2) && self.lineIsClearFrom(midpt2, to:pt2) {
-                return [pt1, midpt2, pt2]
+        if self.piece(at: corner2) == nil {
+            if self.lineIsClearFrom(slot1, to: corner2) && self.lineIsClearFrom(corner2, to: slot2) {
+                return [slot1, corner2, slot2]
             }
         }
         // print("failed two-segment test")
-        // 3. third check: The Way of the Moving Line
-        // (this was the algorithmic insight that makes the whole thing possible)
-        // connect the x or y coordinates of the pieces by a vertical or horizontal line;
-        // move that line through the whole grid including outside the boundaries,
-        // and see if all three resulting segments are clear
-        // the only drawback with this approach is that if there are multiple paths...
-        // we may find a longer one before we find a shorter one, which is counter-intuitive
-        // so, accumulate all found paths and submit only the shortest
-        var marr = [Path]()
+        // 3. Third check: Three segments. "The Way of the Moving Line"
+        // (This was the algorithmic insight that makes the whole thing possible!)
+        // Connect the x or y coordinates of the pieces by a vertical or horizontal line;
+        // move that line through the _whole_ grid including outside the boundaries,
+        // and see if all three resulting segments are clear.
+        // The only drawback with this approach is that if there are multiple paths,
+        // we may find a longer one before we find a shorter one, which is counter-intuitive;
+        // so, accumulate _all_ found paths and then return only the shortest.
+        var foundPaths = [Path]()
         // print("=======")
-        func addPathIfValid(_ midpt1:Slot, _ midpt2:Slot) {
-            // print("about to check triple segment \(pt1) \(midpt1) \(midpt2) \(pt2)")
-            // new in swift, reject if same midpoint
-            if midpt1.0 == midpt2.0 && midpt1.1 == midpt2.1 {return}
-            if self.piece(at:midpt1) == nil && self.piece(at:midpt2) == nil {
-                if self.lineIsClearFrom(pt1, to:midpt1) &&
-                    self.lineIsClearFrom(midpt1, to:midpt2) &&
-                    self.lineIsClearFrom(midpt2, to:pt2) {
-                        marr.append([pt1,midpt1,midpt2,pt2])
+        func addPathIfValid(_ corner1: Slot, _ corner2: Slot) {
+            // print("about to check triple segment \(slot1) \(corner1) \(corner2) \(slot2)")
+            guard corner1 != corner2 else { // if the corners are the same corner, that's not 3 segments
+                return
+            }
+            if self.piece(at: corner1) == nil && self.piece(at: corner2) == nil {
+                if self.lineIsClearFrom(slot1, to: corner1) &&
+                    self.lineIsClearFrom(corner1, to: corner2) &&
+                    self.lineIsClearFrom(corner2, to: slot2) {
+                        foundPaths.append([slot1, corner1, corner2, slot2]) // easy-peasy!
                 }
             }
         }
-        for y in -1...self.rows {
-            addPathIfValid((pt1.column,y),(pt2.column,y))
+        for row in -1...self.rows {
+            addPathIfValid((slot1.column, row), (slot2.column, row))
         }
-        for x in -1...self.columns {
-            addPathIfValid((x,pt1.row),(x,pt2.row))
+        for column in -1...self.columns {
+            addPathIfValid((column, slot1.row), (column, slot2.row))
         }
-        if marr.count > 0 { // got at least one! find the shortest and submit it
-            func distance(_ pt1:Slot, _ pt2:Slot) -> Double {
-                // utility to learn physical distance between two points (thank you, M. Descartes)
-                let deltax = pt1.0 - pt2.0
-                let deltay = pt1.1 - pt2.1
-                return Double(deltax * deltax + deltay * deltay).squareRoot()
+        if foundPaths.isEmpty { // no dice
+            return nil
+        }
+        if foundPaths.count == 1 { // trivial, we're all done
+            return foundPaths.first
+        }
+        // Okay, we have multiple paths! Find the _shortest_ and return it.
+        func distance(_ pt1: Slot, _ pt2: Slot) -> Double {
+            // utility to learn physical distance between two points (thank you, M. Descartes)
+            let deltax = pt1.0 - pt2.0
+            let deltay = pt1.1 - pt2.1
+            return Double(deltax * deltax + deltay * deltay).squareRoot()
+        }
+        var shortestLength = -1.0
+        var shortestPath = Path()
+        for thisPath in foundPaths {
+            var thisLength = 0.0
+            for index in thisPath.indices.dropLast() {
+                thisLength += distance(thisPath[index],thisPath[index+1])
             }
-            var shortestLength = -1.0
-            var shortestPath = Path()
-            for thisPath in marr {
-                var thisLength = 0.0
-                for ix in thisPath.indices.dropLast() {
-                    thisLength += distance(thisPath[ix],thisPath[ix+1])
-                }
-                if shortestLength < 0 || thisLength < shortestLength {
-                    shortestLength = thisLength
-                    shortestPath = thisPath
-                }
+            if shortestLength < 0 || thisLength < shortestLength {
+                shortestLength = thisLength
+                shortestPath = thisPath
             }
-            assert(shortestPath.count > 0, "We must have a path to illuminate by now")
-            return shortestPath
         }
-        // no dice
-        return nil
+        assert(shortestPath.count > 0, "We must have a path to illuminate by now")
+        return shortestPath
     }
-    
+
+    /// Check whether the currently highlighted two pieces constitute a legal pair.
+    /// If they do, remove them from the hilited pieces, the grid, and the interface.
+    /// If they don't, remove them from the hilited pieces (and remove their interface highlighting).
     private func checkHilitedPair() async {
-        print("should check hilited pair")
-        return () // do nothing for now
         assert(state.hilitedPieces.count == 2, "Must have a pair to check")
-//        for piece in state.hilitedPieces {
-//            assert(piece.window != nil, "Pieces to check must be displayed on board")
-//        }
-        type(of: services.application).userInteraction(false)
+        await presenter?.receive(.userInteraction(false))
+        defer {
+            Task {
+                await presenter?.receive(.userInteraction(true))
+            }
+        }
         let p1 = state.hilitedPieces[0]
         let p2 = state.hilitedPieces[1]
-        if p1.picName != p2.picName {
+        guard p1.picName == p2.picName else {
             await self.unhilite()
-            type(of: services.application).userInteraction(true)
             return
         }
-        if let path = self.checkPair(p1, and:p2) {
-            // flash the path and remove the two pieces
-            self.legalPathShower.illuminate(path:path)
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(0.2))
-                self.legalPathShower.unilluminate()
-                try? await Task.sleep(for: .seconds(0.1))
-                type(of: services.application).userInteraction(true)
-                await reallyRemovePair()
-            }
+        if let path = self.checkPair(p1, and: p2) {
+            // TODO: restore path drawing
+//            // flash the path and remove the two pieces
+//            self.legalPathShower.illuminate(path:path)
+//            Task { @MainActor in
+//                try? await Task.sleep(for: .seconds(0.2))
+//                self.legalPathShower.unilluminate()
+//                try? await Task.sleep(for: .seconds(0.1))
+//                await reallyRemovePair()
+//            }
+            // TODO: restore reallyRemovePair; right now I am just removing directly
+            // which is right only for stage 1
+            await self.unhilite()
+            await self.removePiece(p1)
+            await self.removePiece(p2)
         } else {
-            type(of: services.application).userInteraction(true)
             await self.unhilite()
         }
     }

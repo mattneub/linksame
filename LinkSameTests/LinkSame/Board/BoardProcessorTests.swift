@@ -155,6 +155,101 @@ struct BoardProcessorTests {
         #expect(boardView.thingsReceived.count == 2)
         #expect(boardView.thingsReceived[0] == .userInteraction(false))
         #expect(boardView.thingsReceived[1] == .userInteraction(true))
-        // TODO: test that if we now contain two hilited pieces, we do a pair check
+    }
+
+    @Test("receive tapped: reaches two hilited pieces, trivially not a match, unhilited")
+    func receiveTappedTwoHilitedNoMatch() async throws {
+        let piece = PieceReducer(picName: "howdy", column: 0, row: 0)
+        subject.state.hilitedPieces = [piece]
+        let piece2 = PieceReducer(picName: "yoho", column: 0, row: 0)
+        await subject.receive(.tapped(piece2))
+        #expect(subject.state.hilitedPieces.isEmpty)
+        // first the view is told to hilite both, then it is told to hilite neither
+        #expect(boardView.statesPresented.count == 2)
+        #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
+        #expect(boardView.statesPresented.last?.hilitedPieces == [])
+    }
+
+    // okay, now we get into the heart of the app, the logic of board analysis
+
+    @Test("receive tapped: reaches two hilited pieces, topologically not a match, unhilited")
+    func receiveTappedTwoHilitedMatchButNotLegalPair() async throws {
+        subject.grid[column: 0, row: 0] = PieceReducer(picName: "howdy", column: 0, row: 0)
+        let piece: PieceReducer = PieceReducer(picName: "yoho", column: 1, row: 0)
+        subject.grid[column: 1, row: 0] = piece
+        let piece2: PieceReducer = PieceReducer(picName: "yoho", column: 0, row: 1)
+        subject.grid[column: 0, row: 1] = piece2
+        subject.grid[column: 1, row: 1] = PieceReducer(picName: "howdy", column: 1, row: 1)
+        subject.state.hilitedPieces = [piece]
+        await subject.receive(.tapped(piece2))
+        // they have the same name, but they are diagonal and blocked, no legal path
+        #expect(subject.state.hilitedPieces.isEmpty)
+        #expect(boardView.statesPresented.count == 2)
+        #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
+        #expect(boardView.statesPresented.last?.hilitedPieces == [])
+        #expect(subject.grid[column: 1, row: 0] == piece)
+        #expect(subject.grid[column: 0, row: 1] == piece2)
+    }
+
+    @Test("receive tapped: reaches two hilited pieces, topologically a match, two segments, unhilited and removed")
+    func receiveTappedTwoHilitedMatchLegalPairTwoSegments() async throws {
+        subject.grid[column: 0, row: 0] = PieceReducer(picName: "howdy", column: 0, row: 0)
+        let piece = PieceReducer(picName: "yoho", column: 1, row: 0)
+        subject.grid[column: 1, row: 0] = piece
+        let piece2 = PieceReducer(picName: "yoho", column: 0, row: 1)
+        subject.grid[column: 0, row: 1] = piece2
+        subject.state.hilitedPieces = [piece]
+        await subject.receive(.tapped(piece2))
+        #expect(subject.state.hilitedPieces.isEmpty)
+        #expect(boardView.statesPresented.count == 2)
+        #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
+        #expect(boardView.statesPresented.last?.hilitedPieces == [])
+        #expect(subject.grid[column: 1, row: 0] == nil)
+        #expect(subject.grid[column: 0, row: 1] == nil)
+        #expect(boardView.thingsReceived.contains(.remove(piece: piece)))
+        #expect(boardView.thingsReceived.contains(.remove(piece: piece2)))
+    }
+
+    @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed")
+    func receiveTappedTwoHilitedMatchLegalPairThreeSegments() async throws {
+        let piece = PieceReducer(picName: "yoho", column: 0, row: 0)
+        subject.grid[column: 0, row: 0] = piece
+        subject.grid[column: 0, row: 1] = PieceReducer(picName: "howdy", column: 0, row: 1)
+        let piece2 = PieceReducer(picName: "yoho", column: 0, row: 2)
+        subject.grid[column: 0, row: 2] = piece2
+        subject.grid[column: 1, row: 1] = PieceReducer(picName: "hello", column: 1, row: 1)
+        subject.state.hilitedPieces = [piece]
+        await subject.receive(.tapped(piece2))
+        #expect(subject.state.hilitedPieces.isEmpty)
+        #expect(boardView.statesPresented.count == 2)
+        #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
+        #expect(boardView.statesPresented.last?.hilitedPieces == [])
+        #expect(subject.grid[column: 0, row: 0] == nil)
+        #expect(subject.grid[column: 0, row: 2] == nil)
+        #expect(boardView.thingsReceived.contains(.remove(piece: piece)))
+        #expect(boardView.thingsReceived.contains(.remove(piece: piece2)))
+        // TODO: of course it would be really interesting to confirm what exact path is the match here
+    }
+
+    @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed")
+    func receiveTappedTwoHilitedMatchLegalPairThreeSegments2() async throws {
+        // same as the preceding but flipped horizontally
+        let piece = PieceReducer(picName: "yoho", column: 1, row: 0)
+        subject.grid[column: 1, row: 0] = piece
+        subject.grid[column: 0, row: 1] = PieceReducer(picName: "howdy", column: 0, row: 1)
+        let piece2 = PieceReducer(picName: "yoho", column: 1, row: 2)
+        subject.grid[column: 1, row: 2] = piece2
+        subject.grid[column: 1, row: 1] = PieceReducer(picName: "hello", column: 1, row: 1)
+        subject.state.hilitedPieces = [piece]
+        await subject.receive(.tapped(piece2))
+        #expect(subject.state.hilitedPieces.isEmpty)
+        #expect(boardView.statesPresented.count == 2)
+        #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
+        #expect(boardView.statesPresented.last?.hilitedPieces == [])
+        #expect(subject.grid[column: 1, row: 0] == nil)
+        #expect(subject.grid[column: 1, row: 2] == nil)
+        #expect(boardView.thingsReceived.contains(.remove(piece: piece)))
+        #expect(boardView.thingsReceived.contains(.remove(piece: piece2)))
+        // TODO: of course it would be really interesting to confirm what exact path is the match here
     }
 }
