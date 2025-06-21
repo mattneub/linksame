@@ -208,6 +208,10 @@ struct BoardProcessorTests {
         #expect(subject.grid[column: 0, row: 1] == nil)
         #expect(boardView.thingsReceived.contains(.remove(piece: piece)))
         #expect(boardView.thingsReceived.contains(.remove(piece: piece2)))
+        // and we flashed the path
+        let expectedPath = [Slot(1, 0), Slot(1, 1), Slot(0, 1)]
+        #expect(boardView.thingsReceived.contains(.illuminate(path: expectedPath)))
+        #expect(boardView.thingsReceived.contains(.unilluminate))
     }
 
     @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed")
@@ -228,7 +232,11 @@ struct BoardProcessorTests {
         #expect(subject.grid[column: 0, row: 2] == nil)
         #expect(boardView.thingsReceived.contains(.remove(piece: piece)))
         #expect(boardView.thingsReceived.contains(.remove(piece: piece2)))
-        // TODO: of course it would be really interesting to confirm what exact path is the match here
+        // and we flashed the path — and the path is the shorter path, which goes outside the
+        // left grid bounds, rather than going all the way around the piece at (1, 1)
+        let expectedPath = [Slot(0, 0), Slot(-1, 0), Slot(-1, 2), Slot(0, 2)]
+        #expect(boardView.thingsReceived.contains(.illuminate(path: expectedPath)))
+        #expect(boardView.thingsReceived.contains(.unilluminate))
     }
 
     @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed")
@@ -250,6 +258,10 @@ struct BoardProcessorTests {
         #expect(subject.grid[column: 1, row: 2] == nil)
         #expect(boardView.thingsReceived.contains(.remove(piece: piece)))
         #expect(boardView.thingsReceived.contains(.remove(piece: piece2)))
-        // TODO: of course it would be really interesting to confirm what exact path is the match here
+        // and we flashed the path — and the path is the shorter path, which goes outside the
+        // right grid bounds, rather than going all the way around the piece at (0, 1)
+        let expectedPath = [Slot(1, 0), Slot(2, 0), Slot(2, 2), Slot(1, 2)]
+        #expect(boardView.thingsReceived.contains(.illuminate(path: expectedPath)))
+        #expect(boardView.thingsReceived.contains(.unilluminate))
     }
 }

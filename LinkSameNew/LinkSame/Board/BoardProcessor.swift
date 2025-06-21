@@ -42,12 +42,6 @@ final class BoardProcessor: BoardProcessorType, Processor {
 //    static let userMoved = Notification.Name("userMoved")
 //    static let userTappedPath = Notification.Name("userTappedPath")
 
-    /// The address of a slot within the grid.
-    typealias Slot = (column: Int, row: Int)
-
-    /// Expression of the concept of a path between a succession of slots.
-    typealias Path = [Slot]
-
     /// Reference to the presenter; set by the coordinator on creation.
     weak var presenter: (any ReceiverPresenter<BoardEffect, BoardState>)?
 
@@ -55,7 +49,9 @@ final class BoardProcessor: BoardProcessorType, Processor {
     var state = BoardState()
 
     var stageNumber = 0
-    var showingHint : Bool { return self.legalPathShower.isIlluminating }
+
+    // TODO: find another way of expressing this one
+    // var showingHint : Bool { return self.legalPathShower.isIlluminating }
 
     /// The Grid, acting as the source of truth for where the pieces are.
     /// We always have one; its dimensions are determined at creation time.
@@ -119,7 +115,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 guard !deck.isEmpty else {
                     throw DeckSizeError.oops
                 }
-                await addPieceAt((column: column, row: row), withPicture: deck.removeLast())
+                await addPieceAt(Slot(column: column, row: row), withPicture: deck.removeLast())
             }
         }
         self.hintPath = self.legalPath() // generate initial hint
@@ -132,7 +128,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
         for column in 0 ..< oldGrid.columns {
             for row in 0 ..< oldGrid.rows {
                 if let oldPiece = oldGrid[column: column, row: row] {
-                    await addPieceAt((column: column, row: row), withPicture: oldPiece.picName)
+                    await addPieceAt(Slot(column: column, row: row), withPicture: oldPiece.picName)
                 } // and otherwise it will just be nil
                 // TODO: seem to be just assuming that the physical layout is empty
             }
@@ -151,13 +147,13 @@ final class BoardProcessor: BoardProcessorType, Processor {
         for column in 0 ..< self.columns {
             for row in 0 ..< self.rows {
                 // TODO: This looks like it should be otiose: addPiece should remove if a piece is already slotted in
-                if let oldPiece = self.piece(at: (column: column, row: row)) {
+                if let oldPiece = self.piece(at: Slot(column: column, row: row)) {
                     await self.removePiece(oldPiece)
                 }
                 guard !deck.isEmpty else {
                     throw DeckSizeError.oops
                 }
-                await addPieceAt((column: column, row: row), withPicture: deck.removeLast().picName)
+                await addPieceAt(Slot(column: column, row: row), withPicture: deck.removeLast().picName)
             }
         }
         self.hintPath = self.legalPath() // generate initial hint
@@ -171,7 +167,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             var deck = [String]()
             for column in 0 ..< columns {
                 for row in 0 ..< rows {
-                    if let piece = self.piece(at: (column: column, row: row)) {
+                    if let piece = self.piece(at: Slot(column: column, row: row)) {
                         deck.append(piece.picName)
                     }
                 }
@@ -183,7 +179,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             type(of: services.application).userInteraction(true)
             for column in 0 ..< columns {
                 for row in 0 ..< rows {
-                    if let piece = self.piece(at: (column: column, row: row)) {
+                    if let piece = self.piece(at: Slot(column: column, row: row)) {
                         // TODO: move this to view, I think (but in any case, restore)
 //                        UIView.transition(
 //                            with: piece, duration: 0.7, options: .transitionFlipFromLeft, animations: {
@@ -196,84 +192,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
         } while self.legalPath() == nil // both creates and tests for existence of legal path
         // TODO: and don't I need to update the hint path?
     }
-    
-    // okay, so previously I had this functionality spread over two methods
-    // board illuminate() and unilluminate(), plus remembering to set the state property
-    // plus I was skankily handing the path to draw into the layer itself
-    // that is just the kind of thing I wanted to clean up
-    // so I put it all into a little helper class
-    @MainActor
-    final class LegalPathShower : NSObject {
-        // view whose draw defers to us
-        final class PathView : UIView {
-            private var pathShower : LegalPathShower?
-            init(pathShower:LegalPathShower) {
-                self.pathShower = pathShower
-                super.init(frame:.zero) // caller's job to give us size
-                self.isOpaque = false
-            }
-            required init?(coder aDecoder: NSCoder) {
-                fatalError("init(coder:) has not been implemented")
-            }
-            override func draw(_ rect: CGRect) {
-                pathShower?.draw(intoIlluminationContext: UIGraphicsGetCurrentContext())
-            }
-            deinit {
-                print("farewell from PathView")
-            }
-        }
-        unowned private let board : BoardProcessor
-        fileprivate init(board:BoardProcessor) {self.board = board}
-        private var pathToIlluminate : Path?
-        fileprivate private(set) var isIlluminating = false {
-            didSet {
-                // TODO: Restore this, just commenting out so I can compile
-//                switch self.isIlluminating {
-//                case false:
-//                    self.pathToIlluminate = nil
-//                    self.board.pathView.isUserInteractionEnabled = false // make touches just fall thru once again
-//                    self.board.pathView.setNeedsDisplay()
-//                case true:
-//                    self.board.pathView.isUserInteractionEnabled = true // block touches
-//                    self.board.pathView.setNeedsDisplay()
-//                }
-            }
-        }
-        fileprivate func illuminate(path:Path) {
-            self.pathToIlluminate = path
-            self.isIlluminating = true
-        }
-        fileprivate func unilluminate() {
-            self.isIlluminating = false
-        }
-        private func draw(intoIlluminationContext con: CGContext?) {
-            // if no path, do nothing, thus causing the layer to become empty
-            guard let arr = self.pathToIlluminate else {return}
-            guard let con = con else {return}
-            // okay, we have a path
-            // connect the dots; however, the dots we want to connect are the *centers* of the pieces...
-            // whereas we are given piece *origins*, so calculate offsets
-            // TODO: restore this, just commenting out so I can compile
-//            let sz = self.board.pieceSize
-//            let offx = sz.width/2.0
-//            let offy = sz.height/2.0
-//            con.setLineJoin(.round)
-//            con.setStrokeColor(red: 0.4, green: 0.4, blue: 1.0, alpha: 1.0)
-//            con.setLineWidth(3.0)
-//            con.beginPath()
-//            con.addLines(between: arr.map {piece in
-//                let origin = self.board.originOf(piece)
-//                return CGPoint(x: origin.x + offx, y: origin.y + offy)
-//            })
-//            con.strokePath()
-        }
-        deinit {
-            print("farewell from LegalPathShower")
-        }
-    }
-    
-    private lazy var legalPathShower = LegalPathShower(board:self)
-    
+
     /// Report the piece at a slot of the grid, except that adjacent to the real grid there is
     /// an imaginary extension on all sides, consisting of empty slots, where path drawing can
     /// take place.
@@ -281,7 +200,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
     /// - Returns: A piece reducer describing the piece that is in that slot of the grid.
     private func piece(at slot: Slot) -> PieceReducer? {
         // TODO: Consider moving this to grid, i.e. just make it part of the subscripting.
-        let (column, row) = slot
+        let (column, row) = (slot.column, slot.row)
         // it is legal to ask for piece one slot outside boundaries, but not further
         assert(column >= -1 && column <= self.columns, "Piece requested out of bounds (column)")
         assert(row >= -1 && row <= self.rows, "Piece requested out of bounds (row)")
@@ -298,7 +217,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
     ///   - slot: The slot where the piece should go.
     ///   - picTitle: The name of the picture for the piece.
     private func addPieceAt(_ slot: Slot, withPicture picTitle: String) async {
-        let (column, row) = slot
+        let (column, row) = (slot.column, slot.row)
         let piece = PieceReducer(picName: picTitle, column: column, row: row)
         grid[column: column, row: row] = piece
         await presenter?.receive(.insert(piece: piece))
@@ -329,7 +248,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 (start, end) = (p2, p1)
             }
             for row in start.row + 1 ..< end.row {
-                if self.piece(at: (p1.column, row)) != nil {
+                if self.piece(at: Slot(p1.column, row)) != nil {
                     return false
                 }
             }
@@ -340,7 +259,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 (start, end) = (p2, p1)
             }
             for column in start.column + 1 ..< end.column {
-                if self.piece(at: (column, p1.row)) != nil {
+                if self.piece(at: Slot(column, p1.row)) != nil {
                     return false
                 }
             }
@@ -361,7 +280,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
         // return true // testing game end
         for column in 0..<self.columns {
             for row in 0..<self.rows {
-                if self.piece(at: (column, row)) != nil {
+                if self.piece(at: Slot(column, row)) != nil {
                     return false
                 }
             }
@@ -422,15 +341,15 @@ final class BoardProcessor: BoardProcessorType, Processor {
             for x in 0..<self.columns {
                 // for (var y = self.yct - 1; y > 0; y--) {
                 for y in self.rows>>>0 { // not an exact match for my original C version, but simpler
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var yt = y-1; yt >= 0; yt--) {
                         for yt in y>>>0 {
-                            let piece2 = self.piece(at:(x,yt))
+                            let piece2 = self.piece(at: Slot(x,yt))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
@@ -442,15 +361,15 @@ final class BoardProcessor: BoardProcessorType, Processor {
             for y in 0..<self.rows {
                 // for (var x = self.xct - 1; x > 0; x--) {
                 for x in self.columns>>>0 {
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var xt = x-1; xt >= 0; xt--) {
                         for xt in x>>>0 {
-                            let piece2 = self.piece(at:(xt,y))
+                            let piece2 = self.piece(at: Slot(xt,y))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
@@ -464,30 +383,30 @@ final class BoardProcessor: BoardProcessorType, Processor {
             for x in 0..<self.columns {
                 // for (var y = center - 1; y > 0; y--) {
                 for y in center>>>0 {
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var yt = y-1; yt >= 0; yt--) {
                         for yt in y>>>0 {
-                            let piece2 = self.piece(at:(x,yt))
+                            let piece2 = self.piece(at: Slot(x,yt))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
                 }
                 // for (var y = center; y <= self.yct - 1; y++) {
                 for y in center..<self.rows {
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var yt = y+1; yt < self.yct; yt++) {
                         for yt in y+1..<self.rows {
-                            let piece2 = self.piece(at:(x,yt))
+                            let piece2 = self.piece(at: Slot(x,yt))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
@@ -501,30 +420,30 @@ final class BoardProcessor: BoardProcessorType, Processor {
             for y in 0..<self.rows {
                 // for (var x = center-1; x > 0; x--) {
                 for x in center>>>0 {
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var xt = x-1; xt >= 0; xt--) {
                         for xt in x>>>0 {
-                            let piece2 = self.piece(at:(xt,y))
+                            let piece2 = self.piece(at: Slot(xt,y))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
                 }
                 // for (var x = center; x <= self.xct - 1; x++) {
                 for x in center..<self.columns {
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var xt = x+1; xt < self.xct; xt++) {
                         for xt in x+1..<self.columns {
-                            let piece2 = self.piece(at:(xt,y))
+                            let piece2 = self.piece(at: Slot(xt,y))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
@@ -538,30 +457,30 @@ final class BoardProcessor: BoardProcessorType, Processor {
             for x in 0..<self.columns {
                 // for (var y = self.yct-1; y > center; y--) {
                 for y in self.rows>>>center { // not identical to C loop, moved pivot
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var yt = y-1; yt >= center; yt--) {
                         for yt in y>>>center {
-                            let piece2 = self.piece(at:(x,yt))
+                            let piece2 = self.piece(at: Slot(x,yt))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
                 }
                 // for (var y = 0; y < center-1; y++) {
                 for y in 0..<center {
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var yt = y+1; yt < center; yt++) {
                         for yt in y+1..<center {
-                            let piece2 = self.piece(at:(x,yt))
+                            let piece2 = self.piece(at: Slot(x,yt))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
@@ -575,30 +494,30 @@ final class BoardProcessor: BoardProcessorType, Processor {
             for y in 0..<self.rows {
                 // for (var x = self.xct-1; x > center; x--) {
                 for x in self.columns>>>center {
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var xt = x-1; xt >= center; xt--) {
                         for xt in x>>>center {
-                            let piece2 = self.piece(at:(xt,y))
+                            let piece2 = self.piece(at: Slot(xt,y))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
                 }
                 // for (var x = 0; x < center-1; x++) {
                 for x in 0..<center {
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var xt = x+1; xt < center; xt++) {
                         for xt in x..<center { // not identical
-                            let piece2 = self.piece(at:(xt,y))
+                            let piece2 = self.piece(at: Slot(xt,y))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
@@ -612,15 +531,15 @@ final class BoardProcessor: BoardProcessorType, Processor {
             for x in 0..<center {
                 // for (var y = self.yct - 1; y > 0; y--) {
                 for y in self.rows>>>0 {
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var yt = y-1; yt >= 0; yt--) {
                         for yt in y>>>0 {
-                            let piece2 = self.piece(at:(x,yt))
+                            let piece2 = self.piece(at: Slot(x,yt))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
@@ -630,15 +549,15 @@ final class BoardProcessor: BoardProcessorType, Processor {
             for x in center..<self.columns {
                 // for (var y = 0; y < self.yct-1; y++) {
                 for y in 0..<self.rows {
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var yt = y+1; yt < self.yct; yt++) {
                         for yt in y..<self.rows {
-                            let piece2 = self.piece(at:(x,yt))
+                            let piece2 = self.piece(at: Slot(x,yt))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
@@ -651,15 +570,15 @@ final class BoardProcessor: BoardProcessorType, Processor {
             for y in 0..<center {
                 // for (var x = self.xct - 1; x > 0; x--) {
                 for x in self.columns>>>0 {
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var xt = x-1; xt >= 0; xt--) {
                         for xt in x>>>0 {
-                            let piece2 = self.piece(at:(xt,y))
+                            let piece2 = self.piece(at: Slot(xt,y))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
@@ -669,15 +588,15 @@ final class BoardProcessor: BoardProcessorType, Processor {
             for y in center..<self.rows {
                 // for (var x = 0; x < self.xct-1; x++) {
                 for x in 0..<self.columns {
-                    let piece = self.piece(at:(x,y))
+                    let piece = self.piece(at: Slot(x,y))
                     if piece == nil {
                         // for (var xt = x+1; xt < self.xct; xt++) {
                         for xt in x..<self.columns {
-                            let piece2 = self.piece(at:(xt,y))
+                            let piece2 = self.piece(at: Slot(xt,y))
                             if piece2 == nil {
                                 continue
                             }
-                            await movePiece(piece2!, to:(x,y))
+                            await movePiece(piece2!, to: Slot(x,y))
                             break
                         }
                     }
@@ -735,8 +654,8 @@ final class BoardProcessor: BoardProcessorType, Processor {
     ///   - p2: The second piece.
     /// - Returns: A legal path connecting the slots of the two pieces, or nil if there is no such path.
     private func checkPair(_ p1: PieceReducer, and p2: PieceReducer) -> Path? {
-        let slot1: Slot = (column: p1.column, row: p1.row)
-        let slot2: Slot = (column: p2.column, row: p2.row)
+        let slot1 = Slot(column: p1.column, row: p1.row)
+        let slot2 = Slot(column: p2.column, row: p2.row)
         // 1. First check: 1 segment. Are they on the same line with nothing between them?
         if self.lineIsClearFrom(slot1, to: slot2) {
             return [slot1, slot2]
@@ -744,8 +663,8 @@ final class BoardProcessor: BoardProcessorType, Processor {
         // print("failed straight line test")
         // 2. Second check: 2 segments. Are they at the corners of a rectangle
         // with nothing on one pair of sides between them?
-        let corner1: Slot = (p1.column, p2.row)
-        let corner2: Slot = (p2.column, p1.row)
+        let corner1 = Slot(p1.column, p2.row)
+        let corner2 = Slot(p2.column, p1.row)
         if self.piece(at: corner1) == nil {
             if self.lineIsClearFrom(slot1, to: corner1) && self.lineIsClearFrom(corner1, to: slot2) {
                 return [slot1, corner1, slot2]
@@ -781,10 +700,10 @@ final class BoardProcessor: BoardProcessorType, Processor {
             }
         }
         for row in -1...self.rows {
-            addPathIfValid((slot1.column, row), (slot2.column, row))
+            addPathIfValid(Slot(slot1.column, row), Slot(slot2.column, row))
         }
         for column in -1...self.columns {
-            addPathIfValid((column, slot1.row), (column, slot2.row))
+            addPathIfValid(Slot(column, slot1.row), Slot(column, slot2.row))
         }
         if foundPaths.isEmpty { // no dice
             return nil
@@ -795,8 +714,8 @@ final class BoardProcessor: BoardProcessorType, Processor {
         // Okay, we have multiple paths! Find the _shortest_ and return it.
         func distance(_ pt1: Slot, _ pt2: Slot) -> Double {
             // utility to learn physical distance between two points (thank you, M. Descartes)
-            let deltax = pt1.0 - pt2.0
-            let deltay = pt1.1 - pt2.1
+            let deltax = pt1.column - pt2.column
+            let deltay = pt1.row - pt2.row
             return Double(deltax * deltax + deltay * deltay).squareRoot()
         }
         var shortestLength = -1.0
@@ -833,15 +752,16 @@ final class BoardProcessor: BoardProcessorType, Processor {
             return
         }
         if let path = self.checkPair(p1, and: p2) {
-            // TODO: restore path drawing
-//            // flash the path and remove the two pieces
-//            self.legalPathShower.illuminate(path:path)
-//            Task { @MainActor in
-//                try? await Task.sleep(for: .seconds(0.2))
-//                self.legalPathShower.unilluminate()
-//                try? await Task.sleep(for: .seconds(0.1))
-//                await reallyRemovePair()
-//            }
+            // flash the path
+            await presenter?.receive(.illuminate(path: path))
+            try? await unlessTesting {
+                try? await Task.sleep(for: .seconds(0.2))
+            }
+            await presenter?.receive(.unilluminate)
+            try? await unlessTesting {
+                try? await Task.sleep(for: .seconds(0.1))
+            }
+//          await reallyRemovePair()
             // TODO: restore reallyRemovePair; right now I am just removing directly
             // which is right only for stage 1
             await self.unhilite()
@@ -852,10 +772,10 @@ final class BoardProcessor: BoardProcessorType, Processor {
         }
     }
     
-    // tap gesture recognizer action handler
-    // maintain an ivar pointing to hilited pieces
-    // when that list has two items, check them for validity
-
+    /// The user has tapped the given piece. If already highlighted, remove it from the highlighted
+    /// list and unhighlight it; otherwise, add it to the highlighted list and highlight it. If there
+    /// are now two highlighted pieces, evaluate for a legal path.
+    /// - Parameter piece: The piece tapped.
     private func userTapped(piece: PieceReducer) async {
         assert(state.hilitedPieces.count < 2, "tap when two pieces are already hilited")
         await presenter?.receive(.userInteraction(false))
@@ -905,14 +825,14 @@ final class BoardProcessor: BoardProcessorType, Processor {
     private func legalPath () -> Path? {
         for x in 0..<self.columns {
             for y in 0..<self.rows {
-                let piece = self.piece(at:(x,y))
+                let piece = self.piece(at: Slot(x,y))
                 if piece == nil {
                     continue
                 }
                 let picName = piece!.picName
                 for xx in 0..<self.columns {
                     for yy in 0..<self.rows {
-                        let piece2 = self.piece(at:(xx,yy))
+                        let piece2 = self.piece(at: Slot(xx,yy))
                         if piece2 == nil {
                             continue
                         }
@@ -939,14 +859,15 @@ final class BoardProcessor: BoardProcessorType, Processor {
     }
     
     // public, called by LinkSameViewController to ask us to display hint
-    func hint () {
+    func hint() async {
+        // TODO: need to deal with tappability during this kind of illumination
         // no need to waste time calling legalPath(); path is ready (or not) in hintPath
         if let path = self.hintPath {
-            self.legalPathShower.illuminate(path:path)
+            await presenter?.receive(.illuminate(path: path))
         } else { // this part shouldn't happen, but just in case, waste time after all
             self.hintPath = self.legalPath()
             if self.hintPath != nil {
-                self.hint() // try again, and this time we'll succeed
+                await self.hint() // try again, and this time we'll succeed
             } else {
                 self.redeal() // should _really_ never happen, but just in case
             }
@@ -955,8 +876,8 @@ final class BoardProcessor: BoardProcessorType, Processor {
     
     // public, for the same reason: if LinkSameViewController tells us to hint,
     // we stay hinted until we are told to unhint
-    func unhint () {
-        self.legalPathShower.unilluminate()
+    func unhint() async {
+        await presenter?.receive(.unilluminate)
     }
 
     deinit {

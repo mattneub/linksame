@@ -5,8 +5,10 @@ import WaitWhile
 
 @MainActor
 struct BoardViewTests {
+    let subject = BoardView(columns: 2, rows: 2)
     let screen = MockScreen()
     let processor = MockProcessor<BoardAction, BoardState, BoardEffect>()
+    let pathView = MockPathView()
 
     init() {
         services.screen = screen
@@ -93,11 +95,10 @@ struct BoardViewTests {
 
     @Test("Initializer sets up the view's subview.")
     func initializer() async throws {
-        // TODO: Eventually I expect the subview to have a class we can test for.
         let subject = BoardView(columns: 1, rows: 1)
         subject.frame = CGRect(origin: .zero, size: .init(width: 100, height: 100))
         subject.layoutIfNeeded()
-        let subview = try #require(subject.subviews.first)
+        let subview = try #require(subject.subviews.first as? PathView)
         #expect(subview.frame == CGRect(origin: .zero, size: .init(width: 100, height: 100)))
         subject.frame = CGRect(origin: .zero, size: .init(width: 200, height: 200))
         subject.layoutIfNeeded()
@@ -123,7 +124,6 @@ struct BoardViewTests {
         let piece2 = Piece(picName: "piece2", column: 0, row: 0)
         let piece3 = Piece(picName: "piece3", column: 0, row: 0)
         let piece4 = Piece(picName: "piece4", column: 0, row: 0)
-        let subject = BoardView(columns: 2, rows: 2)
         subject.addSubview(piece1)
         subject.addSubview(piece2)
         subject.addSubview(piece3)
@@ -138,13 +138,26 @@ struct BoardViewTests {
         #expect(piece4.isHilited == false)
     }
 
+    @Test("receive illuminate: sends illuminate to path view, translating slots to center points")
+    func illuminate() async {
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .phone
+            traits.displayScale = 2
+        }
+        subject.frame = CGRect(origin: .zero, size: .init(width: 208, height: 208))
+        subject.layoutIfNeeded()
+        subject.pathView = pathView
+        await subject.receive(.illuminate(path: [Slot(column: 1, row: 1)]))
+        // see next test to find out how I know where the center is for that slot
+        #expect(pathView.thingsReceived.first == .illuminate([CGPoint(x: 136, y: 136)]))
+    }
+
     @Test("Receive insert: inserts piece at expected location")
     func insert() async throws {
         screen.traitCollection = UITraitCollection { traits in
             traits.userInterfaceIdiom = .phone
             traits.displayScale = 2
         }
-        let subject = BoardView(columns: 2, rows: 2)
         subject.frame = CGRect(origin: .zero, size: .init(width: 208, height: 208))
         subject.layoutIfNeeded()
         #expect(subject.pieceSize == CGSize(width: 64, height: 64))
@@ -169,7 +182,6 @@ struct BoardViewTests {
             traits.userInterfaceIdiom = .pad
             traits.displayScale = 2
         }
-        let subject = BoardView(columns: 2, rows: 2)
         subject.frame = CGRect(origin: .zero, size: .init(width: 272, height: 272))
         subject.layoutIfNeeded()
         #expect(subject.pieceSize == CGSize(width: 64, height: 64))
@@ -191,7 +203,6 @@ struct BoardViewTests {
 
     @Test("receive remove: removes corresponding piece from interface")
     func remove() async {
-        let subject = BoardView(columns: 2, rows: 2)
         let piece1 = Piece(picName: "hey", column: 1, row: 1)
         let piece2 = Piece(picName: "ho", column: 2, row: 2)
         subject.addSubview(piece1)
@@ -204,9 +215,15 @@ struct BoardViewTests {
         #expect(subject.pieces[0].picName == "hey")
     }
 
+    @Test("receive unilluminate: sends unilluminate to path view")
+    func unilluminate() async {
+        subject.pathView = pathView
+        await subject.receive(.unilluminate)
+        #expect(pathView.thingsReceived.first == .unilluminate)
+    }
+
     @Test("receive userInteraction: calls application userInteraction")
     func userInteraction() async {
-        let subject = BoardView(columns: 2, rows: 2)
         await subject.receive(.userInteraction(false))
         #expect(MockApplication.methodsCalled == ["userInteraction(_:)"])
         #expect(MockApplication.bools == [false])
@@ -217,7 +234,6 @@ struct BoardViewTests {
 
     @Test("tappedPiece: send processor .tapped(piece)")
     func tappedPiece() async throws {
-        let subject = BoardView(columns: 2, rows: 2)
         subject.frame = CGRect(origin: .zero, size: .init(width: 272, height: 272))
         subject.layoutIfNeeded()
         subject.processor = processor

@@ -37,9 +37,8 @@ class BoardView: UIView, ReceiverPresenter {
 
     /// View that holds the path drawing. It goes in front of all pieces.
     /// It is tappable, but user interaction is generally disabled, so taps fall thru to the pieces.
-    lazy var pathView: UIView = {
-        // TODO: restore this somehow
-        let pathView = UIView() // LegalPathShower.PathView(pathShower: self.legalPathShower)
+    lazy var pathView: PathView = {
+        let pathView = PathView(frame: .zero)
         pathView.isUserInteractionEnabled = false // clicks just fall right thru
         let tap = UITapGestureRecognizer(target: self, action: #selector(tappedPathView))
         addGestureRecognizer(tap)
@@ -96,12 +95,16 @@ class BoardView: UIView, ReceiverPresenter {
 
     func receive(_ effect: BoardEffect) async {
         switch effect {
+        case .illuminate(path: let path):
+            await pathView.receive(.illuminate(path.map { centerOf(column: $0.column, row: $0.row) }))
         case .insert(let piece):
             insert(piece: piece)
         case .remove(let piece):
             remove(piece: piece)
         case .userInteraction(let onOff):
             type(of: services.application).userInteraction(onOff)
+        case .unilluminate:
+            await pathView.receive(.unilluminate)
         }
     }
 
@@ -164,6 +167,15 @@ class BoardView: UIView, ReceiverPresenter {
             + (onPhone ? 0 : 64/2) // allow for toolbar
         )
         return CGPoint(x: x, y: y)
+    }
+
+    /// Utility: Given a piece's slot in the grid, where is its center in the view?
+    /// - Parameters:
+    ///   - column: The column address of the piece's slot.
+    ///   - row: The row address of the piece's slot
+    /// - Returns: The center of the piece, if there were a piece at this slot.
+    func centerOf(column: Int, row: Int) -> CGPoint {
+        CGRect(origin: originOf(column: column, row: row), size: pieceSize).center
     }
 
     @objc func tappedPathView() {}

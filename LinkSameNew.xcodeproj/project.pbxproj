@@ -35,6 +35,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				"Stuff I'm Not Using.swift",
 			);
 			target = 3F6B09172DDBC17E0053C85C /* LinkSameNew */;
 		};
