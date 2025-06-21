@@ -21,8 +21,8 @@ final class Piece: UIView {
         return lhs.toReducer == rhs
     }
 
-    /// What image we display.
-    let picName: String
+    /// What image we display. This can change if the pieces are redealt (shuffle).
+    var picName: String
 
     /// Where we are slotted.
     let column: Int
@@ -34,7 +34,9 @@ final class Piece: UIView {
     }
 
     override var description: String {
-        return "picname: \(picName); column: \(column); row: \(row)"
+        MainActor.assumeIsolated {
+            return "picname: \(picName); column: \(column); row: \(row)"
+        }
     }
 
     init(picName: String, column: Int, row: Int) {
@@ -106,7 +108,7 @@ final class Piece: UIView {
 }
 
 /// Reducer for maintaining key information about a Piece.
-struct PieceReducer: Equatable, Codable {
+struct PieceReducer: Equatable, Hashable, Codable {
     let picName: String
     var column: Int = -1
     var row: Int = -1

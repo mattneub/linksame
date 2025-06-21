@@ -101,6 +101,14 @@ class BoardView: UIView, ReceiverPresenter {
             insert(piece: piece)
         case .remove(let piece):
             remove(piece: piece)
+        case .transition(let piece, let picture):
+            guard let realPiece = pieces.first(where: { $0 == piece }) else {
+                return
+            }
+            services.view.transition(with: realPiece, duration: 0.7, options: .transitionFlipFromLeft, animations: {
+                realPiece.picName = picture
+                realPiece.setNeedsDisplay()
+            })
         case .userInteraction(let onOff):
             type(of: services.application).userInteraction(onOff)
         case .unilluminate:

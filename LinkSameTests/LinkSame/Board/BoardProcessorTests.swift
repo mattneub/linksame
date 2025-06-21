@@ -264,4 +264,46 @@ struct BoardProcessorTests {
         #expect(boardView.thingsReceived.contains(.illuminate(path: expectedPath)))
         #expect(boardView.thingsReceived.contains(.unilluminate))
     }
+
+    @Test("shuffle: unhilites and presents, unilluminates, turns user interaction off and on, rewrites grid, sends corresponding transition")
+    func shuffle() async throws {
+        subject.grid[column: 1, row: 0] = PieceReducer(picName: "yoho", column: 1, row: 0)
+        subject.grid[column: 0, row: 1] = PieceReducer(picName: "yoho", column: 0, row: 1)
+        subject.grid[column: 1, row: 2] = PieceReducer(picName: "teehee", column: 1, row: 2)
+        subject.grid[column: 1, row: 1] = PieceReducer(picName: "teehee", column: 1, row: 1)
+        subject.state.hilitedPieces = [PieceReducer(picName: "yoho", column: 1, row: 0)]
+        await subject.shuffle()
+        #expect(subject.state.hilitedPieces == [])
+        #expect(boardView.statesPresented.first?.hilitedPieces == [])
+        #expect(boardView.thingsReceived.first == .unilluminate)
+        let gridPieces = subject.grid.grid.flatMap {$0}.compactMap {$0}
+        #expect(gridPieces.count == 4)
+        let picNames = gridPieces.map { $0.picName }
+        let slots = gridPieces.map { Slot(column: $0.column, row: $0.row) }
+        #expect(picNames.sorted() == ["teehee", "teehee", "yoho", "yoho"])
+        #expect(Set(slots) == [Slot(column: 1, row: 0), Slot(column: 0, row: 1), Slot(column: 1, row: 2), Slot(column: 1, row: 1)])
+        #expect(boardView.thingsReceived.count == 7)
+        #expect(boardView.thingsReceived.contains(.userInteraction(false)))
+        #expect(boardView.thingsReceived.contains(.userInteraction(true)))
+        var effectPieces = [PieceReducer]()
+        var effectPix = [String]()
+        for thing in boardView.thingsReceived {
+            if case .transition(let piece, let picName) = thing {
+                effectPieces.append(piece)
+                effectPix.append(picName)
+            }
+        }
+        #expect(effectPieces.count == 4)
+        #expect(effectPix.count == 4)
+        #expect(Set(effectPieces) == [
+            PieceReducer(picName: "yoho", column: 1, row: 0),
+            PieceReducer(picName: "yoho", column: 0, row: 1),
+            PieceReducer(picName: "teehee", column: 1, row: 2),
+            PieceReducer(picName: "teehee", column: 1, row: 1),
+        ])
+        let resultantPieces = zip(effectPieces, effectPix).map {
+            PieceReducer(picName: $1, column: $0.column, row: $0.row)
+        }
+        #expect(Set(resultantPieces) == Set(gridPieces))
+    }
 }

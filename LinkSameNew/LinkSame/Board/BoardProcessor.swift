@@ -12,6 +12,7 @@ protocol BoardProcessorType: AnyObject {
     var deckAtStartOfStage: [PieceReducer] { get }
     func createAndDealDeck() async throws
     func populateFrom(oldGrid: Grid, deckAtStartOfStage: [PieceReducer]) async
+    func shuffle() async
 }
 
 // TODO: eventually get rid of this comment
@@ -61,7 +62,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
     var columns: Int { grid.columns }
     var rows: Int { grid.rows }
 
-    private var hintPath : Path?
+    private var hintPath: Path?
 
     /// Variable where we maintain the contents of the "deck" at the start of each stage,
     /// in case we are asked to restart the stage. The "deck" consists of just a list of pictures,
@@ -159,11 +160,12 @@ final class BoardProcessor: BoardProcessorType, Processor {
         self.hintPath = self.legalPath() // generate initial hint
     }
 
-    // shuffle existing pieces; could be because user asked to shuffle, could be we're out of legal moves
-    func redeal() {
+    /// Shuffle existing pieces; could be because user asked to shuffle,
+    /// could be we're out of legal moves. Gather up all displayed pieces (as picture names),
+    /// shuffle them, deal them into the currently occupied slots.
+    func redeal() async {
         repeat {
-            type(of: services.application).userInteraction(false)
-            // gather up all displayed pieces (as picture names), shuffle them, deal them into their current slots
+            await presenter?.receive(.userInteraction(false))
             var deck = [String]()
             for column in 0 ..< columns {
                 for row in 0 ..< rows {
@@ -176,21 +178,18 @@ final class BoardProcessor: BoardProcessorType, Processor {
             deck.shuffle()
             deck.shuffle()
             deck.shuffle()
-            type(of: services.application).userInteraction(true)
             for column in 0 ..< columns {
                 for row in 0 ..< rows {
-                    if let piece = self.piece(at: Slot(column: column, row: row)) {
-                        // TODO: move this to view, I think (but in any case, restore)
-//                        UIView.transition(
-//                            with: piece, duration: 0.7, options: .transitionFlipFromLeft, animations: {
-//                                piece.picName = deck.removeLast()
-//                                piece.setNeedsDisplay()
-//                        })
+                    if let originalPiece = grid[column: column, row: row] {
+                        let picture = deck.removeLast()
+                        grid[column: column, row: row] = PieceReducer(picName: picture, column: column, row: row)
+                        await presenter?.receive(.transition(piece: originalPiece, toPicture: picture))
                     }
                 }
             }
+            await presenter?.receive(.userInteraction(true))
         } while self.legalPath() == nil // both creates and tests for existence of legal path
-        // TODO: and don't I need to update the hint path?
+        self.hintPath = self.legalPath() // generate initial hint
     }
 
     /// Report the piece at a slot of the grid, except that adjacent to the real grid there is
@@ -636,7 +635,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             }
             self.hintPath = self.legalPath() // okay, assess the situation; either way, we need a new hint ready
             if self.hintPath == nil {
-                self.redeal()
+                await self.redeal()
             }
             // we do this after the slide animation is over, so we can get two animations in row, cool
             type(of: services.application).userInteraction(true)
@@ -869,7 +868,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             if self.hintPath != nil {
                 await self.hint() // try again, and this time we'll succeed
             } else {
-                self.redeal() // should _really_ never happen, but just in case
+                await self.redeal() // should _really_ never happen, but just in case
             }
         }
     }
@@ -878,6 +877,15 @@ final class BoardProcessor: BoardProcessorType, Processor {
     // we stay hinted until we are told to unhint
     func unhint() async {
         await presenter?.receive(.unilluminate)
+    }
+
+    /// The user has asked to shuffle the pieces.
+    func shuffle() async {
+        state.hilitedPieces = []
+        await presenter?.present(state)
+        await presenter?.receive(.unilluminate)
+        // TODO: Penalize user
+        await redeal()
     }
 
     deinit {

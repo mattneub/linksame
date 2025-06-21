@@ -48,8 +48,6 @@ extension UIView {
     ///   - duration: Duration of the animation.
     ///   - options: Animation options describing the transition.
     ///
-    /// Note that you must _not_ have any `animations` parameter.
-    ///
     @objc class func transitionAsync(with view: UIView, duration: Double, options: UIView.AnimationOptions) async {
         await withCheckedContinuation { continuation in
             Self.transition(with: view, duration: duration, options: options, animations: {}) { _ in

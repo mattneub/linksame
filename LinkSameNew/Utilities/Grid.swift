@@ -28,7 +28,7 @@ struct Grid: Equatable, Codable {
 }
 
 /// The address of a slot within the grid.
-struct Slot: Equatable {
+struct Slot: Equatable, Hashable {
     let column: Int
     let row: Int
 }

@@ -6,6 +6,8 @@ enum BoardEffect: Equatable {
     case insert(piece: PieceReducer)
     /// Remove a piece from the board, corresponding with the given reducer (and throw it away).
     case remove(piece: PieceReducer)
+    /// Transform the given piece to display the given picture, with animation.
+    case transition(piece: PieceReducer, toPicture: String)
     /// Remove the contents of the path layer.
     case unilluminate
     /// Turn user interaction off or on.

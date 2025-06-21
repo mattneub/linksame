@@ -15,6 +15,7 @@ struct BoardViewTests {
         services.application = MockApplication()
         MockApplication.methodsCalled.removeAll()
         MockApplication.bools.removeAll()
+        services.view = MockUIView.self
     }
 
     @Test("pieceSize: works as expected")
@@ -213,6 +214,23 @@ struct BoardViewTests {
         await subject.receive(.remove(piece: .init(picName: "ho", column: 2, row: 2))) // matches piece2
         #expect(subject.pieces.count == 1)
         #expect(subject.pieces[0].picName == "hey")
+    }
+
+    @Test("receive transition: calls view transition with expected arguments, changing picture of piece")
+    func transition() async throws {
+        MockUIView.methodsCalled = []
+        let piece1 = Piece(picName: "hey", column: 1, row: 1)
+        let piece2 = Piece(picName: "ho", column: 2, row: 2)
+        subject.addSubview(piece1)
+        subject.addSubview(piece2)
+        await subject.receive(.transition(piece: piece2.toReducer, toPicture: "yoho"))
+        #expect(MockUIView.methodsCalled == ["transition(with:duration:options:animations:completion:)"])
+        #expect(MockUIView.view === piece2)
+        #expect(MockUIView.duration == 0.7)
+        #expect(MockUIView.options == [.transitionFlipFromLeft])
+        #expect(piece2.picName == "ho")
+        MockUIView.animations?()
+        #expect(piece2.picName == "yoho")
     }
 
     @Test("receive unilluminate: sends unilluminate to path view")

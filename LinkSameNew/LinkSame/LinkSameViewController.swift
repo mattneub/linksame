@@ -370,13 +370,10 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
 //        }
     }
     
-    @IBAction private func doShuffle(_:Any?) {
-//        if self.board.showingHint {
-//            self.toggleHint(nil)
-//        }
-        self.stage?.userAskedForShuffle()
-//        self.board.unhilite()
-//        self.board.redeal()
+    @IBAction func doShuffle(_: Any?) {
+        Task {
+            await processor?.receive(.shuffle)
+        }
     }
     
     @IBAction private func doRestartStage(_:Any?) {

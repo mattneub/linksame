@@ -32,4 +32,8 @@ final class MockBoardProcessor: BoardProcessorType {
         self.grid = oldGrid
         self.deckAtStartOfStage = deckAtStartOfStage
     }
+
+    func shuffle() {
+        methodsCalled.append(#function)
+    }
 }

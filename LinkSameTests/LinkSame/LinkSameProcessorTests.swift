@@ -12,10 +12,12 @@ struct LinkSameProcessorTests {
     let screen = MockScreen()
     let stage = MockStage()
     let application = MockApplication()
+    let board = MockBoardProcessor()
 
     init() {
         subject.presenter = presenter
         subject.coordinator = coordinator
+        subject.boardProcessor = board
         services.persistence = persistence
         services.screen = screen
         services.application = application
@@ -23,9 +25,7 @@ struct LinkSameProcessorTests {
 
     @Test("stageLabelText: returns expected value")
     func stageLabelText() {
-        let boardProcessor = MockBoardProcessor()
-        subject.boardProcessor = boardProcessor
-        boardProcessor.stageNumber = 7
+        board.stageNumber = 7
         persistence.int = 8
         #expect(subject.stageLabelText == "Stage 8 of 9") // adds 1 to each of those values
     }
@@ -173,8 +173,6 @@ struct LinkSameProcessorTests {
           arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
     )
     func awakenStateSavedData(awakeningType: AwakeningType) async throws {
-        let board = MockBoardProcessor()
-        subject.boardProcessor = board
         let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
@@ -199,8 +197,6 @@ struct LinkSameProcessorTests {
           arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
     )
     func awakenThenWhatNoSavedData(awakeningType: AwakeningType) async throws {
-        let board = MockBoardProcessor()
-        subject.boardProcessor = board
         persistence.string = ["Hard"]
         screen.traitCollection = UITraitCollection { traits in
             traits.userInterfaceIdiom = .pad
@@ -237,8 +233,6 @@ struct LinkSameProcessorTests {
           arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
     )
     func awakenThenWhatSavedData(awakeningType: AwakeningType) async throws {
-        let board = MockBoardProcessor()
-        subject.boardProcessor = board
         let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
@@ -268,9 +262,7 @@ struct LinkSameProcessorTests {
 
     @Test("receive saveBoardState: saves the board state to persistence")
     func saveBoardState() async throws {
-        let boardProcessor = MockBoardProcessor()
-        subject.boardProcessor = boardProcessor
-        boardProcessor.grid = Grid(columns: 1, rows: 1)
+        board.grid = Grid(columns: 1, rows: 1)
         subject.stage = MockStage()
         subject.stage?.score = 1
         await subject.receive(.saveBoardState)
@@ -303,6 +295,12 @@ struct LinkSameProcessorTests {
         #expect(defs == PopoverDefaults(lastStage: 7, size: "Hard", style: "Animals"))
     }
 
+    @Test("receive shuffle: call board processor shuffle")
+    func shuffle() async {
+        await subject.receive(.shuffle)
+        #expect(board.methodsCalled == ["shuffle()"])
+    }
+
     @Test("receive startNewGame: calls coordinator dismiss, nilifies copy of defaults, sets and presents state interface mode")
     func startNewGame() async {
         subject.state.defaultsBeforeShowingNewGamePopover = .init(lastStage: 7, size: "Size", style: "Style")
@@ -332,9 +330,7 @@ struct LinkSameProcessorTests {
     @Test("after .viewDidLoad, lifetime didEnterBackground if state interface mode is .practice saves the board state to persistence")
     func didEnterBackgroundPractice() async throws {
         subject.state.interfaceMode = .practice
-        let boardProcessor = MockBoardProcessor()
-        subject.boardProcessor = boardProcessor
-        boardProcessor.grid = Grid(columns: 1, rows: 1)
+        board.grid = Grid(columns: 1, rows: 1)
         subject.stage = MockStage()
         subject.stage?.score = 1
         await subject.receive(.viewDidLoad)

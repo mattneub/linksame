@@ -59,6 +59,8 @@ final class LinkSameProcessor: Processor {
                 dismissalDelegate: presenter as? any NewGamePopoverDismissalButtonDelegate
             )
             savePopoverDefaults()
+        case .shuffle:
+            await boardProcessor?.shuffle()
         case .startNewGame:
             coordinator?.dismiss()
             state.defaultsBeforeShowingNewGamePopover = nil // crucial or we'll fall one behind

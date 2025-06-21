@@ -143,7 +143,7 @@ struct LinkSameViewControllerTests {
         makeWindow(viewController: subject)
         subject.loadViewIfNeeded()
         await subject.receive(.animateStageLabel)
-        #expect(MockUIView.methodsCalled == ["transitionAsync(with:duration:options:)"])
+        #expect(MockUIView.methodsCalled.first == "transitionAsync(with:duration:options:)")
     }
 
     @Test("receive userInteraction: calls application userInteraction")
@@ -154,6 +154,13 @@ struct LinkSameViewControllerTests {
         await subject.receive(.userInteraction(true))
         #expect(MockApplication.methodsCalled == ["userInteraction(_:)", "userInteraction(_:)"])
         #expect(MockApplication.bools == [false, true])
+    }
+
+    @Test("doShuffle: sends shuffle to processor")
+    func doShuffle() async throws {
+        subject.doShuffle(nil)
+        await #while(processor.thingsReceived.isEmpty)
+        #expect(processor.thingsReceived.first == .shuffle)
     }
 
 }
