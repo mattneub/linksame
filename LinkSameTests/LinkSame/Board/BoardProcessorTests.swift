@@ -8,10 +8,12 @@ struct BoardProcessorTests {
     let persistence = MockPersistence()
     let boardView = MockReceiverPresenter<BoardEffect, BoardState>()
     let subject = BoardProcessor(gridSize: (columns: 2, rows: 3))
+    let gravity = MockGravity()
 
     init() {
         services.persistence = persistence
         subject.presenter = boardView
+        subject.gravity = gravity
     }
 
     @Test("initializer: creates grid")
@@ -49,13 +51,6 @@ struct BoardProcessorTests {
             }
         }
         #expect(gridPieces.compactMap {$0}.map { $0.picName } == deck.map { $0.picName }.reversed())
-        // every grid piece knows its own position
-        for column in 0 ..< 2 {
-            for row in 0 ..< 18 {
-                let piece = subject.grid[column: column, row: row]!
-                #expect((piece.column, piece.row) == (column, row))
-            }
-        }
         // what we said to the presenter
         #expect(boardView.thingsReceived.count == 36)
         var expectedEffects = [BoardEffect]()
@@ -93,13 +88,6 @@ struct BoardProcessorTests {
             }
         }
         #expect(gridPieces.compactMap {$0}.map { $0.picName } == deck.map { $0.picName}.reversed())
-        // every grid piece knows its own position
-        for column in 0 ..< 4 {
-            for row in 0 ..< 11 {
-                let piece = subject.grid[column: column, row: row]!
-                #expect((piece.column, piece.row) == (column, row))
-            }
-        }
         // what we said to the presenter
         #expect(boardView.thingsReceived.count == 44)
         var expectedEffects = [BoardEffect]()
@@ -119,7 +107,7 @@ struct BoardProcessorTests {
         subject.presenter = boardView
         var grid = Grid(columns: 2, rows: 3)
         let piece = PieceReducer(picName: "howdy", column: 1, row: 1)
-        grid[column: 1, row: 1] = piece
+        grid[column: 1, row: 1] = "howdy"
         await subject.populateFrom(oldGrid: grid, deckAtStartOfStage: [.init(picName: "hello")])
         let gridPiece = try #require(subject.grid[column: 1, row: 1])
         #expect(gridPiece.picName == "howdy")
@@ -174,12 +162,12 @@ struct BoardProcessorTests {
 
     @Test("receive tapped: reaches two hilited pieces, topologically not a match, unhilited")
     func receiveTappedTwoHilitedMatchButNotLegalPair() async throws {
-        subject.grid[column: 0, row: 0] = PieceReducer(picName: "howdy", column: 0, row: 0)
-        let piece: PieceReducer = PieceReducer(picName: "yoho", column: 1, row: 0)
-        subject.grid[column: 1, row: 0] = piece
-        let piece2: PieceReducer = PieceReducer(picName: "yoho", column: 0, row: 1)
-        subject.grid[column: 0, row: 1] = piece2
-        subject.grid[column: 1, row: 1] = PieceReducer(picName: "howdy", column: 1, row: 1)
+        subject.grid[column: 0, row: 0] = "howdy"
+        let piece = PieceReducer(picName: "yoho", column: 1, row: 0)
+        subject.grid[column: 1, row: 0] = "yoho"
+        let piece2 = PieceReducer(picName: "yoho", column: 0, row: 1)
+        subject.grid[column: 0, row: 1] = "yoho"
+        subject.grid[column: 1, row: 1] = "howdy"
         subject.state.hilitedPieces = [piece]
         await subject.receive(.tapped(piece2))
         // they have the same name, but they are diagonal and blocked, no legal path
@@ -193,11 +181,11 @@ struct BoardProcessorTests {
 
     @Test("receive tapped: reaches two hilited pieces, topologically a match, two segments, unhilited and removed")
     func receiveTappedTwoHilitedMatchLegalPairTwoSegments() async throws {
-        subject.grid[column: 0, row: 0] = PieceReducer(picName: "howdy", column: 0, row: 0)
+        subject.grid[column: 0, row: 0] = "howdy"
         let piece = PieceReducer(picName: "yoho", column: 1, row: 0)
-        subject.grid[column: 1, row: 0] = piece
+        subject.grid[column: 1, row: 0] = "yoho"
         let piece2 = PieceReducer(picName: "yoho", column: 0, row: 1)
-        subject.grid[column: 0, row: 1] = piece2
+        subject.grid[column: 0, row: 1] = "yoho"
         subject.state.hilitedPieces = [piece]
         await subject.receive(.tapped(piece2))
         #expect(subject.state.hilitedPieces.isEmpty)
@@ -217,11 +205,11 @@ struct BoardProcessorTests {
     @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed")
     func receiveTappedTwoHilitedMatchLegalPairThreeSegments() async throws {
         let piece = PieceReducer(picName: "yoho", column: 0, row: 0)
-        subject.grid[column: 0, row: 0] = piece
-        subject.grid[column: 0, row: 1] = PieceReducer(picName: "howdy", column: 0, row: 1)
+        subject.grid[column: 0, row: 0] = "yoho"
+        subject.grid[column: 0, row: 1] = "howdy"
         let piece2 = PieceReducer(picName: "yoho", column: 0, row: 2)
-        subject.grid[column: 0, row: 2] = piece2
-        subject.grid[column: 1, row: 1] = PieceReducer(picName: "hello", column: 1, row: 1)
+        subject.grid[column: 0, row: 2] = "yoho"
+        subject.grid[column: 1, row: 1] = "hello"
         subject.state.hilitedPieces = [piece]
         await subject.receive(.tapped(piece2))
         #expect(subject.state.hilitedPieces.isEmpty)
@@ -243,11 +231,11 @@ struct BoardProcessorTests {
     func receiveTappedTwoHilitedMatchLegalPairThreeSegments2() async throws {
         // same as the preceding but flipped horizontally
         let piece = PieceReducer(picName: "yoho", column: 1, row: 0)
-        subject.grid[column: 1, row: 0] = piece
-        subject.grid[column: 0, row: 1] = PieceReducer(picName: "howdy", column: 0, row: 1)
+        subject.grid[column: 1, row: 0] = "yoho"
+        subject.grid[column: 0, row: 1] = "howdy"
         let piece2 = PieceReducer(picName: "yoho", column: 1, row: 2)
-        subject.grid[column: 1, row: 2] = piece2
-        subject.grid[column: 1, row: 1] = PieceReducer(picName: "hello", column: 1, row: 1)
+        subject.grid[column: 1, row: 2] = "yoho"
+        subject.grid[column: 1, row: 1] = "hello"
         subject.state.hilitedPieces = [piece]
         await subject.receive(.tapped(piece2))
         #expect(subject.state.hilitedPieces.isEmpty)
@@ -265,12 +253,28 @@ struct BoardProcessorTests {
         #expect(boardView.thingsReceived.contains(.unilluminate))
     }
 
+    @Test("receive tapped: exercises gravity, calls presenter move")
+    func receiveTappedGravity() async {
+        let piece = PieceReducer(picName: "yoho", column: 1, row: 0)
+        subject.grid[column: 1, row: 0] = "yoho"
+        subject.grid[column: 0, row: 1] = "howdy"
+        let piece2 = PieceReducer(picName: "yoho", column: 1, row: 2)
+        subject.grid[column: 1, row: 2] = "yoho"
+        subject.grid[column: 1, row: 1] = "hello"
+        let movenda: [Movendum] = [.init(piece: .init(picName: "movenda", column: 0, row: 1), newSlot: .init(0,2))]
+        gravity.movenda = movenda
+        subject.state.hilitedPieces = [piece]
+        await subject.receive(.tapped(piece2))
+        #expect(gravity.methodsCalled == ["exerciseGravity(grid:stageNumber:)"])
+        #expect(boardView.thingsReceived.contains(.move(movenda)))
+    }
+
     @Test("shuffle: unhilites and presents, unilluminates, turns user interaction off and on, rewrites grid, sends corresponding transition")
     func shuffle() async throws {
-        subject.grid[column: 1, row: 0] = PieceReducer(picName: "yoho", column: 1, row: 0)
-        subject.grid[column: 0, row: 1] = PieceReducer(picName: "yoho", column: 0, row: 1)
-        subject.grid[column: 1, row: 2] = PieceReducer(picName: "teehee", column: 1, row: 2)
-        subject.grid[column: 1, row: 1] = PieceReducer(picName: "teehee", column: 1, row: 1)
+        subject.grid[column: 1, row: 0] = "yoho"
+        subject.grid[column: 0, row: 1] = "yoho"
+        subject.grid[column: 1, row: 2] = "teehee"
+        subject.grid[column: 1, row: 1] = "teehee"
         subject.state.hilitedPieces = [PieceReducer(picName: "yoho", column: 1, row: 0)]
         await subject.shuffle()
         #expect(subject.state.hilitedPieces == [])

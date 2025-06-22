@@ -25,8 +25,8 @@ final class Piece: UIView {
     var picName: String
 
     /// Where we are slotted.
-    let column: Int
-    let row: Int
+    var column: Int
+    var row: Int
 
     private var hilite: Bool = false
     var isHilited: Bool {

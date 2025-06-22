@@ -82,9 +82,9 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
         Task {
             await processor?.receive(.didInitialLayout)
         }
-        return () // uncomment for launch image screen shot
-
-        self.restoreGameFromSavedDataOrStartNewGame()
+//        return () // uncomment for launch image screen shot
+//
+//        self.restoreGameFromSavedDataOrStartNewGame()
 
         // responses to game events and application lifetime events
 
@@ -172,30 +172,6 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
             await services.view.transitionAsync(with: self.stageLabel, duration: 0.4, options: .transitionFlipFromLeft)
         case .userInteraction(let onOff):
             type(of: services.application).userInteraction(onOff)
-        }
-    }
-
-    private func restoreGameFromSavedDataOrStartNewGame() {
-        // have we a state saved?  if so, reconstruct game
-        if let stateData = services.persistence.loadData(forKey: .boardData),
-            let state = try? PropertyListDecoder().decode(PersistentState.self, from: stateData) {
-            // okay, we've got state! there are two possibilities:
-            // it might have been a practice game, or it might have been a timed game between stages
-//            self.board = state.board
-//            self.boardView?.removeFromSuperview()
-//            self.boardView = self.board.view
-//            self.backgroundView.addSubview(self.boardView!)
-//            self.boardView?.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            // there must _always_ be a Stage, and a practice game just ignores it
-            // self.stage = Stage(lsvc: self, score: state.score)
-            // TODO: need to restore this somehow
-            // self.interfaceMode = state.timed ? .timed : .practice
-            Task {
-                await self.animateBoardTransition(.fade)
-                // self.populateStageLabel() // with no animation
-            }
-        } else { // otherwise, create new game from scratch
-            self.startNewGame()
         }
     }
 

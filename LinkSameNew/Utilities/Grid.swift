@@ -17,12 +17,45 @@ struct Grid: Equatable, Codable {
         self.rows = rows
         self.grid = Array(repeating: Array(repeating: nil, count: rows), count: columns)
     }
+    /// Getter for the piece reducer at a given address. There is an imaginary border around the
+    /// "borders" of our grid, one piece in thickness, for which we return `nil`. Addresses outside
+    /// that border are illegal.
     subscript(column column: Int, row row: Int) -> PieceReducer? {
         get {
-            grid[column][row]
+            // it is legal to ask for piece one slot outside boundaries, but not further
+            assert(column >= -1 && column <= self.columns, "Piece requested out of bounds (column)")
+            assert(row >= -1 && row <= self.rows, "Piece requested out of bounds (row)")
+            // immediately outside boundaries, report slot as empty
+            if (column == -1 || column == self.columns) { return nil }
+            if (row == -1 || row == self.rows) { return nil }
+            // inside boundaries, report actual contents of slot
+            return grid[column][row]
         }
-        set(piece) {
-            grid[column][row] = piece
+    }
+    /// "Convenience" getter, for when the context has a Slot rather than individual column and
+    /// row values. Simply calls the subscript getter for column and row, returning piece reducer.
+    subscript(_ slot: Slot) -> PieceReducer? {
+        get {
+            self[column: slot.column, row: slot.row]
+        }
+    }
+    /// Setter using just the name of the piece's picture and a given address; we create an actual
+    /// piece reducer from that information. Unfortunately this means we also have to supply a
+    /// getter, so now we have an ambiguous getter; but that's a small price to pay. And it turns out
+    /// that I can demote the getter here so I never have to deal directly with the ambiguity.
+    @_disfavoredOverload subscript(column column: Int, row row: Int) -> String? {
+        get {
+            grid[column][row]?.picName // TODO: what if we threw a fatal error here?
+        }
+        set(picName) {
+            // it is illegal to set a value outside boundaries
+            assert(column > -1 && column < self.columns, "Slot set out of bounds (column)")
+            assert(row > -1 && row < self.rows, "Slot set out of bounds (row)")
+            if let picName {
+                grid[column][row] = PieceReducer(picName: picName, column: column, row: row)
+            } else {
+                grid[column][row] = nil
+            }
         }
     }
 }
@@ -43,6 +76,12 @@ extension Slot {
 
 /// Expression of the concept of a path between a succession of slots.
 typealias Path = [Slot]
+
+/// A movendum is a temporary reducer describing the movement of a piece to new slot.
+struct Movendum: Equatable {
+    let piece: PieceReducer
+    let newSlot: Slot
+}
 
 // TODO: The remaining question is whether I should be passing the grid in the state
 // instead of using effects to add and remove pieces from the interface.

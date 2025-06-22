@@ -49,6 +49,9 @@ final class BoardProcessor: BoardProcessorType, Processor {
     /// State to be presented to the presenter for display in the interface.
     var state = BoardState()
 
+    /// Auxiliary gravity object. It's a `var` so we can slot in a mock for testing.
+    var gravity: any GravityType = Gravity()
+
     var stageNumber = 0
 
     // TODO: find another way of expressing this one
@@ -148,7 +151,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
         for column in 0 ..< self.columns {
             for row in 0 ..< self.rows {
                 // TODO: This looks like it should be otiose: addPiece should remove if a piece is already slotted in
-                if let oldPiece = self.piece(at: Slot(column: column, row: row)) {
+                if let oldPiece = grid[column: column, row: row] {
                     await self.removePiece(oldPiece)
                 }
                 guard !deck.isEmpty else {
@@ -164,12 +167,13 @@ final class BoardProcessor: BoardProcessorType, Processor {
     /// could be we're out of legal moves. Gather up all displayed pieces (as picture names),
     /// shuffle them, deal them into the currently occupied slots.
     func redeal() async {
+        var limit = unlessTesting(10) // put a limit on how many times we will try
         repeat {
             await presenter?.receive(.userInteraction(false))
             var deck = [String]()
             for column in 0 ..< columns {
                 for row in 0 ..< rows {
-                    if let piece = self.piece(at: Slot(column: column, row: row)) {
+                    if let piece = grid[column: column, row: row] {
                         deck.append(piece.picName)
                     }
                 }
@@ -182,34 +186,19 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 for row in 0 ..< rows {
                     if let originalPiece = grid[column: column, row: row] {
                         let picture = deck.removeLast()
-                        grid[column: column, row: row] = PieceReducer(picName: picture, column: column, row: row)
+                        grid[column: column, row: row] = picture
                         await presenter?.receive(.transition(piece: originalPiece, toPicture: picture))
                     }
                 }
             }
             await presenter?.receive(.userInteraction(true))
-        } while self.legalPath() == nil // both creates and tests for existence of legal path
+            limit -= 1
+        } while self.legalPath() == nil && limit > 0 // both creates and tests for existence of legal path
         self.hintPath = self.legalPath() // generate initial hint
+        // and if we've failed to get a legal path after 10 tries, the hint is just nil
+        // but at least the user will see something, rather than us looping forever or crashing or something
     }
 
-    /// Report the piece at a slot of the grid, except that adjacent to the real grid there is
-    /// an imaginary extension on all sides, consisting of empty slots, where path drawing can
-    /// take place.
-    /// - Parameter slot: The specified slot of the grid.
-    /// - Returns: A piece reducer describing the piece that is in that slot of the grid.
-    private func piece(at slot: Slot) -> PieceReducer? {
-        // TODO: Consider moving this to grid, i.e. just make it part of the subscripting.
-        let (column, row) = (slot.column, slot.row)
-        // it is legal to ask for piece one slot outside boundaries, but not further
-        assert(column >= -1 && column <= self.columns, "Piece requested out of bounds (column)")
-        assert(row >= -1 && row <= self.rows, "Piece requested out of bounds (row)")
-        // immediately outside boundaries, report slot as empty
-        if (column == -1 || column == self.columns) { return nil }
-        if (row == -1 || row == self.rows) { return nil }
-        // inside boundaries, report actual contents of slot
-        return grid[column: column, row: row]
-    }
-    
     /// Create a piece and put it into a given slot _and the interface_.
     /// It is crucial to keep these in sync.
     /// - Parameters:
@@ -217,8 +206,8 @@ final class BoardProcessor: BoardProcessorType, Processor {
     ///   - picTitle: The name of the picture for the piece.
     private func addPieceAt(_ slot: Slot, withPicture picTitle: String) async {
         let (column, row) = (slot.column, slot.row)
+        grid[column: column, row: row] = picTitle
         let piece = PieceReducer(picName: picTitle, column: column, row: row)
-        grid[column: column, row: row] = piece
         await presenter?.receive(.insert(piece: piece))
     }
     
@@ -247,7 +236,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 (start, end) = (p2, p1)
             }
             for row in start.row + 1 ..< end.row {
-                if self.piece(at: Slot(p1.column, row)) != nil {
+                if grid[column: p1.column, row: row] != nil {
                     return false
                 }
             }
@@ -258,7 +247,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 (start, end) = (p2, p1)
             }
             for column in start.column + 1 ..< end.column {
-                if self.piece(at: Slot(column, p1.row)) != nil {
+                if grid[column: column, row: p1.row] != nil {
                     return false
                 }
             }
@@ -279,371 +268,14 @@ final class BoardProcessor: BoardProcessorType, Processor {
         // return true // testing game end
         for column in 0..<self.columns {
             for row in 0..<self.rows {
-                if self.piece(at: Slot(column, row)) != nil {
+                if grid[column: column, row: row] != nil {
                     return false
                 }
             }
         }
         return true
     }
-        
-    private func reallyRemovePair() async {
-        var movenda = [PieceReducer]() // we will maintain a list of all pieces that need to animate a position change
-        // utility to prepare pieces for position change
-        // configure the piece internally and grid-wise for its new position, 
-        // but keep it physically in the old position
-        // store it in movenda so we can animate it into its new position at the end of this method
-        func movePiece(_ piece: PieceReducer, to newSlot: Slot) async {
-            assert(self.piece(at: newSlot) == nil, "Slot to move piece to must be empty")
-            // move the piece within the *grid*
-            let picName = piece.picName
-            // TODO: restore
-            // let oldFrame = piece.frame
-            await self.removePiece(piece)
-            await addPieceAt(newSlot, withPicture: picName)
-            // however, we are not yet redrawn, so now...
-            // return piece to its previous position! but add to movenda
-            // later we will animate it into correct position
-            let pnew = self.piece(at: newSlot)!
-            // TODO: restore
-            // pnew.frame = oldFrame
-            movenda += [pnew]
-        }
 
-        type(of: services.application).userInteraction(false)
-        // notify (so score can be incremented)
-        // nc.post(name: BoardProcessor.userMoved, object: self)
-        // actually remove the pieces (we happen to know there must be exactly two)
-        for piece in state.hilitedPieces {
-            await self.removePiece(piece)
-        }
-        state.hilitedPieces.removeAll()
-        // game over? if so, notify along with current stage and we're out of here!
-        if self.gameOver() {
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(0.1)) // nicer with a little delay
-                type(of: services.application).userInteraction(true)
-                // nc.post(name: BoardProcessor.gameOver, object: self, userInfo: ["stage":self.stageNumber])
-            }
-            return
-        }
-        // close up! depends on what stage we are in
-        // the following code is really ugly and repetitive, every case being modelled on the same template
-        // but it works and I'm not touching it!
-        switch self.stageNumber {
-        case 0: // no gravity, do nothing
-            // fallthrough // debugging later cases
-            break
-        case 1: // gravity down
-            // fallthrough // debugging later cases
-            // for (var x = 0; x < self.xct; x++) {
-            for x in 0..<self.columns {
-                // for (var y = self.yct - 1; y > 0; y--) {
-                for y in self.rows>>>0 { // not an exact match for my original C version, but simpler
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var yt = y-1; yt >= 0; yt--) {
-                        for yt in y>>>0 {
-                            let piece2 = self.piece(at: Slot(x,yt))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-            }
-        case 2: // gravity right
-            // fallthrough // debugging later cases
-            // for (var y = 0; y < self.yct; y++) {
-            for y in 0..<self.rows {
-                // for (var x = self.xct - 1; x > 0; x--) {
-                for x in self.columns>>>0 {
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var xt = x-1; xt >= 0; xt--) {
-                        for xt in x>>>0 {
-                            let piece2 = self.piece(at: Slot(xt,y))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-            }
-        case 3: // gravity toward central horiz line
-            // fallthrough // debugging later cases
-            let center = self.rows/2 // integer div, deliberate
-            // exactly like 1 except we have to do it twice in two directions
-            // for (var x = 0; x < self.xct; x++) {
-            for x in 0..<self.columns {
-                // for (var y = center - 1; y > 0; y--) {
-                for y in center>>>0 {
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var yt = y-1; yt >= 0; yt--) {
-                        for yt in y>>>0 {
-                            let piece2 = self.piece(at: Slot(x,yt))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-                // for (var y = center; y <= self.yct - 1; y++) {
-                for y in center..<self.rows {
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var yt = y+1; yt < self.yct; yt++) {
-                        for yt in y+1..<self.rows {
-                            let piece2 = self.piece(at: Slot(x,yt))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-            }
-        case 4: // gravity toward central vertical line
-            // fallthrough // debugging later cases
-            // exactly like 3 except the other orientation
-            let center = self.columns/2 // integer div, deliberate
-            // for (var y = 0; y < self.yct; y++) {
-            for y in 0..<self.rows {
-                // for (var x = center-1; x > 0; x--) {
-                for x in center>>>0 {
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var xt = x-1; xt >= 0; xt--) {
-                        for xt in x>>>0 {
-                            let piece2 = self.piece(at: Slot(xt,y))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-                // for (var x = center; x <= self.xct - 1; x++) {
-                for x in center..<self.columns {
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var xt = x+1; xt < self.xct; xt++) {
-                        for xt in x+1..<self.columns {
-                            let piece2 = self.piece(at: Slot(xt,y))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-            }
-        case 5: // gravity away from central horiz line
-            // fallthrough // debugging later cases
-            // exactly like 3 except we walk from the outside to the center
-            let center = self.rows/2 // integer div, deliberate
-            // for (var x = 0; x < self.xct; x++) {
-            for x in 0..<self.columns {
-                // for (var y = self.yct-1; y > center; y--) {
-                for y in self.rows>>>center { // not identical to C loop, moved pivot
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var yt = y-1; yt >= center; yt--) {
-                        for yt in y>>>center {
-                            let piece2 = self.piece(at: Slot(x,yt))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-                // for (var y = 0; y < center-1; y++) {
-                for y in 0..<center {
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var yt = y+1; yt < center; yt++) {
-                        for yt in y+1..<center {
-                            let piece2 = self.piece(at: Slot(x,yt))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-            }
-        case 6: // gravity away from central vertical line
-            // fallthrough // debugging later cases
-            // exactly like 4 except we start at the outside
-            let center = self.columns/2 // integer div, deliberate
-            // for (var y = 0; y < self.yct; y++) {
-            for y in 0..<self.rows {
-                // for (var x = self.xct-1; x > center; x--) {
-                for x in self.columns>>>center {
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var xt = x-1; xt >= center; xt--) {
-                        for xt in x>>>center {
-                            let piece2 = self.piece(at: Slot(xt,y))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-                // for (var x = 0; x < center-1; x++) {
-                for x in 0..<center {
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var xt = x+1; xt < center; xt++) {
-                        for xt in x..<center { // not identical
-                            let piece2 = self.piece(at: Slot(xt,y))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-            }
-        case 7: // gravity down in one half, gravity up in the other half
-            // fallthrough // debugging later cases
-            // like doing 1 in two pieces with the second piece in reverse direction
-            let center = self.columns/2;
-            // for (var x = 0; x < center; x++) {
-            for x in 0..<center {
-                // for (var y = self.yct - 1; y > 0; y--) {
-                for y in self.rows>>>0 {
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var yt = y-1; yt >= 0; yt--) {
-                        for yt in y>>>0 {
-                            let piece2 = self.piece(at: Slot(x,yt))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-            }
-            // for (var x = center; x < self.xct; x++) {
-            for x in center..<self.columns {
-                // for (var y = 0; y < self.yct-1; y++) {
-                for y in 0..<self.rows {
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var yt = y+1; yt < self.yct; yt++) {
-                        for yt in y..<self.rows {
-                            let piece2 = self.piece(at: Slot(x,yt))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-            }
-        case 8: // gravity left in one half, gravity right in other half
-            // like doing 2 in two pieces with second in reverse direction
-            let center = self.rows/2
-            // for (var y = 0; y < center; y++) {
-            for y in 0..<center {
-                // for (var x = self.xct - 1; x > 0; x--) {
-                for x in self.columns>>>0 {
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var xt = x-1; xt >= 0; xt--) {
-                        for xt in x>>>0 {
-                            let piece2 = self.piece(at: Slot(xt,y))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-            }
-            // for (var y = center; y < self.yct; y++) {
-            for y in center..<self.rows {
-                // for (var x = 0; x < self.xct-1; x++) {
-                for x in 0..<self.columns {
-                    let piece = self.piece(at: Slot(x,y))
-                    if piece == nil {
-                        // for (var xt = x+1; xt < self.xct; xt++) {
-                        for xt in x..<self.columns {
-                            let piece2 = self.piece(at: Slot(xt,y))
-                            if piece2 == nil {
-                                continue
-                            }
-                            await movePiece(piece2!, to: Slot(x,y))
-                            break
-                        }
-                    }
-                }
-            }
-
-        default:
-            break
-        }
-        
-        // animate!
-        // and then check for stuck
-    
-        // slide pieces into their correct place
-        // okay, so all the pieces in movenda have the following odd feature:
-        // they are internally consistent (they are in the right place in the grid, and they know that place)
-        // but they are *physically* in the wrong place
-        // thus all we have to do is move them visibly into the right place
-        // the big lesson here is that animations run in another thread...
-        // so as an animation begins, the interface is refreshed first
-        // thus it doesn't matter that we moved the piece into its right place;
-        // we also moved the piece back into its wrong place, 
-        // and that is what the user will see when the animation starts
-
-        Task { @MainActor in
-            await services.view.animateAsync(withDuration: 0.15, delay: 0.1, options: .curveLinear) {
-                while movenda.count > 0 {
-                    // TODO: restore this, just removing so I can compile
-//                    let p = movenda.removeLast()
-//                    var f = p.frame
-//                    f.origin = self.originOf((p.x, p.y))
-//                    // print("Will change frame of piece \(p)")
-//                    // print("From \(p.frame)")
-//                    // print("To \(f)")
-//                    p.frame = f // this is the move that will be animated
-                }
-            }
-            self.hintPath = self.legalPath() // okay, assess the situation; either way, we need a new hint ready
-            if self.hintPath == nil {
-                await self.redeal()
-            }
-            // we do this after the slide animation is over, so we can get two animations in row, cool
-            type(of: services.application).userInteraction(true)
-        }
-    }
-    
-
-    
     /// This is the main game logic utility! The day I figured out how to do this is the day I
     /// realized I could write this game. Decide whether the given pieces constitute a legal pair;
     /// if they do, return an array of successive slot positions consituting the legal path
@@ -664,12 +296,12 @@ final class BoardProcessor: BoardProcessorType, Processor {
         // with nothing on one pair of sides between them?
         let corner1 = Slot(p1.column, p2.row)
         let corner2 = Slot(p2.column, p1.row)
-        if self.piece(at: corner1) == nil {
+        if grid[corner1] == nil {
             if self.lineIsClearFrom(slot1, to: corner1) && self.lineIsClearFrom(corner1, to: slot2) {
                 return [slot1, corner1, slot2]
             }
         }
-        if self.piece(at: corner2) == nil {
+        if grid[corner2] == nil {
             if self.lineIsClearFrom(slot1, to: corner2) && self.lineIsClearFrom(corner2, to: slot2) {
                 return [slot1, corner2, slot2]
             }
@@ -690,7 +322,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             guard corner1 != corner2 else { // if the corners are the same corner, that's not 3 segments
                 return
             }
-            if self.piece(at: corner1) == nil && self.piece(at: corner2) == nil {
+            if grid[corner1] == nil && grid[corner2] == nil {
                 if self.lineIsClearFrom(slot1, to: corner1) &&
                     self.lineIsClearFrom(corner1, to: corner2) &&
                     self.lineIsClearFrom(corner2, to: slot2) {
@@ -760,17 +392,45 @@ final class BoardProcessor: BoardProcessorType, Processor {
             try? await unlessTesting {
                 try? await Task.sleep(for: .seconds(0.1))
             }
-//          await reallyRemovePair()
-            // TODO: restore reallyRemovePair; right now I am just removing directly
-            // which is right only for stage 1
             await self.unhilite()
+            // remove the pieces
             await self.removePiece(p1)
             await self.removePiece(p2)
+            // TODO: I think this is where game-over check goes
+            // perform any gravity moves
+            let movenda = gravity.exerciseGravity(grid: &grid, stageNumber: stageNumber)
+            if !movenda.isEmpty {
+                await presenter?.receive(.move(movenda))
+            }
+            // generate new hint path, but also check whether we need a redeal
+            self.hintPath = self.legalPath()
+            if self.hintPath == nil {
+                await self.redeal()
+            }
         } else {
             await self.unhilite()
         }
     }
-    
+
+    // TODO: restore eventually, this is game over check
+    // type(of: services.application).userInteraction(false)
+    // notify (so score can be incremented)
+    // nc.post(name: BoardProcessor.userMoved, object: self)
+    // actually remove the pieces (we happen to know there must be exactly two)
+    //        for piece in state.hilitedPieces {
+    //            await self.removePiece(piece)
+    //        }
+    //        state.hilitedPieces.removeAll()
+    // game over? if so, notify along with current stage and we're out of here!
+    //        if self.gameOver() {
+    //            Task { @MainActor in
+    //                try? await Task.sleep(for: .seconds(0.1)) // nicer with a little delay
+    //                type(of: services.application).userInteraction(true)
+    //                // nc.post(name: BoardProcessor.gameOver, object: self, userInfo: ["stage":self.stageNumber])
+    //            }
+    //            return
+    //        }
+
     /// The user has tapped the given piece. If already highlighted, remove it from the highlighted
     /// list and unhighlight it; otherwise, add it to the highlighted list and highlight it. If there
     /// are now two highlighted pieces, evaluate for a legal path.
@@ -803,7 +463,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 if p.isHilited {
                     p.toggleHilite()
                 }
-                state.hilitedPieces = [self.piece(at: path.first!)!, self.piece(at: path.last!)!]
+                state.hilitedPieces = [grid[path.first!]!, grid[path.last!]!]
                 await checkHilitedPair()
             }
         }
@@ -824,14 +484,14 @@ final class BoardProcessor: BoardProcessorType, Processor {
     private func legalPath () -> Path? {
         for x in 0..<self.columns {
             for y in 0..<self.rows {
-                let piece = self.piece(at: Slot(x,y))
+                let piece = grid[column: x, row: y]
                 if piece == nil {
                     continue
                 }
                 let picName = piece!.picName
                 for xx in 0..<self.columns {
                     for yy in 0..<self.rows {
-                        let piece2 = self.piece(at: Slot(xx,yy))
+                        let piece2 = grid[column: xx, row: yy]
                         if piece2 == nil {
                             continue
                         }

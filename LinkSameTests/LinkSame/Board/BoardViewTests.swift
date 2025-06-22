@@ -202,6 +202,31 @@ struct BoardViewTests {
         #expect(tap.action == #selector(subject.tappedPiece))
     }
 
+    @Test("receive move: moves the specified piece(s) to the specified location(s), rewrites their column and row")
+    func move() async throws {
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .pad
+            traits.displayScale = 2
+        }
+        subject.frame = CGRect(origin: .zero, size: .init(width: 272, height: 272))
+        subject.layoutIfNeeded()
+        let piece1 = Piece(picName: "hey", column: 0, row: 0)
+        let piece2 = Piece(picName: "ho", column: 1, row: 0)
+        subject.addSubview(piece1)
+        subject.addSubview(piece2)
+        let movenda: [Movendum] = [
+            .init(piece: piece1.toReducer, newSlot: .init(0,1)),
+            .init(piece: piece2.toReducer, newSlot: .init(0,2)),
+        ]
+        await subject.receive(.move(movenda))
+        #expect(piece1.column == 0)
+        #expect(piece1.row == 1)
+        #expect(piece2.column == 0)
+        #expect(piece2.row == 2)
+        #expect(piece1.frame.origin == CGPoint(x: 72, y: 136+32))
+        #expect(piece2.frame.origin == CGPoint(x: 72, y: 136+64+32))
+    }
+
     @Test("receive remove: removes corresponding piece from interface")
     func remove() async {
         let piece1 = Piece(picName: "hey", column: 1, row: 1)

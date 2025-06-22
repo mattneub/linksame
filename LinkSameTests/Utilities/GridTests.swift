@@ -18,15 +18,27 @@ struct GridTests {
     @Test("subscript: correctly addresses piece")
     func subscripting() throws {
         var subject = Grid(columns: 2, rows: 3)
+        // string setter -> String
         for (columnIndex, column) in subject.grid.enumerated() {
             for (rowIndex, piece) in column.enumerated() {
                 #expect(piece == nil)
-                subject[column: columnIndex, row: rowIndex] = PieceReducer(picName: "\(columnIndex) \(rowIndex)", column: 1, row: 1)
+                subject[column: columnIndex, row: rowIndex] = "\(columnIndex) \(rowIndex)"
             }
         }
+        // column and row getter -> PieceReducer
         for columnIndex in 0..<2 {
             for rowIndex in 0..<3 {
                 let piece = try #require(subject[column: columnIndex, row: rowIndex])
+                let name = piece.picName.split(separator: " ")
+                #expect(name.count == 2)
+                #expect(name[0] == String(columnIndex))
+                #expect(name[1] == String(rowIndex))
+            }
+        }
+        // slot getter -> PieceReducer
+        for columnIndex in 0..<2 {
+            for rowIndex in 0..<3 {
+                let piece = try #require(subject[Slot(columnIndex, rowIndex)])
                 let name = piece.picName.split(separator: " ")
                 #expect(name.count == 2)
                 #expect(name[0] == String(columnIndex))

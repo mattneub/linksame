@@ -99,6 +99,8 @@ class BoardView: UIView, ReceiverPresenter {
             await pathView.receive(.illuminate(path.map { centerOf(column: $0.column, row: $0.row) }))
         case .insert(let piece):
             insert(piece: piece)
+        case .move(let movenda):
+            await move(movenda: movenda)
         case .remove(let piece):
             remove(piece: piece)
         case .transition(let piece, let picture):
@@ -144,6 +146,26 @@ class BoardView: UIView, ReceiverPresenter {
         }
     }
     
+    /// Move pieces in accordance with the movenda instructions.
+    /// - Parameter movenda: The instructions, saying what pieces to move to where.
+    func move(movenda: [Movendum]) async {
+        let movenda = movenda.map { movendum in
+            // replace piece reducer with real Piece; if you can't, replace whole tuple with nil
+            if let piece = pieces.first(where: { $0 == movendum.piece }) {
+                return (piece: piece, newSlot: movendum.newSlot)
+            } else {
+                return nil
+            }
+        }.compactMap { $0 } // throw away all nil tuples (shouldn't be any) and unwrap the rest
+        await services.view.animateAsync(withDuration: 0.15, delay: 0.1, options: .curveLinear) {
+            for movendum in movenda {
+                movendum.piece.frame.origin = self.originOf(column: movendum.newSlot.column, row: movendum.newSlot.row)
+                movendum.piece.column = movendum.newSlot.column
+                movendum.piece.row = movendum.newSlot.row
+            }
+        }
+    }
+
     /// Remove the piece described by the reducer.
     /// - Parameter piece: Reducer describing the piece to be removed.
     func remove(piece: PieceReducer) {
