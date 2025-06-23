@@ -46,6 +46,9 @@ final class BoardProcessor: BoardProcessorType, Processor {
     /// Reference to the presenter; set by the coordinator on creation.
     weak var presenter: (any ReceiverPresenter<BoardEffect, BoardState>)?
 
+    /// Reference to board delegate; set by the coordinator on creation.
+    weak var delegate: (any BoardDelegate)?
+
     /// State to be presented to the presenter for display in the interface.
     var state = BoardState()
 
@@ -81,6 +84,16 @@ final class BoardProcessor: BoardProcessorType, Processor {
 
     func receive(_ action: BoardAction) async {
         switch action {
+        case .doubleTappedPiece:
+            if let path = self.hintPath {
+                if let pathStart = path.first, let pathEnd = path.last {
+                    if let piece1 = grid[pathStart], let piece2 = grid[pathEnd] {
+                        state.hilitedPieces = [piece1, piece2]
+                        await presenter?.present(state)
+                        await checkHilitedPair()
+                    }
+                }
+            }
         case .tapped(let piece):
             await userTapped(piece: piece)
         }
@@ -261,20 +274,6 @@ final class BoardProcessor: BoardProcessorType, Processor {
         self.grid[column: piece.column, row: piece.row] = nil
         await presenter?.receive(.remove(piece: piece))
     }
-    
-    // utility to learn whether the grid is empty, indicating that the game is over
-    
-    private func gameOver () -> Bool {
-        // return true // testing game end
-        for column in 0..<self.columns {
-            for row in 0..<self.rows {
-                if grid[column: column, row: row] != nil {
-                    return false
-                }
-            }
-        }
-        return true
-    }
 
     /// This is the main game logic utility! The day I figured out how to do this is the day I
     /// realized I could write this game. Decide whether the given pieces constitute a legal pair;
@@ -371,14 +370,10 @@ final class BoardProcessor: BoardProcessorType, Processor {
     private func checkHilitedPair() async {
         assert(state.hilitedPieces.count == 2, "Must have a pair to check")
         await presenter?.receive(.userInteraction(false))
-        defer {
-            Task {
-                await presenter?.receive(.userInteraction(true))
-            }
-        }
         let p1 = state.hilitedPieces[0]
         let p2 = state.hilitedPieces[1]
         guard p1.picName == p2.picName else {
+            await presenter?.receive(.userInteraction(true))
             await self.unhilite()
             return
         }
@@ -396,7 +391,12 @@ final class BoardProcessor: BoardProcessorType, Processor {
             // remove the pieces
             await self.removePiece(p1)
             await self.removePiece(p2)
-            // TODO: I think this is where game-over check goes
+            if grid.isEmpty {
+                // stage is over! tell the delegate, we're out of here
+                await presenter?.receive(.userInteraction(true))
+                delegate?.stageEnded()
+                return
+            }
             // perform any gravity moves
             let movenda = gravity.exerciseGravity(grid: &grid, stageNumber: stageNumber)
             if !movenda.isEmpty {
@@ -410,6 +410,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
         } else {
             await self.unhilite()
         }
+        await presenter?.receive(.userInteraction(true))
     }
 
     // TODO: restore eventually, this is game over check
@@ -438,11 +439,6 @@ final class BoardProcessor: BoardProcessorType, Processor {
     private func userTapped(piece: PieceReducer) async {
         assert(state.hilitedPieces.count < 2, "tap when two pieces are already hilited")
         await presenter?.receive(.userInteraction(false))
-        defer {
-            Task {
-                await presenter?.receive(.userInteraction(true))
-            }
-        }
         let hilited = state.hilitedPieces.contains(piece)
         if !hilited {
             state.hilitedPieces.append(piece)
@@ -450,27 +446,15 @@ final class BoardProcessor: BoardProcessorType, Processor {
             state.hilitedPieces.remove(object: piece)
         }
         await presenter?.present(state)
+        await presenter?.receive(.userInteraction(true))
+
         if state.hilitedPieces.count == 2 {
             await checkHilitedPair()
         }
     }
     
-    // short-circuit, just make a legal move yet already
-    @objc private func handleDeveloperDoubleTap(_ g:UIGestureRecognizer) {
-        Task {
-            if let path = self.legalPath() {
-                let p = g.view as! Piece
-                if p.isHilited {
-                    p.toggleHilite()
-                }
-                state.hilitedPieces = [grid[path.first!]!, grid[path.last!]!]
-                await checkHilitedPair()
-            }
-        }
-    }
-    
     // tap gesture on pathView
-    
+
 //    @objc private func tappedPathView(_ : UIGestureRecognizer) {
 //        nc.post(name: BoardProcessor.userTappedPath, object: self)
 //    }
@@ -557,6 +541,11 @@ final class BoardProcessor: BoardProcessorType, Processor {
     enum DeckSizeError: Error {
         case oops
     }
+}
+
+@MainActor
+protocol BoardDelegate: AnyObject {
+    func stageEnded()
 }
 
 /// Reducer that carries pertinent BoardProcessor data into and out of persistence.

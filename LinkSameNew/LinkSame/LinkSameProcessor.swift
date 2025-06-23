@@ -66,6 +66,7 @@ final class LinkSameProcessor: Processor {
             state.defaultsBeforeShowingNewGamePopover = nil // crucial or we'll fall one behind
             state.interfaceMode = .timed // TODO: Currently we presume that all new games start as timed
             await presenter?.present(state)
+            await setUpGameFromScratch()
         case .timedPractice(let segment):
             state.interfaceMode = .init(rawValue: segment)!
             await presenter?.present(state)
@@ -120,9 +121,16 @@ final class LinkSameProcessor: Processor {
         // create new board object and configure it
         coordinator?.makeBoardProcessor(gridSize: (boardColumns, boardRows))
 
+        await setUpNewStage(stageNumber: 0)
+    }
+
+    /// Follow-on from `setUpGameFromScratch`, factored out so `stageEnded` can call it too,
+    /// with different stage number. As the name says, set up the new stage: make a deck and
+    /// deal it out, transition the board appropriately, show the stage label, save the board state.
+    func setUpNewStage(stageNumber: Int) async {
         await presenter?.receive(.userInteraction(false))
 
-        boardProcessor?.stageNumber = 0
+        boardProcessor?.stageNumber = stageNumber
         // self.board.stage = 8 // testing game end behavior, comment out!
 
         self.stage = Stage(score: 0)
@@ -135,7 +143,7 @@ final class LinkSameProcessor: Processor {
             print(error)
             return
         }
-        let boardTransition: BoardTransition = .fade
+        let boardTransition: BoardTransition = stageNumber == 0 ? .fade : .slide
         await presenter?.receive(.animateBoardTransition(boardTransition))
 
         // show stage label
@@ -167,7 +175,7 @@ final class LinkSameProcessor: Processor {
 
         await presenter?.receive(.userInteraction(false))
 
-        boardProcessor?.stageNumber = boardData.stageNumber
+        boardProcessor?.stageNumber = boardData.stageNumber // TODO: Is this right?
         await boardProcessor?.populateFrom(oldGrid: grid, deckAtStartOfStage: boardData.deckAtStartOfStage)
 
         self.stage = Stage(score: savedState.score)
@@ -281,6 +289,24 @@ final class LinkSameProcessor: Processor {
         )
         if let stateData = try? PropertyListEncoder().encode(state) {
             services.persistence.save(stateData, forKey: .boardData)
+        }
+    }
+}
+
+extension LinkSameProcessor: BoardDelegate {
+    func stageEnded() {
+        guard let board = boardProcessor else {
+            return
+        }
+        let stageNumber = board.stageNumber
+        if stageNumber == services.persistence.loadInt(forKey: .lastStage) {
+            // TODO: Obviously we would restart the whole game with the dialog
+            return
+        }
+        let gridSize = (board.grid.columns, board.grid.rows)
+        coordinator?.makeBoardProcessor(gridSize: gridSize)
+        Task {
+            await setUpNewStage(stageNumber: stageNumber + 1)
         }
     }
 }

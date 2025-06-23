@@ -105,6 +105,7 @@ struct RootCoordinatorTests {
         let boardProcessor = try #require(linkSameProcessor.boardProcessor as? BoardProcessor)
         let boardView = try #require(boardProcessor.presenter as? BoardView)
         #expect(boardView.processor === boardProcessor)
+        #expect(boardProcessor.delegate === linkSameProcessor)
         let linkSameViewController = try #require(subject.rootViewController as? LinkSameViewController)
         #expect(boardView.translatesAutoresizingMaskIntoConstraints == false)
         let constraints = linkSameViewController.backgroundView.constraints.filter { $0.secondItem as? UIView === boardView }

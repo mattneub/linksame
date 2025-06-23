@@ -46,4 +46,16 @@ struct GridTests {
             }
         }
     }
+
+    @Test("isEmpty: works as expected")
+    func isEmpty() {
+        var subject = Grid(columns: 2, rows: 3)
+        #expect(subject.isEmpty)
+        subject[column: 1, row: 2] = "testing"
+        #expect(!subject.isEmpty)
+        subject[column: 1, row: 2] = nil
+        #expect(subject.isEmpty)
+        subject[column: 0, row: 0] = "testing"
+        #expect(!subject.isEmpty)
+    }
 }

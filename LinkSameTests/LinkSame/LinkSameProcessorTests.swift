@@ -44,14 +44,15 @@ struct LinkSameProcessorTests {
 
     // There are three ways that the app can "awaken" which share functionality.
     // So we test all of them together, using this enum to configure the tests for each one.
-    enum AwakeningType {
+    enum AwakeningType: CaseIterable {
         case didInitialLayout // receive .didInitialLayout, i.e. launching cold
+        case startNewGame // receive .startNewGame, i.e. user tapped Done in New Game popover
         case didBecomeActiveGameOver // didBecomeActive is called, and there is a .gameOver true default
         case didBecomeActiveComingBack // didBecomeActive is called, and state comingBack is true (i.e. we were backgrounded)
     }
 
     @Test("awakening with no saved data, gets board size from persistence, or Easy on phone; asks coordinator to make board processor",
-          arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
+          arguments: AwakeningType.allCases
     )
     func awakenNoSavedData(awakeningType: AwakeningType) async throws {
         screen.traitCollection = UITraitCollection { traits in // how to say, nowadays
@@ -61,6 +62,8 @@ struct LinkSameProcessorTests {
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
+        case .startNewGame:
+            await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
             persistence.bool = true
             await subject.didBecomeActive()
@@ -69,13 +72,13 @@ struct LinkSameProcessorTests {
             await subject.didBecomeActive()
         }
         #expect(!persistence.loadKeys.contains(.size)) // on iPhone we don't ask persistence for size
-        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
+        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:)")
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (10, 6)) // on iPhone, persistence size is ignored, we only do Easy
     }
 
     @Test("awakening with no saved data, gets board size from persistence, or Easy on phone (3x); asks coordinator to make board processor",
-          arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
+          arguments: AwakeningType.allCases
     )
     func awakenNoSavedData3x(awakeningType: AwakeningType) async throws {
         screen.traitCollection = UITraitCollection { traits in
@@ -85,6 +88,8 @@ struct LinkSameProcessorTests {
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
+        case .startNewGame:
+            await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
             persistence.bool = true
             await subject.didBecomeActive()
@@ -93,13 +98,13 @@ struct LinkSameProcessorTests {
             await subject.didBecomeActive()
         }
         #expect(!persistence.loadKeys.contains(.size)) // on iPhone we don't ask persistence for size
-        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
+        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:)")
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (12, 7)) // on iPhone, persistence size is ignored, we only do Easy
     }
 
     @Test("awakening with no saved data, gets board size from persistence on iPad; asks coordinator to make board processor",
-          arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
+          arguments: AwakeningType.allCases
     )
     func awakenNoSavedDataPad(awakeningType: AwakeningType) async throws {
         persistence.string = ["Hard"]
@@ -110,6 +115,8 @@ struct LinkSameProcessorTests {
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
+        case .startNewGame:
+            await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
             persistence.bool = true
             await subject.didBecomeActive()
@@ -119,13 +126,13 @@ struct LinkSameProcessorTests {
         }
         #expect(persistence.methodsCalled.contains("loadString(forKey:)"))
         #expect(persistence.loadKeys.contains(.size))
-        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
+        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:)")
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (16, 9)) // hard size
     }
 
     @Test("awakening with saved data, gets board size from saved data, asks coordinator to make board processor",
-          arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
+          arguments: AwakeningType.allCases
     )
     func awakenSavedData(awakeningType: AwakeningType) async throws {
         let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
@@ -135,6 +142,8 @@ struct LinkSameProcessorTests {
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
+        case .startNewGame:
+            return () // this test is not applicable
         case .didBecomeActiveGameOver:
             return () // this test is not applicable
         case .didBecomeActiveComingBack:
@@ -144,19 +153,21 @@ struct LinkSameProcessorTests {
         print(persistence.methodsCalled)
         #expect(persistence.methodsCalled.contains("loadData(forKey:)"))
         #expect(persistence.loadKeys.contains(.boardData))
-        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
+        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:)")
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (3, 2))
     }
 
     @Test("awakening with no saved data configures state interface mode and stage label text",
-          arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
+          arguments: AwakeningType.allCases
     )
     func awakenStateNoSavedData(awakeningType: AwakeningType) async throws {
         persistence.int = 4
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
+        case .startNewGame:
+            await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
             persistence.bool = true
             await subject.didBecomeActive()
@@ -170,7 +181,7 @@ struct LinkSameProcessorTests {
     }
 
     @Test("receive didInitialLayout with saved data configures state interface mode and stage label text",
-          arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
+          arguments: AwakeningType.allCases
     )
     func awakenStateSavedData(awakeningType: AwakeningType) async throws {
         let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
@@ -181,6 +192,8 @@ struct LinkSameProcessorTests {
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
+        case .startNewGame:
+            return () // this test is not applicable
         case .didBecomeActiveGameOver:
             return () // this test is not applicable
         case .didBecomeActiveComingBack:
@@ -194,7 +207,7 @@ struct LinkSameProcessorTests {
     }
 
     @Test("awakening with no saved data sends .userInteraction, .putBoard, .animatedBoardTransition, sets stageNumber, makes stage, tells board create deck",
-          arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
+          arguments: AwakeningType.allCases
     )
     func awakenThenWhatNoSavedData(awakeningType: AwakeningType) async throws {
         persistence.string = ["Hard"]
@@ -205,6 +218,8 @@ struct LinkSameProcessorTests {
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
+        case .startNewGame:
+            await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
             persistence.bool = true
             await subject.didBecomeActive()
@@ -212,7 +227,7 @@ struct LinkSameProcessorTests {
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
         }
-        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
+        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:)")
         #expect(presenter.thingsReceived.count == 4)
         #expect(presenter.thingsReceived[0] == .userInteraction(false))
         #expect(presenter.thingsReceived[1] == .animateBoardTransition(.fade))
@@ -230,7 +245,7 @@ struct LinkSameProcessorTests {
     }
 
     @Test("awakening with saved data sends .userInteraction, .putBoard, .animatedBoardTransition, sets stageNumber, makes stage, tells board create deck",
-          arguments: [AwakeningType.didInitialLayout, .didBecomeActiveGameOver, .didBecomeActiveComingBack]
+          arguments: AwakeningType.allCases
     )
     func awakenThenWhatSavedData(awakeningType: AwakeningType) async throws {
         let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
@@ -240,6 +255,8 @@ struct LinkSameProcessorTests {
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
+        case .startNewGame:
+            return () // this test is not applicable
         case .didBecomeActiveGameOver:
             return () // this test is not applicable
         case .didBecomeActiveComingBack:
@@ -306,7 +323,7 @@ struct LinkSameProcessorTests {
         subject.state.defaultsBeforeShowingNewGamePopover = .init(lastStage: 7, size: "Size", style: "Style")
         subject.state.interfaceMode = .practice
         await subject.receive(.startNewGame)
-        #expect(coordinator.methodsCalled == ["dismiss()"])
+        #expect(coordinator.methodsCalled.first == "dismiss()")
         #expect(subject.state.defaultsBeforeShowingNewGamePopover == nil)
         #expect(presenter.statesPresented.last?.interfaceMode == .timed)
     }
@@ -398,6 +415,45 @@ struct LinkSameProcessorTests {
         services.lifetime.willEnterForegroundPublisher.send()
         await #while(subject.state.comingBackFromBackground == false)
         #expect(subject.state.comingBackFromBackground == true)
+    }
+
+    @Test("stageEnded: checks persistence lastStage, if not greater than stageNumber, stops")
+    func stageEndedStops() {
+        board.stageNumber = 5
+        persistence.int = 5
+        subject.stageEnded()
+        #expect(persistence.methodsCalled == ["loadInt(forKey:)"])
+        #expect(persistence.loadKeys.first == .lastStage)
+        #expect(coordinator.methodsCalled.isEmpty)
+    }
+
+    @Test("stageEnded: checks persistence lastState, if greater, continues, calls coordinator makeBoardProcessor")
+    func stageEndedContinues() async throws {
+        board.stageNumber = 5
+        persistence.int = 6
+        board.grid = Grid(columns: 3, rows: 4)
+        subject.stageEnded()
+        #expect(persistence.methodsCalled == ["loadInt(forKey:)"])
+        #expect(persistence.loadKeys.first == .lastStage)
+        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:)"])
+        #expect(coordinator.gridSize! == (3, 4))
+        // and the rest is like "then what" when launching,
+        // but board transition is slide and stage number is incremented
+        await #while(presenter.thingsReceived.count < 4)
+        #expect(presenter.thingsReceived.count == 4)
+        #expect(presenter.thingsReceived[0] == .userInteraction(false))
+        #expect(presenter.thingsReceived[1] == .animateBoardTransition(.slide)) // *
+        #expect(presenter.thingsReceived[2] == .animateStageLabel)
+        #expect(presenter.thingsReceived[3] == .userInteraction(true))
+        #expect(board.stageNumber == 6) // *
+        #expect(board.methodsCalled.first == "createAndDealDeck()")
+        let stage = try #require(subject.stage)
+        #expect(stage.score == 0) // TODO: I don't expect this to be true ultimately!
+        // and we save board state
+        #expect(persistence.methodsCalled.last == "save(_:forKey:)")
+        #expect(persistence.saveKeys.last == .boardData)
+        let value = try #require(persistence.values.last as? Data)
+        let _ = try PropertyListDecoder().decode(PersistentState.self, from: value)
     }
 }
 

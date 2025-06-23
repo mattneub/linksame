@@ -58,6 +58,11 @@ struct Grid: Equatable, Codable {
             }
         }
     }
+
+    /// Is the grid empty? (This is how you know a stage has ended.)
+    var isEmpty: Bool {
+        grid.flatMap { $0 }.allSatisfy { $0 == nil }
+    }
 }
 
 /// The address of a slot within the grid.
@@ -66,7 +71,7 @@ struct Slot: Equatable, Hashable {
     let row: Int
 }
 
-/// Extra initializer, because sometimes we are too busy to add external names.
+/// Extra Slot initializer, because sometimes we are too busy to add external names.
 extension Slot {
     init(_ column: Int, _ row: Int) {
         self.column = column

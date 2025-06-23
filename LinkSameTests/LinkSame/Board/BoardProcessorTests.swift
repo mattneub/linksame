@@ -9,11 +9,13 @@ struct BoardProcessorTests {
     let boardView = MockReceiverPresenter<BoardEffect, BoardState>()
     let subject = BoardProcessor(gridSize: (columns: 2, rows: 3))
     let gravity = MockGravity()
+    let delegate = MockBoardDelegate()
 
     init() {
         services.persistence = persistence
         subject.presenter = boardView
         subject.gravity = gravity
+        subject.delegate = delegate
     }
 
     @Test("initializer: creates grid")
@@ -156,6 +158,7 @@ struct BoardProcessorTests {
         #expect(boardView.statesPresented.count == 2)
         #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
         #expect(boardView.statesPresented.last?.hilitedPieces == [])
+        #expect(delegate.methodsCalled.isEmpty)
     }
 
     // okay, now we get into the heart of the app, the logic of board analysis
@@ -177,29 +180,40 @@ struct BoardProcessorTests {
         #expect(boardView.statesPresented.last?.hilitedPieces == [])
         #expect(subject.grid[column: 1, row: 0] == piece)
         #expect(subject.grid[column: 0, row: 1] == piece2)
+        #expect(delegate.methodsCalled.isEmpty)
     }
 
-    @Test("receive tapped: reaches two hilited pieces, topologically a match, two segments, unhilited and removed")
-    func receiveTappedTwoHilitedMatchLegalPairTwoSegments() async throws {
+    // incidentally test developer double tap, just the once
+    @Test(
+        "receive tapped: reaches two hilited pieces, topologically a match, two segments, unhilited and removed",
+        arguments: [1,2]
+    )
+    func receiveTappedTwoHilitedMatchLegalPairTwoSegments(which: Int) async throws {
         subject.grid[column: 0, row: 0] = "howdy"
         let piece = PieceReducer(picName: "yoho", column: 1, row: 0)
         subject.grid[column: 1, row: 0] = "yoho"
         let piece2 = PieceReducer(picName: "yoho", column: 0, row: 1)
         subject.grid[column: 0, row: 1] = "yoho"
-        subject.state.hilitedPieces = [piece]
-        await subject.receive(.tapped(piece2))
+        if which == 1 { // normal single tap on second piece
+            subject.state.hilitedPieces = [piece2]
+            await subject.receive(.tapped(piece))
+        } else { // developer double-tap
+            await subject.hint() // tee-hee, just a sneaky way of generating the legal path
+            await subject.receive(.doubleTappedPiece)
+        }
         #expect(subject.state.hilitedPieces.isEmpty)
         #expect(boardView.statesPresented.count == 2)
-        #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
+        #expect(boardView.statesPresented.first?.hilitedPieces == [piece2, piece])
         #expect(boardView.statesPresented.last?.hilitedPieces == [])
         #expect(subject.grid[column: 1, row: 0] == nil)
         #expect(subject.grid[column: 0, row: 1] == nil)
         #expect(boardView.thingsReceived.contains(.remove(piece: piece)))
         #expect(boardView.thingsReceived.contains(.remove(piece: piece2)))
         // and we flashed the path
-        let expectedPath = [Slot(1, 0), Slot(1, 1), Slot(0, 1)]
+        let expectedPath = [Slot(0, 1), Slot(1, 1), Slot(1, 0)]
         #expect(boardView.thingsReceived.contains(.illuminate(path: expectedPath)))
         #expect(boardView.thingsReceived.contains(.unilluminate))
+        #expect(delegate.methodsCalled.isEmpty)
     }
 
     @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed")
@@ -225,6 +239,7 @@ struct BoardProcessorTests {
         let expectedPath = [Slot(0, 0), Slot(-1, 0), Slot(-1, 2), Slot(0, 2)]
         #expect(boardView.thingsReceived.contains(.illuminate(path: expectedPath)))
         #expect(boardView.thingsReceived.contains(.unilluminate))
+        #expect(delegate.methodsCalled.isEmpty)
     }
 
     @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed")
@@ -251,6 +266,30 @@ struct BoardProcessorTests {
         let expectedPath = [Slot(1, 0), Slot(2, 0), Slot(2, 2), Slot(1, 2)]
         #expect(boardView.thingsReceived.contains(.illuminate(path: expectedPath)))
         #expect(boardView.thingsReceived.contains(.unilluminate))
+        #expect(delegate.methodsCalled.isEmpty)
+    }
+
+    @Test("receive tapped: reaches two hilited pieces, match, last pair! unhilited, removed, call delegate stageEnded")
+    func receiveTappedTwoHilitedMatchLegalPairLastPair() async throws {
+        // same as the preceding but no other pieces except tapped pieces
+        let piece = PieceReducer(picName: "yoho", column: 1, row: 0)
+        subject.grid[column: 1, row: 0] = "yoho"
+        let piece2 = PieceReducer(picName: "yoho", column: 1, row: 2)
+        subject.grid[column: 1, row: 2] = "yoho"
+        subject.state.hilitedPieces = [piece]
+        await subject.receive(.tapped(piece2))
+        #expect(subject.state.hilitedPieces.isEmpty)
+        #expect(boardView.statesPresented.count == 2)
+        #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
+        #expect(boardView.statesPresented.last?.hilitedPieces == [])
+        #expect(subject.grid[column: 1, row: 0] == nil)
+        #expect(subject.grid[column: 1, row: 2] == nil)
+        #expect(boardView.thingsReceived.contains(.remove(piece: piece)))
+        #expect(boardView.thingsReceived.contains(.remove(piece: piece2)))
+        let expectedPath = [Slot(1, 0), Slot(1, 2)]
+        #expect(boardView.thingsReceived.contains(.illuminate(path: expectedPath)))
+        #expect(boardView.thingsReceived.contains(.unilluminate))
+        #expect(delegate.methodsCalled == ["stageEnded()"])
     }
 
     @Test("receive tapped: exercises gravity, calls presenter move")
@@ -309,5 +348,13 @@ struct BoardProcessorTests {
             PieceReducer(picName: $1, column: $0.column, row: $0.row)
         }
         #expect(Set(resultantPieces) == Set(gridPieces))
+    }
+}
+
+final class MockBoardDelegate: BoardDelegate {
+    var methodsCalled = [String]()
+
+    func stageEnded() {
+        methodsCalled.append(#function)
     }
 }

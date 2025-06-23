@@ -219,5 +219,9 @@ class BoardView: UIView, ReceiverPresenter {
         }
     }
 
-    @objc func developerDoubleTappedPiece() {}
+    @objc func developerDoubleTappedPiece() {
+        Task {
+            await processor?.receive(.doubleTappedPiece)
+        }
+    }
 }
