@@ -46,10 +46,6 @@ final class NewGameViewController: UIViewController, ReceiverPresenter {
         }
     }
 
-    /// Reference to the delegate to whom we will report when the user taps a bar button item
-    /// to dismiss us; set by the coordinator at module creation time.
-    weak var newGamePopoverDismissalButtonDelegate: (any NewGamePopoverDismissalButtonDelegate)?
-
     init () {
         super.init(nibName: nil, bundle: nil)
         self.edgesForExtendedLayout = []
@@ -65,11 +61,15 @@ final class NewGameViewController: UIViewController, ReceiverPresenter {
         view.backgroundColor = .systemBackground
 
         let cancelBarButtonItem = MyBarButtonItem(systemItem: .cancel) { [weak self] _ in
-            self?.newGamePopoverDismissalButtonDelegate?.cancelNewGame()
+            Task {
+                await self?.processor?.receive(.cancelNewGame)
+            }
         }
         navigationItem.rightBarButtonItem = cancelBarButtonItem
         let doneBarButtonItem = MyBarButtonItem(systemItem: .done) { [weak self] _ in
-            self?.newGamePopoverDismissalButtonDelegate?.startNewGame()
+            Task {
+                await self?.processor?.receive(.startNewGame)
+            }
         }
         navigationItem.leftBarButtonItem = doneBarButtonItem
 
@@ -146,7 +146,7 @@ final class NewGameViewController: UIViewController, ReceiverPresenter {
 /// item and wants to start a new game or simply cancel. Both are ways of dismissing us.
 @MainActor
 protocol NewGamePopoverDismissalButtonDelegate: AnyObject {
-    func cancelNewGame()
-    func startNewGame()
+    func cancelNewGame() async
+    func startNewGame() async
 }
 

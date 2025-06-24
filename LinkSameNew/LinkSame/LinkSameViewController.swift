@@ -7,7 +7,7 @@ enum BoardTransition {
     case fade
 }
 
-final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGamePopoverDismissalButtonDelegate {
+final class LinkSameViewController: UIViewController, ReceiverPresenter {
 
     /// Outlets referencing the interface. Some of these don't exist on iPhone!
     @IBOutlet weak var backgroundView : UIView!
@@ -42,8 +42,8 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
         }
 
         // fix width of hint button to accomodate new labels Show Hint and Hide Hint
-        self.hintButton?.possibleTitles = [HintButtonTitle.show, HintButtonTitle.hide] // not working
-        self.hintButton?.title = HintButtonTitle.show
+//        self.hintButton?.possibleTitles = [HintButtonTitle.show, HintButtonTitle.hide] // not working
+        self.hintButton?.title = LinkSameState.HintButtonTitle.show.rawValue
         self.hintButton?.width = 110 // forced to take a wild guess
 
         Task {
@@ -51,12 +51,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
         }
     }
 
-    private struct HintButtonTitle {
-        static let show = "Show Hint"
-        static let hide = "Hide Hint"
-    }
-
-    var stage : Stage?
+    var stage: Stage?
     
     init() {
         super.init(nibName: nil, bundle: nil)
@@ -162,6 +157,9 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
             stageLabel.text = state.stageLabelText
             stageLabel.sizeToFit()
         }
+
+        // hint button
+        hintButton?.title = state.hintButtonTitle.rawValue
     }
 
     func receive(_ effect: LinkSameEffect) async {
@@ -334,16 +332,10 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
     
     // ============================ toolbar buttons =================================
     
-    @IBAction @objc private func toggleHint(_:Any?) { // hintButton
-//        self.board.unhilite()
-//        if !self.board.showingHint {
-//            self.hintButton?.title = HintButtonTitle.hide
-//            self.stage?.userAskedForHint()
-//            self.board.hint()
-//        } else {
-//            self.hintButton?.title = HintButtonTitle.show
-//            self.board.unhint()
-//        }
+    @IBAction func toggleHint(_: Any?) { // hintButton
+        Task {
+            await processor?.receive(.hint)
+        }
     }
     
     @IBAction func doShuffle(_: Any?) {
@@ -374,47 +366,21 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter, NewGame
     }
 }
 
-extension LinkSameViewController { // buttons in popover
-    
-    @IBAction private func doNew(_ sender: (any UIPopoverPresentationControllerSourceItem)?) {
-//        if self.board.showingHint {
-//            self.toggleHint(nil)
-//        }
-//        self.board.unhilite()
+extension LinkSameViewController { // buttons in hamburger button alert on iPhone, "toolbar" on iPad
+
+    @IBAction func doNew(_ sender: (any UIPopoverPresentationControllerSourceItem)?) {
         Task {
             await processor?.receive(.showNewGame(sender: sender))
         }
     }
-    
-    func cancelNewGame() { // cancel button in new game popover
-        type(of: services.application).userInteraction(false)
-        Task {
-            await processor?.receive(.cancelNewGame)
-            type(of: services.application).userInteraction(true)
-        }
-    }
-    
-    // Done button in new game popover
-    // also, at launch, through layout subviews
-    // also when we become active, if we have no board data
-    func startNewGame() {
-        Task {
-            await processor?.receive(.startNewGame)
-            self.prepareNewStage(nil)
-        }
-    }
-    
-    @IBAction private func doTimedPractice(_ segmentedControl: UISegmentedControl) {
-//        if self.board.showingHint {
-//            self.toggleHint(nil)
-//        }
-//        self.board.unhilite()
+
+    @IBAction func doTimedPractice(_ segmentedControl: UISegmentedControl) {
         Task {
             await processor?.receive(.timedPractice(segmentedControl.selectedSegmentIndex))
         }
     }
     
-    @IBAction private func doHelp(_ sender: (any UIPopoverPresentationControllerSourceItem)?) {
+    @IBAction func doHelp(_ sender: (any UIPopoverPresentationControllerSourceItem)?) {
         Task {
             await processor?.receive(.showHelp(sender: sender))
         }
@@ -428,7 +394,12 @@ extension LinkSameViewController : UIToolbarDelegate {
 }
 
 extension LinkSameViewController { // hamburger button on phone
-    @IBAction func doHamburgerButton (_ : Any) {
+    @IBAction func doHamburgerButton (_: Any) {
+        Task {
+            await processor?.receive(.hamburger)
+        }
+
+        return ()
 //        if self.board.showingHint {
 //            self.toggleHint(nil)
 //        }

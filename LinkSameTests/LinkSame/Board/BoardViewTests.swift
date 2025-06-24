@@ -139,6 +139,18 @@ struct BoardViewTests {
         #expect(piece4.isHilited == false)
     }
 
+    @Test("present: obeys state path view tappable")
+    func presentPathViewTappable() async {
+        subject.pathView = pathView
+        #expect(pathView.isUserInteractionEnabled == true)
+        var state = BoardState(pathViewTappable: false)
+        await subject.present(state)
+        #expect(pathView.isUserInteractionEnabled == false)
+        state = BoardState(pathViewTappable: true)
+        await subject.present(state)
+        #expect(pathView.isUserInteractionEnabled == true)
+    }
+
     @Test("receive illuminate: sends illuminate to path view, translating slots to center points")
     func illuminate() async {
         screen.traitCollection = UITraitCollection { traits in
@@ -286,5 +298,13 @@ struct BoardViewTests {
         subject.perform(gestureRecognizer.action, with: gestureRecognizer) // whew!
         await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.first == .tapped(piece))
+    }
+
+    @Test("tappedPathView: send processor .tappedPathView")
+    func tappedPathView() async {
+        subject.processor = processor
+        subject.tappedPathView()
+        await #while(processor.thingsReceived.isEmpty)
+        #expect(processor.thingsReceived.last == .tappedPathView)
     }
 }

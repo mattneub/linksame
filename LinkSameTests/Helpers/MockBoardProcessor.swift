@@ -8,16 +8,8 @@ final class MockBoardProcessor: BoardProcessorType {
     var _stageNumber = -1
     var _view = MockBoardView(columns: 1, rows: 1)
     var grid = Grid(columns: 1, rows: 1)
-    var deckAtStartOfStage = [PieceReducer]()
-
-    var stageNumber: Int {
-        get {
-            return _stageNumber
-        }
-        set {
-            _stageNumber = newValue
-        }
-    }
+    var _deckAtStartOfStage = [PieceReducer]()
+    var show: Bool?
 
     var view: BoardView {
         _view
@@ -27,13 +19,39 @@ final class MockBoardProcessor: BoardProcessorType {
         methodsCalled.append(#function)
     }
 
+    func deckAtStartOfStage() -> [PieceReducer] {
+        methodsCalled.append(#function)
+        return _deckAtStartOfStage
+    }
+
+
     func populateFrom(oldGrid: Grid, deckAtStartOfStage: [PieceReducer]) {
         methodsCalled.append(#function)
         self.grid = oldGrid
-        self.deckAtStartOfStage = deckAtStartOfStage
+        self._deckAtStartOfStage = deckAtStartOfStage
+    }
+
+    func showHint(_ show: Bool) async {
+        methodsCalled.append(#function)
+        self.show = show
     }
 
     func shuffle() {
         methodsCalled.append(#function)
     }
+
+    func stageNumber() -> Int {
+        methodsCalled.append(#function)
+        return _stageNumber
+    }
+
+    func setStageNumber(_ stageNumber: Int) {
+        methodsCalled.append(#function)
+        self._stageNumber = stageNumber
+    }
+
+    func unhilite() async {
+        methodsCalled.append(#function)
+    }
+
 }

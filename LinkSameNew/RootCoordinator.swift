@@ -54,8 +54,7 @@ final class RootCoordinator: RootCoordinatorType {
         viewController.popoverPresentationDelegate = popoverPresentationDelegate
         processor.presenter = viewController
         newGameProcessor = processor
-        // TODO: I doubt that this is the right delegate, should probably be the processor
-        viewController.newGamePopoverDismissalButtonDelegate = dismissalDelegate
+        processor.dismissalDelegate = dismissalDelegate
 
         viewController.isModalInPresentation = true // must be before presentation to work
         let navigationController = UINavigationController(rootViewController: viewController)

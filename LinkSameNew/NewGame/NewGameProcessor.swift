@@ -7,16 +7,26 @@ final class NewGameProcessor: Processor {
     /// Reference to our chief presenter. Set by the coordinator on module creation.
     weak var presenter: (any ReceiverPresenter<NewGameEffect, NewGameState>)?
 
+    /// Reference to the delegate to whom we will report when the user taps a bar button item
+    /// to dismiss us; set by the coordinator at module creation time.
+    weak var dismissalDelegate: (any NewGamePopoverDismissalButtonDelegate)?
+
     /// State to be passed to the presenter for reflection in the interface.
     var state = NewGameState()
 
     func receive(_ action: NewGameAction) async {
         switch action {
 
+        case .cancelNewGame:
+            await dismissalDelegate?.cancelNewGame()
+
         case .initialInterfaceIsReady:
             let numberOfStages = services.persistence.loadInt(forKey: .lastStage)
             await presenter?.receive(.selectPickerRow(numberOfStages))
             await updateCheckmarks()
+
+        case .startNewGame:
+            await dismissalDelegate?.startNewGame()
 
         case .userSelectedPickerRow(let row):
             services.persistence.save(row, forKey: .lastStage)

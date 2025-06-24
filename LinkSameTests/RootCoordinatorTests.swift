@@ -49,7 +49,7 @@ struct RootCoordinatorTests {
         let presentationDelegate = try #require(presentationController.delegate)
         #expect(presentationDelegate === popoverDelegate)
         #expect(viewController.popoverPresentationDelegate === popoverDelegate)
-        #expect(viewController.newGamePopoverDismissalButtonDelegate === dismissalDelegate)
+        #expect(processor.dismissalDelegate === dismissalDelegate)
     }
 
     @Test("showHelp: sets up module, shows view controller as popover")

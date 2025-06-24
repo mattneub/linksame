@@ -2,34 +2,35 @@
 import UIKit
 import QuartzCore
 
-// TODO: NOTE - I might change this to communicate via an action enum; let's see how things go.
-/// Public face of the BoardProcessor, so we can mock it for testing. This defines the messages
+/// Public face of the BoardProcessor, defining the messages
 /// that the LinkSameProcessor can send to the BoardProcessor.
 @MainActor
 protocol BoardProcessorType: AnyObject {
-    var stageNumber: Int { get set }
+    func stageNumber() -> Int
+    func setStageNumber(_: Int)
     var grid: Grid { get }
-    var deckAtStartOfStage: [PieceReducer] { get }
+    func deckAtStartOfStage() -> [PieceReducer]
     func createAndDealDeck() async throws
     func populateFrom(oldGrid: Grid, deckAtStartOfStage: [PieceReducer]) async
+    func showHint(_: Bool) async
     func shuffle() async
+    func unhilite() async
 }
 
-// TODO: eventually get rid of this comment
-/*
- Board has strong reference to View
- Board has strong reference to Grid
+/// Extension implementing some trivial state getters and setters from the protocol.
+extension BoardProcessorType where Self: BoardProcessor {
+    func stageNumber() -> Int {
+        state.stageNumber
+    }
 
- Grid has strong reference to Pieces (qua array)
- View has strong reference to Pieces (qua subviews)
- 
- Board has strong reference to PathView
- View has strong reference to PathView (qua subview)
- 
- PathView has weak reference to LegalPathShower
- LegalPathShower has unowned reference to Board
- Board has strong reference to LegalPathShower
- */
+    func setStageNumber(_ stageNumber: Int) {
+        state.stageNumber = stageNumber
+    }
+
+    func deckAtStartOfStage() -> [PieceReducer] {
+        state.deckAtStartOfStage
+    }
+}
 
 /// The BoardProcessor serves the LinkSameProcessor. It doesn't know how the whole game works,
 /// but it does know how the game is _played_: it understands the physical mechanism of the game
@@ -55,11 +56,6 @@ final class BoardProcessor: BoardProcessorType, Processor {
     /// Auxiliary gravity object. It's a `var` so we can slot in a mock for testing.
     var gravity: any GravityType = Gravity()
 
-    var stageNumber = 0
-
-    // TODO: find another way of expressing this one
-    // var showingHint : Bool { return self.legalPathShower.isIlluminating }
-
     /// The Grid, acting as the source of truth for where the pieces are.
     /// We always have one; its dimensions are determined at creation time.
     var grid: Grid
@@ -67,13 +63,6 @@ final class BoardProcessor: BoardProcessorType, Processor {
     /// Shortcut for accessing the dimensions of the grid.
     var columns: Int { grid.columns }
     var rows: Int { grid.rows }
-
-    private var hintPath: Path?
-
-    /// Variable where we maintain the contents of the "deck" at the start of each stage,
-    /// in case we are asked to restart the stage. The "deck" consists of just a list of pictures,
-    /// because we know where the corresponding pieces go: just fill the grid.
-    var deckAtStartOfStage = [PieceReducer]()
 
     /// Initializer.
     /// - Parameter gridSize: The size of our grid, which will be created, empty, at initialization.
@@ -85,7 +74,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
     func receive(_ action: BoardAction) async {
         switch action {
         case .doubleTappedPiece:
-            if let path = self.hintPath {
+            if let path = state.hintPath {
                 if let pathStart = path.first, let pathEnd = path.last {
                     if let piece1 = grid[pathStart], let piece2 = grid[pathEnd] {
                         state.hilitedPieces = [piece1, piece2]
@@ -96,6 +85,8 @@ final class BoardProcessor: BoardProcessorType, Processor {
             }
         case .tapped(let piece):
             await userTapped(piece: piece)
+        case .tappedPathView:
+            delegate?.userTappedPathView()
         }
     }
 
@@ -125,7 +116,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             deck.shuffle()
         }
         // store a copy so we can restart the stage if we have to
-        self.deckAtStartOfStage = deck.map { PieceReducer(picName: $0) }
+        state.deckAtStartOfStage = deck.map { PieceReducer(picName: $0) }
         // create actual pieces and we're all set!
         for column in 0 ..< columns {
             for row in 0 ..< rows {
@@ -135,7 +126,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 await addPieceAt(Slot(column: column, row: row), withPicture: deck.removeLast())
             }
         }
-        self.hintPath = self.legalPath() // generate initial hint
+        state.hintPath = self.legalPath() // generate initial hint
     }
 
     /// Given a grid and a deck, make our grid look like the old grid, making all the same
@@ -150,17 +141,17 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 // TODO: seem to be just assuming that the physical layout is empty
             }
         }
-        self.deckAtStartOfStage = oldDeck
-        self.hintPath = self.legalPath() // generate initial hint
+        state.deckAtStartOfStage = oldDeck
+        state.hintPath = self.legalPath() // generate initial hint
     }
 
     func restartStage() async throws {
         // deal stored deck; remove existing pieces as we go
         // attempt to deal with crashes, hard to see what could be crashing except maybe removeLast
-        guard deckAtStartOfStage.count == columns * rows else {
+        guard state.deckAtStartOfStage.count == columns * rows else {
             throw DeckSizeError.oops
         }
-        var deck = deckAtStartOfStage // do not change deckAtStartOfStage, we might need it again!
+        var deck = state.deckAtStartOfStage // do not change deckAtStartOfStage, we might need it again!
         for column in 0 ..< self.columns {
             for row in 0 ..< self.rows {
                 // TODO: This looks like it should be otiose: addPiece should remove if a piece is already slotted in
@@ -173,7 +164,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 await addPieceAt(Slot(column: column, row: row), withPicture: deck.removeLast().picName)
             }
         }
-        self.hintPath = self.legalPath() // generate initial hint
+        state.hintPath = self.legalPath() // generate initial hint
     }
 
     /// Shuffle existing pieces; could be because user asked to shuffle,
@@ -207,7 +198,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             await presenter?.receive(.userInteraction(true))
             limit -= 1
         } while self.legalPath() == nil && limit > 0 // both creates and tests for existence of legal path
-        self.hintPath = self.legalPath() // generate initial hint
+        state.hintPath = self.legalPath() // generate initial hint
         // and if we've failed to get a legal path after 10 tries, the hint is just nil
         // but at least the user will see something, rather than us looping forever or crashing or something
     }
@@ -224,18 +215,15 @@ final class BoardProcessor: BoardProcessorType, Processor {
         await presenter?.receive(.insert(piece: piece))
     }
     
-    // as pieces are highlighted, we store them in an ivar
-    // thus, to unhighlight all highlighted pieces, we just run thru that list
-    // now public, because controller might need to cancel existing highlight
-    // make no assumptions about how many are in list!
-    
+    /// Remove any piece highlighting. If nothing is highlighted, no harm done.
     func unhilite() async {
-        state.hilitedPieces = []
-        await presenter?.present(state)
+        if !state.hilitedPieces.isEmpty {
+            state.hilitedPieces = []
+            await presenter?.present(state)
+        }
     }
-    
-    // utility to determine whether the line from p1 to p2 consists entirely of nil
-    
+
+    /// Utility to determine whether the line from p1 to p2 consists entirely of nil.
     private func lineIsClearFrom(_ p1: Slot, to p2: Slot) -> Bool {
         if !(p1.column == p2.column || p1.row == p2.row) {
             return false // they are not even on the same line
@@ -398,13 +386,13 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 return
             }
             // perform any gravity moves
-            let movenda = gravity.exerciseGravity(grid: &grid, stageNumber: stageNumber)
+            let movenda = gravity.exerciseGravity(grid: &grid, stageNumber: state.stageNumber)
             if !movenda.isEmpty {
                 await presenter?.receive(.move(movenda))
             }
             // generate new hint path, but also check whether we need a redeal
-            self.hintPath = self.legalPath()
-            if self.hintPath == nil {
+            state.hintPath = self.legalPath()
+            if state.hintPath == nil {
                 await self.redeal()
             }
         } else {
@@ -500,27 +488,27 @@ final class BoardProcessor: BoardProcessorType, Processor {
         }
         return nil
     }
-    
-    // public, called by LinkSameViewController to ask us to display hint
-    func hint() async {
-        // TODO: need to deal with tappability during this kind of illumination
-        // no need to waste time calling legalPath(); path is ready (or not) in hintPath
-        if let path = self.hintPath {
-            await presenter?.receive(.illuminate(path: path))
-        } else { // this part shouldn't happen, but just in case, waste time after all
-            self.hintPath = self.legalPath()
-            if self.hintPath != nil {
-                await self.hint() // try again, and this time we'll succeed
-            } else {
-                await self.redeal() // should _really_ never happen, but just in case
+
+    func showHint(_ show: Bool) async {
+        state.hilitedPieces = []
+        if show {
+            // no need to waste time calling legalPath(); path is ready (or not) in hintPath
+            if let path = state.hintPath {
+                await presenter?.receive(.illuminate(path: path))
+            } else { // this part shouldn't happen, but just in case, waste time after all
+                state.hintPath = self.legalPath()
+                if state.hintPath != nil {
+                    await self.showHint(true) // try again, and this time we'll succeed
+                } else {
+                    await self.redeal() // should _really_ never happen, but just in case
+                }
             }
+            state.pathViewTappable = true
+        } else {
+            await presenter?.receive(.unilluminate)
+            state.pathViewTappable = false
         }
-    }
-    
-    // public, for the same reason: if LinkSameViewController tells us to hint,
-    // we stay hinted until we are told to unhint
-    func unhint() async {
-        await presenter?.receive(.unilluminate)
+        await presenter?.present(state)
     }
 
     /// The user has asked to shuffle the pieces.
@@ -546,19 +534,13 @@ final class BoardProcessor: BoardProcessorType, Processor {
 @MainActor
 protocol BoardDelegate: AnyObject {
     func stageEnded()
+    func userTappedPathView()
 }
 
 /// Reducer that carries pertinent BoardProcessor data into and out of persistence.
 nonisolated
-struct BoardSaveableData: Codable {
+struct BoardSaveableData: Codable, Equatable {
     let stageNumber: Int
     let grid: Grid
     let deckAtStartOfStage: [PieceReducer]
-}
-extension BoardSaveableData {
-    @MainActor init(boardProcessor board: any BoardProcessorType) {
-        self.stageNumber = board.stageNumber
-        self.grid = board.grid
-        self.deckAtStartOfStage = board.deckAtStartOfStage
-    }
 }

@@ -6,6 +6,10 @@ enum LinkSameAction: Equatable {
     case cancelNewGame
     /// Sent once at the crucial moment where we first have our dimensions, ready to populate the board interface.
     case didInitialLayout
+    /// The user tapped the hamburger button (on iPhone).
+    case hamburger
+    /// The user tapped the hint button. This could mean show the hint or hide the hint.
+    case hint
     /// Save state.
     case saveBoardState
     /// Display the Help popover.
@@ -29,11 +33,13 @@ extension LinkSameAction {
         switch (lhs, rhs) {
         case (.cancelNewGame, .cancelNewGame): return true
         case (.didInitialLayout, .didInitialLayout): return true
+        case (.hamburger, .hamburger): return true
+        case (.hint, .hint): return true
         case (.saveBoardState, .saveBoardState): return true
-        case (let .showNewGame(sender), let .showNewGame(sender2)): return sender === sender2
         case (let .showHelp(sender), let .showHelp(sender2)): return sender === sender2
-        case (.startNewGame, .startNewGame): return true
+        case (let .showNewGame(sender), let .showNewGame(sender2)): return sender === sender2
         case (.shuffle, .shuffle): return true
+        case (.startNewGame, .startNewGame): return true
         case (let .timedPractice(segment), let .timedPractice(segment2)): return segment == segment2
         case (.viewDidLoad, .viewDidLoad): return true
         default: return false

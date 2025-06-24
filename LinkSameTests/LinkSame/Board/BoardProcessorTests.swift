@@ -37,7 +37,7 @@ struct BoardProcessorTests {
         try await subject.createAndDealDeck()
         #expect(persistence.methodsCalled == ["loadString(forKey:)"])
         #expect(persistence.loadKeys == [.style])
-        let deck = subject.deckAtStartOfStage
+        let deck = subject.state.deckAtStartOfStage
         #expect(deck.count == 36)
         let pix = deck.map { $0.picName }
         #expect(Set(pix).count == 9) // 9 basic images
@@ -74,7 +74,7 @@ struct BoardProcessorTests {
         try await subject.createAndDealDeck()
         #expect(persistence.methodsCalled == ["loadString(forKey:)"])
         #expect(persistence.loadKeys == [.style])
-        let deck = subject.deckAtStartOfStage
+        let deck = subject.state.deckAtStartOfStage
         #expect(deck.count == 44)
         let pix = deck.map { $0.picName }
         #expect(Set(pix).count == 11) // 9 basic images plus two additional
@@ -118,7 +118,7 @@ struct BoardProcessorTests {
         #expect(boardView.thingsReceived.count == 1)
         #expect(boardView.thingsReceived.first == .insert(piece: piece))
         #expect(subject.grid[column: 0, row: 0] == nil) // good enough, no need to check them all
-        #expect(subject.deckAtStartOfStage == [.init(picName: "hello")])
+        #expect(subject.state.deckAtStartOfStage == [.init(picName: "hello")])
     }
 
     @Test("receive tapped: if hilitedPieces contains piece, it is removed; present state")
@@ -198,7 +198,7 @@ struct BoardProcessorTests {
             subject.state.hilitedPieces = [piece2]
             await subject.receive(.tapped(piece))
         } else { // developer double-tap
-            await subject.hint() // tee-hee, just a sneaky way of generating the legal path
+            subject.state.hintPath = [Slot(0, 1), Slot(1, 1), Slot(1, 0)]
             await subject.receive(.doubleTappedPiece)
         }
         #expect(subject.state.hilitedPieces.isEmpty)
@@ -308,6 +308,59 @@ struct BoardProcessorTests {
         #expect(boardView.thingsReceived.contains(.move(movenda)))
     }
 
+    @Test("receive tappedPathView: calls delegate userTappedPathView")
+    func receiveTappedPathView() async {
+        await subject.receive(.tappedPathView)
+        #expect(delegate.methodsCalled == ["userTappedPathView()"])
+    }
+
+    @Test("showHint(false): removes hilite, sets path view tappable to false, unilluminates presenter")
+    func showHintFalse() async {
+        subject.state.hilitedPieces = [.init(picName: "hey")]
+        subject.state.pathViewTappable = true
+        await subject.showHint(false)
+        #expect(subject.state.hilitedPieces == [])
+        #expect(subject.state.pathViewTappable == false)
+        #expect(boardView.statesPresented.first?.hilitedPieces == [])
+        #expect(boardView.statesPresented.first?.pathViewTappable == false)
+        #expect(boardView.thingsReceived == [.unilluminate])
+    }
+
+    @Test("showHint(true): removes hilite, sets path view tappable to true, illuminates hint path")
+    func showHintTrue() async {
+        subject.grid[column: 0, row: 0] = "howdy"
+        let piece = PieceReducer(picName: "yoho", column: 1, row: 0)
+        subject.grid[column: 1, row: 0] = "yoho"
+        let piece2 = PieceReducer(picName: "yoho", column: 0, row: 1)
+        subject.grid[column: 0, row: 1] = "yoho"
+        subject.state.hilitedPieces = [piece, piece2]
+        subject.state.pathViewTappable = false
+        await subject.showHint(true) // calculates hint path
+        #expect(subject.state.hilitedPieces == [])
+        #expect(subject.state.pathViewTappable == true)
+        #expect(boardView.statesPresented.first?.hilitedPieces == [])
+        #expect(boardView.statesPresented.first?.pathViewTappable == true)
+        #expect(boardView.thingsReceived == [.illuminate(path: [Slot(0, 1), Slot(1, 1), Slot(1, 0)])])
+    }
+
+    @Test("showHint(true): if there is _already_ a hint path (and there should be), just uses it")
+    func showHintTrueLegalPathExists() async {
+        subject.state.hintPath = [Slot(0, 1)]
+        subject.state.pathViewTappable = false
+        await subject.showHint(true)
+        #expect(subject.state.pathViewTappable == true)
+        #expect(boardView.statesPresented.first?.pathViewTappable == true)
+        #expect(boardView.thingsReceived == [.illuminate(path: [Slot(0, 1)])])
+    }
+
+    @Test("stageNumber and setStageNumber: accesses the state stageNumber")
+    func stageNumber() {
+        subject.state.stageNumber = 7
+        subject.setStageNumber(8)
+        #expect(subject.state.stageNumber == 8)
+        #expect(subject.stageNumber() == 8)
+    }
+
     @Test("shuffle: unhilites and presents, unilluminates, turns user interaction off and on, rewrites grid, sends corresponding transition")
     func shuffle() async throws {
         subject.grid[column: 1, row: 0] = "yoho"
@@ -355,6 +408,10 @@ final class MockBoardDelegate: BoardDelegate {
     var methodsCalled = [String]()
 
     func stageEnded() {
+        methodsCalled.append(#function)
+    }
+
+    func userTappedPathView() {
         methodsCalled.append(#function)
     }
 }

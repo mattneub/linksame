@@ -91,6 +91,8 @@ class BoardView: UIView, ReceiverPresenter {
                 }
             }
         }
+        // path view tappability
+        pathView.isUserInteractionEnabled = state.pathViewTappable
     }
 
     func receive(_ effect: BoardEffect) async {
@@ -208,7 +210,11 @@ class BoardView: UIView, ReceiverPresenter {
         CGRect(origin: originOf(column: column, row: row), size: pieceSize).center
     }
 
-    @objc func tappedPathView() {}
+    @objc func tappedPathView() {
+        Task {
+            await processor?.receive(.tappedPathView)
+        }
+    }
 
     @objc func tappedPiece(_ gestureRecognizer: UITapGestureRecognizer) {
         guard let piece = gestureRecognizer.view as? Piece else {

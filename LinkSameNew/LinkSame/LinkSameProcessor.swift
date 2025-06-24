@@ -17,6 +17,7 @@ final class LinkSameProcessor: Processor {
     var stage: (any StageType)?
 
     /// Board processor that will manage the board view where the game action takes place.
+    /// This is a strong reference! The board processor is rooted here.
     var boardProcessor: (any BoardProcessorType)?
 
     /// Storage for our never-ending task containing eternal for-loops. See the Lifetime object.
@@ -24,14 +25,14 @@ final class LinkSameProcessor: Processor {
 
     /// Utility for constructing the text displayed by the stage label.
     var stageLabelText: String {
-        let stageNumber = self.boardProcessor?.stageNumber ?? 0
+        let stageNumber = self.boardProcessor?.stageNumber() ?? 0
         let maxStages = services.persistence.loadInt(forKey: .lastStage)
         return "Stage \(stageNumber + 1) of \(maxStages + 1)"
     }
 
     func receive(_ action: LinkSameAction) async {
         switch action {
-        case .cancelNewGame:
+        case .cancelNewGame: // comes from the new game popover
             coordinator?.dismiss()
             restorePopoverDefaults()
         case .didInitialLayout: // sent only once, so this means we are launching
@@ -45,29 +46,44 @@ final class LinkSameProcessor: Processor {
             } else {
                 await setUpGameFromScratch()
             }
+        case .hint:
+            // This is a _toggle_, based on the state. The called methods
+            // _also_ check the state, so they can be called directly elsewhere.
+            // Also, as the name suggests, they unhilite any hilited pieces no matter what,
+            // which saves repetition.
+            if state.hintShowing {
+                await hideHintAndUnhilite()
+            } else {
+                await showHintAndUnhilite()
+            }
+        case .hamburger: break // TODO: write this!
         case .saveBoardState:
             saveBoardState()
         case .showHelp(sender: let sender):
+            await hideHintAndUnhilite()
             coordinator?.showHelp(
                 sourceItem: sender,
                 popoverPresentationDelegate: HelpPopoverDelegate() // TODO: might have to keep a reference of course
             )
         case .showNewGame(sender: let sender):
+            await hideHintAndUnhilite()
             coordinator?.showNewGame(
                 sourceItem: sender,
                 popoverPresentationDelegate: NewGamePopoverDelegate(), // TODO: might have to keep a reference of course
-                dismissalDelegate: presenter as? any NewGamePopoverDismissalButtonDelegate
+                dismissalDelegate: self
             )
             savePopoverDefaults()
         case .shuffle:
+            await hideHintAndUnhilite()
             await boardProcessor?.shuffle()
-        case .startNewGame:
+        case .startNewGame: // comes from the new game popover
             coordinator?.dismiss()
             state.defaultsBeforeShowingNewGamePopover = nil // crucial or we'll fall one behind
             state.interfaceMode = .timed // TODO: Currently we presume that all new games start as timed
             await presenter?.present(state)
             await setUpGameFromScratch()
         case .timedPractice(let segment):
+            await hideHintAndUnhilite()
             state.interfaceMode = .init(rawValue: segment)!
             await presenter?.present(state)
         case .viewDidLoad:
@@ -130,7 +146,7 @@ final class LinkSameProcessor: Processor {
     func setUpNewStage(stageNumber: Int) async {
         await presenter?.receive(.userInteraction(false))
 
-        boardProcessor?.stageNumber = stageNumber
+        boardProcessor?.setStageNumber(stageNumber)
         // self.board.stage = 8 // testing game end behavior, comment out!
 
         self.stage = Stage(score: 0)
@@ -175,7 +191,7 @@ final class LinkSameProcessor: Processor {
 
         await presenter?.receive(.userInteraction(false))
 
-        boardProcessor?.stageNumber = boardData.stageNumber // TODO: Is this right?
+        boardProcessor?.setStageNumber(boardData.stageNumber) // TODO: Is this right?
         await boardProcessor?.populateFrom(oldGrid: grid, deckAtStartOfStage: boardData.deckAtStartOfStage)
 
         self.stage = Stage(score: savedState.score)
@@ -255,7 +271,10 @@ final class LinkSameProcessor: Processor {
 
     /// The app is about to become inactive; respond.
     func willResignActive() async {
+        // In case we are showing hint, stop showing it.
+        await hideHintAndUnhilite()
         // In case we are showing any presented stuff, dismiss it.
+        // TODO: If what we were showing was a game over alert (new high or not), this needs special treatment
         coordinator?.dismiss()
         // And in case what was showing was the New Game popover, that counts as cancellation
         // so restore the defaults.
@@ -280,7 +299,7 @@ final class LinkSameProcessor: Processor {
 
     func saveBoardState() {
         guard let board = boardProcessor else { return }
-        let boardData = BoardSaveableData(boardProcessor: board)
+        let boardData = BoardSaveableData(stageNumber: board.stageNumber(), grid: board.grid, deckAtStartOfStage: board.deckAtStartOfStage())
         guard let score = stage?.score else { return }
         let state = PersistentState(
             board: boardData,
@@ -291,14 +310,37 @@ final class LinkSameProcessor: Processor {
             services.persistence.save(stateData, forKey: .boardData)
         }
     }
+
+    func hideHintAndUnhilite() async {
+        await boardProcessor?.unhilite()
+        if state.hintShowing {
+            state.hintShowing = false
+            state.hintButtonTitle = .show
+            await presenter?.present(state)
+            await boardProcessor?.showHint(false)
+        }
+    }
+
+    func showHintAndUnhilite() async {
+        await boardProcessor?.unhilite()
+        if !state.hintShowing {
+            state.hintShowing = true
+            state.hintButtonTitle = .hide
+            await presenter?.present(state)
+            await boardProcessor?.showHint(true)
+            // TODO: tell the stage so we can penalize the user's score
+            //            self.stage?.userAskedForHint()
+        }
+    }
 }
 
+/// Messages from the BoardProcessor.
 extension LinkSameProcessor: BoardDelegate {
     func stageEnded() {
         guard let board = boardProcessor else {
             return
         }
-        let stageNumber = board.stageNumber
+        let stageNumber = board.stageNumber()
         if stageNumber == services.persistence.loadInt(forKey: .lastStage) {
             // TODO: Obviously we would restart the whole game with the dialog
             return
@@ -309,11 +351,29 @@ extension LinkSameProcessor: BoardDelegate {
             await setUpNewStage(stageNumber: stageNumber + 1)
         }
     }
+
+    func userTappedPathView() {
+        Task {
+            await hideHintAndUnhilite()
+        }
+    }
 }
+
+/// Messages from the NewGameProcessor.
+extension LinkSameProcessor: NewGamePopoverDismissalButtonDelegate {
+    func startNewGame() async {
+        await receive(.startNewGame)
+    }
+
+    func cancelNewGame() async {
+        await receive(.cancelNewGame)
+    }
+}
+
 
 /// Reducer representing a clump of saveable game state.
 @MainActor
-struct PersistentState: Codable {
+struct PersistentState: Equatable, Codable {
     let board: BoardSaveableData
     let score: Int
     let timed: Bool

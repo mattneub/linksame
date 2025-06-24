@@ -25,7 +25,7 @@ struct LinkSameProcessorTests {
 
     @Test("stageLabelText: returns expected value")
     func stageLabelText() {
-        board.stageNumber = 7
+        board._stageNumber = 7
         persistence.int = 8
         #expect(subject.stageLabelText == "Stage 8 of 9") // adds 1 to each of those values
     }
@@ -233,15 +233,20 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[1] == .animateBoardTransition(.fade))
         #expect(presenter.thingsReceived[2] == .animateStageLabel)
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
-        #expect(board.stageNumber == 0)
-        #expect(board.methodsCalled.first == "createAndDealDeck()")
+        #expect(board._stageNumber == 0)
+        #expect(board.methodsCalled == ["setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage()"])
         let stage = try #require(subject.stage)
         #expect(stage.score == 0)
         // and we save board state
         #expect(persistence.methodsCalled.last == "save(_:forKey:)")
         #expect(persistence.saveKeys.last == .boardData)
         let value = try #require(persistence.values.last as? Data)
-        let _ = try PropertyListDecoder().decode(PersistentState.self, from: value)
+        let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
+        #expect(persistentState == .init(
+            board: .init(stageNumber: 0, grid: Grid(columns: 1, rows: 1), deckAtStartOfStage: []),
+            score: 0,
+            timed: true
+        ))
     }
 
     @Test("awakening with saved data sends .userInteraction, .putBoard, .animatedBoardTransition, sets stageNumber, makes stage, tells board create deck",
@@ -269,53 +274,109 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[1] == .animateBoardTransition(.fade))
         #expect(presenter.thingsReceived[2] == .animateStageLabel)
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
-        #expect(board.stageNumber == 5)
-        #expect(board.methodsCalled.first == "populateFrom(oldGrid:deckAtStartOfStage:)")
+        #expect(board._stageNumber == 5)
+        #expect(board.methodsCalled == ["setStageNumber(_:)", "populateFrom(oldGrid:deckAtStartOfStage:)", "stageNumber()"])
         #expect(board.grid == Grid(columns: 3, rows: 2))
-        #expect(board.deckAtStartOfStage == [.init(picName: "hello")])
+        #expect(board._deckAtStartOfStage == [.init(picName: "hello")])
         let stage = try #require(subject.stage)
         #expect(stage.score == 42)
     }
 
+    @Test("receive hint: if no hint is showing, configures and presents state, tells board processor to show hint")
+    func hintYes() async {
+        subject.state.hintShowing = false
+        #expect(subject.state.hintButtonTitle == .show)
+        await subject.receive(.hint)
+        #expect(subject.state.hintShowing == true)
+        #expect(subject.state.hintButtonTitle == .hide)
+        #expect(presenter.statesPresented.last?.hintShowing == true)
+        #expect(presenter.statesPresented.last?.hintButtonTitle == .hide)
+        #expect(board.methodsCalled == ["unhilite()", "showHint(_:)"])
+        #expect(board.show == true)
+    }
+
+    @Test("receive hint: if hint is showing, configures and presents state, tells board processor to show hint")
+    func hintNo() async {
+        subject.state.hintShowing = true
+        subject.state.hintButtonTitle = .hide
+        await subject.receive(.hint)
+        #expect(subject.state.hintShowing == false)
+        #expect(subject.state.hintButtonTitle == .show)
+        #expect(presenter.statesPresented.last?.hintShowing == false)
+        #expect(presenter.statesPresented.last?.hintButtonTitle == .show)
+        #expect(board.methodsCalled == ["unhilite()", "showHint(_:)"])
+        #expect(board.show == false)
+    }
+
     @Test("receive saveBoardState: saves the board state to persistence")
     func saveBoardState() async throws {
-        board.grid = Grid(columns: 1, rows: 1)
-        subject.stage = MockStage()
-        subject.stage?.score = 1
+        subject.stage = stage
+        stage.score = 1
+        board._stageNumber = 2
+        board._deckAtStartOfStage = [.init(picName: "howdy")]
+        board.grid = Grid(columns: 3, rows: 2)
         await subject.receive(.saveBoardState)
         await #while(persistence.methodsCalled.isEmpty)
         #expect(persistence.methodsCalled == ["save(_:forKey:)"])
         #expect(persistence.saveKeys == [.boardData])
         let value = try #require(persistence.values.last as? Data)
-        let _ = try PropertyListDecoder().decode(PersistentState.self, from: value)
+        let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
+        #expect(persistentState == .init(
+            board: .init(stageNumber: 2, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "howdy")]),
+            score: 1,
+            timed: true
+        ))
     }
 
-    @Test("receive showHelp: tells the coordinator to showHelp")
+    @Test("receive showHelp: hides hilite and hint, tells the coordinator to showHelp")
     func showHelp() async {
+        subject.state.hintShowing = true
+        subject.state.hintButtonTitle = .hide
         let view = UIView()
         await subject.receive(.showHelp(sender: view))
+        #expect(subject.state.hintShowing == false)
+        #expect(subject.state.hintButtonTitle == .show)
+        #expect(presenter.statesPresented.last?.hintShowing == false)
+        #expect(presenter.statesPresented.last?.hintButtonTitle == .show)
+        #expect(board.methodsCalled == ["unhilite()", "showHint(_:)"])
+        #expect(board.show == false)
         #expect(coordinator.methodsCalled == ["showHelp(sourceItem:popoverPresentationDelegate:)"])
         #expect(coordinator.sourceItem === view)
         #expect(coordinator.popoverPresentationDelegate is HelpPopoverDelegate)
     }
 
-    @Test("receive showNewGame: tells the coordinator to showNewGame, saves a copy of defaults that the user might change")
+    @Test("receive showNewGame: hides hilite and hint, tells the coordinator to showNewGame, saves a copy of defaults that the user might change")
     func showNewGame() async throws {
+        subject.state.hintShowing = true
+        subject.state.hintButtonTitle = .hide
         let view = UIView()
         persistence.dict = [.style: "Animals", .size: "Hard", .lastStage: 7]
         await subject.receive(.showNewGame(sender: view))
+        #expect(subject.state.hintShowing == false)
+        #expect(subject.state.hintButtonTitle == .show)
+        #expect(presenter.statesPresented.last?.hintShowing == false)
+        #expect(presenter.statesPresented.last?.hintButtonTitle == .show)
+        #expect(board.methodsCalled == ["unhilite()", "showHint(_:)"])
+        #expect(board.show == false)
         #expect(coordinator.methodsCalled == ["showNewGame(sourceItem:popoverPresentationDelegate:dismissalDelegate:)"])
         #expect(coordinator.sourceItem === view)
         #expect(coordinator.popoverPresentationDelegate is NewGamePopoverDelegate)
-        #expect(coordinator.dismissalDelegate === presenter)
+        #expect(coordinator.dismissalDelegate === subject)
         let defs = try #require(subject.state.defaultsBeforeShowingNewGamePopover)
         #expect(defs == PopoverDefaults(lastStage: 7, size: "Hard", style: "Animals"))
     }
 
-    @Test("receive shuffle: call board processor shuffle")
+    @Test("receive shuffle: hides hilite and hint, calls board processor shuffle")
     func shuffle() async {
+        subject.state.hintShowing = true
+        subject.state.hintButtonTitle = .hide
         await subject.receive(.shuffle)
-        #expect(board.methodsCalled == ["shuffle()"])
+        #expect(subject.state.hintShowing == false)
+        #expect(subject.state.hintButtonTitle == .show)
+        #expect(presenter.statesPresented.last?.hintShowing == false)
+        #expect(presenter.statesPresented.last?.hintButtonTitle == .show)
+        #expect(board.methodsCalled == ["unhilite()", "showHint(_:)", "shuffle()"])
+        #expect(board.show == false)
     }
 
     @Test("receive startNewGame: calls coordinator dismiss, nilifies copy of defaults, sets and presents state interface mode")
@@ -328,12 +389,31 @@ struct LinkSameProcessorTests {
         #expect(presenter.statesPresented.last?.interfaceMode == .timed)
     }
 
-    @Test("receive timedPractice: presents state with corresponding interfaceMode")
+    @Test("receive timedPractice: hides hilite and hint, presents state with corresponding interfaceMode")
     func timedPractice() async {
+        subject.state.hintShowing = true
+        subject.state.hintButtonTitle = .hide
         subject.state.interfaceMode = .practice
         await subject.receive(.timedPractice(0))
+        #expect(subject.state.hintShowing == false)
+        #expect(subject.state.hintButtonTitle == .show)
+        #expect(presenter.statesPresented.last?.hintShowing == false)
+        #expect(presenter.statesPresented.last?.hintButtonTitle == .show)
+        #expect(board.methodsCalled == ["unhilite()", "showHint(_:)"])
+        #expect(board.show == false)
         #expect(presenter.statesPresented.last?.interfaceMode == .timed)
+        // --
+        board.methodsCalled = []
+        subject.state.hintShowing = true
+        subject.state.hintButtonTitle = .hide
+        subject.state.interfaceMode = .timed
         await subject.receive(.timedPractice(1))
+        #expect(subject.state.hintShowing == false)
+        #expect(subject.state.hintButtonTitle == .show)
+        #expect(presenter.statesPresented.last?.hintShowing == false)
+        #expect(presenter.statesPresented.last?.hintButtonTitle == .show)
+        #expect(board.methodsCalled == ["unhilite()", "showHint(_:)"])
+        #expect(board.show == false)
         #expect(presenter.statesPresented.last?.interfaceMode == .practice)
     }
 
@@ -347,9 +427,11 @@ struct LinkSameProcessorTests {
     @Test("after .viewDidLoad, lifetime didEnterBackground if state interface mode is .practice saves the board state to persistence")
     func didEnterBackgroundPractice() async throws {
         subject.state.interfaceMode = .practice
-        board.grid = Grid(columns: 1, rows: 1)
-        subject.stage = MockStage()
-        subject.stage?.score = 1
+        subject.stage = stage
+        stage.score = 1
+        board._stageNumber = 2
+        board._deckAtStartOfStage = [.init(picName: "howdy")]
+        board.grid = Grid(columns: 3, rows: 2)
         await subject.receive(.viewDidLoad)
         try? await Task.sleep(for: .seconds(0.1))
         services.lifetime.didEnterBackgroundPublisher.send()
@@ -357,7 +439,12 @@ struct LinkSameProcessorTests {
         #expect(persistence.methodsCalled == ["save(_:forKey:)"])
         #expect(persistence.saveKeys == [.boardData])
         let value = try #require(persistence.values.last as? Data)
-        let _ = try PropertyListDecoder().decode(PersistentState.self, from: value)
+        let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
+        #expect(persistentState == .init(
+            board: .init(stageNumber: 2, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "howdy")]),
+            score: 1,
+            timed: false
+        ))
     }
 
     @Test("after .viewDidLoad, lifetime didBecomeActive sets state `comingBackFromBackground` to false")
@@ -419,7 +506,7 @@ struct LinkSameProcessorTests {
 
     @Test("stageEnded: checks persistence lastStage, if not greater than stageNumber, stops")
     func stageEndedStops() {
-        board.stageNumber = 5
+        board._stageNumber = 5
         persistence.int = 5
         subject.stageEnded()
         #expect(persistence.methodsCalled == ["loadInt(forKey:)"])
@@ -429,9 +516,12 @@ struct LinkSameProcessorTests {
 
     @Test("stageEnded: checks persistence lastState, if greater, continues, calls coordinator makeBoardProcessor")
     func stageEndedContinues() async throws {
-        board.stageNumber = 5
+        board._stageNumber = 5
         persistence.int = 6
         board.grid = Grid(columns: 3, rows: 4)
+        board._deckAtStartOfStage = [.init(picName: "howdy")]
+        subject.stage = stage
+        stage.score = 10
         subject.stageEnded()
         #expect(persistence.methodsCalled == ["loadInt(forKey:)"])
         #expect(persistence.loadKeys.first == .lastStage)
@@ -442,18 +532,37 @@ struct LinkSameProcessorTests {
         await #while(presenter.thingsReceived.count < 4)
         #expect(presenter.thingsReceived.count == 4)
         #expect(presenter.thingsReceived[0] == .userInteraction(false))
-        #expect(presenter.thingsReceived[1] == .animateBoardTransition(.slide)) // *
+        #expect(presenter.thingsReceived[1] == .animateBoardTransition(.slide)) // NB slide transition
         #expect(presenter.thingsReceived[2] == .animateStageLabel)
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
-        #expect(board.stageNumber == 6) // *
-        #expect(board.methodsCalled.first == "createAndDealDeck()")
+        #expect(board._stageNumber == 6) // NB incrementing stage number
+        #expect(board.methodsCalled ==  ["stageNumber()", "setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage()"])
         let stage = try #require(subject.stage)
-        #expect(stage.score == 0) // TODO: I don't expect this to be true ultimately!
+        #expect(stage.score == 0) // TODO: Score is not carrying forward! I don't expect this to be true ultimately!
         // and we save board state
         #expect(persistence.methodsCalled.last == "save(_:forKey:)")
         #expect(persistence.saveKeys.last == .boardData)
         let value = try #require(persistence.values.last as? Data)
-        let _ = try PropertyListDecoder().decode(PersistentState.self, from: value)
+        let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
+        #expect(persistentState == .init(
+            board: .init(stageNumber: 6, grid: Grid(columns: 3, rows: 4), deckAtStartOfStage: [.init(picName: "howdy")]),
+            score: 0,
+            timed: true
+        ))
+    }
+
+    @Test("userTappedPathView: hides hilite and hint")
+    func userTappedPathView() async {
+        subject.state.hintShowing = true
+        subject.state.hintButtonTitle = .hide
+        subject.userTappedPathView()
+        await #while(subject.state.hintShowing == true)
+        #expect(subject.state.hintShowing == false)
+        #expect(subject.state.hintButtonTitle == .show)
+        #expect(presenter.statesPresented.last?.hintShowing == false)
+        #expect(presenter.statesPresented.last?.hintButtonTitle == .show)
+        #expect(board.methodsCalled == ["unhilite()", "showHint(_:)"])
+        #expect(board.show == false)
     }
 }
 
@@ -461,6 +570,5 @@ struct LinkSameProcessorTests {
 /// but I expect all this to change when I move the delegate to the subject itself!
 extension MockReceiverPresenter: NewGamePopoverDismissalButtonDelegate {
     func cancelNewGame() {}
-    
     func startNewGame() {}
 }

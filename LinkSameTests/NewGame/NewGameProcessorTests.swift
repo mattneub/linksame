@@ -9,9 +9,11 @@ struct NewGameProcessorTests {
     let presenter = MockReceiverPresenter<NewGameEffect, NewGameState>()
     let persistence = MockPersistence()
     let screen = MockScreen()
+    let dismissalDelegate = MockDismissalDelegate()
 
     init() {
         subject.presenter = presenter
+        subject.dismissalDelegate = dismissalDelegate
         services.persistence = persistence
         services.screen = screen
     }

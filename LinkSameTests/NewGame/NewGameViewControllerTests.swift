@@ -9,13 +9,11 @@ struct NewGameViewControllerTests {
     fileprivate let mockPickerDelegate = MockPickerDelegate()
     fileprivate let mockTableDelegate = MockTableDelegate()
     let processor = MockProcessor<NewGameAction, NewGameState, NewGameEffect>()
-    let dismissalDelegate = MockDismissalDelegate()
 
     init() {
         subject.pickerViewDataSourceDelegate = mockPickerDelegate
         subject.tableViewDataSourceDelegate = mockTableDelegate
         subject.processor = processor
-        subject.newGamePopoverDismissalButtonDelegate = dismissalDelegate
     }
 
     @Test("table view is correctly initialized")
@@ -59,14 +57,18 @@ struct NewGameViewControllerTests {
     func viewDidLoad() async throws {
         subject.loadViewIfNeeded()
         #expect(subject.view.backgroundColor == .systemBackground)
-        let cancelItem = try #require(subject.navigationItem.rightBarButtonItem as? MyBarButtonItem)
-        cancelItem.actionHandler?(UIAction { _ in })
-        #expect(dismissalDelegate.methodsCalled.last == "cancelNewGame()")
-        let doneItem = try #require(subject.navigationItem.leftBarButtonItem as? MyBarButtonItem)
-        doneItem.actionHandler?(UIAction { _ in })
-        #expect(dismissalDelegate.methodsCalled.last == "startNewGame()")
         await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.first == .viewDidLoad)
+        processor.thingsReceived = []
+        let cancelItem = try #require(subject.navigationItem.rightBarButtonItem as? MyBarButtonItem)
+        cancelItem.actionHandler?(UIAction { _ in })
+        await #while(processor.thingsReceived.isEmpty)
+        #expect(processor.thingsReceived.last == .cancelNewGame)
+        processor.thingsReceived = []
+        let doneItem = try #require(subject.navigationItem.leftBarButtonItem as? MyBarButtonItem)
+        doneItem.actionHandler?(UIAction { _ in })
+        await #while(processor.thingsReceived.isEmpty)
+        #expect(processor.thingsReceived.last == .startNewGame)
     }
 
     @Test("viewDidLoad: sets up interface, up to a point; sends .initialInterfaceIsReady")

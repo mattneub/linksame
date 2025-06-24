@@ -8,6 +8,10 @@ struct LinkSameState: Equatable {
     var comingBackFromBackground = false
     /// Temporary copy of the particular defaults that user might change in the new game popover.
     var defaultsBeforeShowingNewGamePopover: PopoverDefaults?
+    /// Title to be displayed by the hint button.
+    var hintButtonTitle = HintButtonTitle.show
+    /// Whether a hint is currently being displayed.
+    var hintShowing = false
     /// Whether the game mode should be timed or practice.
     var interfaceMode: InterfaceMode = .timed
     /// Content of the stage label.
@@ -17,5 +21,10 @@ struct LinkSameState: Equatable {
     enum InterfaceMode: Int {
         case timed = 0
         case practice = 1
+    }
+
+    enum HintButtonTitle: String {
+        case show = "Show Hint"
+        case hide = "Hide Hint"
     }
 }

@@ -2,4 +2,5 @@
 enum BoardAction: Equatable {
     case doubleTappedPiece
     case tapped(PieceReducer)
+    case tappedPathView
 }
