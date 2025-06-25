@@ -63,6 +63,9 @@ final class LinkSameProcessor: Processor {
             await hideHintAndUnhilite()
             let choice = await coordinator?.showActionSheet(title: nil, options: hamburgerRouter.options)
             await hamburgerRouter.doChoice(choice, processor: self)
+        case .restartStage:
+            await hideHintAndUnhilite()
+            await restartStage()
         case .saveBoardState:
             saveBoardState()
         case .showHelp(sender: let sender):
@@ -336,6 +339,21 @@ final class LinkSameProcessor: Processor {
             await boardProcessor?.showHint(true)
             // TODO: tell the stage so we can penalize the user's score
             //            self.stage?.userAskedForHint()
+        }
+    }
+
+    func restartStage() async {
+        do {
+            await presenter?.receive(.userInteraction(false))
+            try await boardProcessor?.restartStage()
+            await presenter?.receive(.animateBoardTransition(.fade))
+            await presenter?.receive(.animateStageLabel)
+            // TODO: deal with score, here or in board, including displaying it
+            saveBoardState()
+            await presenter?.receive(.userInteraction(true))
+        } catch {
+            await presenter?.receive(.userInteraction(true))
+            print(error)
         }
     }
 }

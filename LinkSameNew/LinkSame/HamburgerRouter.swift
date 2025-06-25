@@ -32,7 +32,7 @@ final class HamburgerRouter: HamburgerRouterType {
         case .game: await processor.receive(.showNewGame(sender: nil))
         case .help: await processor.receive(.showHelp(sender: nil))
         case .hint: await processor.receive(.hint)
-        case .restart: break // TODO: write restart stage when we have a score
+        case .restart: await processor.receive(.restartStage)
         case .shuffle: await processor.receive(.shuffle)
         }
     }

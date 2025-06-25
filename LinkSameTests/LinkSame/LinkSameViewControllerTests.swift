@@ -166,6 +166,13 @@ struct LinkSameViewControllerTests {
         #expect(MockApplication.bools == [false, true])
     }
 
+    @Test("doRestartStage: sends restartStage to processor")
+    func doRestartStage() async throws {
+        subject.doRestartStage(nil)
+        await #while(processor.thingsReceived.isEmpty)
+        #expect(processor.thingsReceived.first == .restartStage)
+    }
+
     @Test("doShuffle: sends shuffle to processor")
     func doShuffle() async throws {
         subject.doShuffle(nil)

@@ -6,14 +6,14 @@ import WaitWhile
 @MainActor
 struct BoardProcessorTests {
     let persistence = MockPersistence()
-    let boardView = MockReceiverPresenter<BoardEffect, BoardState>()
+    let presenter = MockReceiverPresenter<BoardEffect, BoardState>()
     let subject = BoardProcessor(gridSize: (columns: 2, rows: 3))
     let gravity = MockGravity()
     let delegate = MockBoardDelegate()
 
     init() {
         services.persistence = persistence
-        subject.presenter = boardView
+        subject.presenter = presenter
         subject.gravity = gravity
         subject.delegate = delegate
     }
@@ -33,17 +33,16 @@ struct BoardProcessorTests {
     func createAndDealDeck() async throws {
         persistence.string = ["Snacks"]
         let subject = BoardProcessor(gridSize: (2, 18)) // tee-hee
-        subject.presenter = boardView
+        subject.presenter = presenter
         try await subject.createAndDealDeck()
         #expect(persistence.methodsCalled == ["loadString(forKey:)"])
         #expect(persistence.loadKeys == [.style])
         let deck = subject.state.deckAtStartOfStage
         #expect(deck.count == 36)
-        let pix = deck.map { $0.picName }
-        #expect(Set(pix).count == 9) // 9 basic images
-        #expect(Set(pix) == ["21", "22", "23", "24", "25", "26", "27", "28", "29"])
+        #expect(Set(deck).count == 9) // 9 basic images
+        #expect(Set(deck) == ["21", "22", "23", "24", "25", "26", "27", "28", "29"])
         for pic in ["21", "22", "23", "24", "25", "26", "27", "28", "29"] {
-            #expect(pix.count(where: {$0 == pic}) == 4)
+            #expect(deck.count(where: {$0 == pic}) == 4)
         }
         var gridPieces = [PieceReducer?]()
         // "undeal"!
@@ -52,9 +51,9 @@ struct BoardProcessorTests {
                 gridPieces.append(subject.grid[column: column, row: row])
             }
         }
-        #expect(gridPieces.compactMap {$0}.map { $0.picName } == deck.map { $0.picName }.reversed())
+        #expect(gridPieces.compactMap {$0}.map { $0.picName } == deck.reversed())
         // what we said to the presenter
-        #expect(boardView.thingsReceived.count == 36)
+        #expect(presenter.thingsReceived.count == 36)
         var expectedEffects = [BoardEffect]()
         for column in 0 ..< 2 {
             for row in 0 ..< 18 {
@@ -63,24 +62,23 @@ struct BoardProcessorTests {
             }
         }
         #expect(expectedEffects.count == 36)
-        #expect(boardView.thingsReceived == expectedEffects)
+        #expect(presenter.thingsReceived == expectedEffects)
     }
 
     @Test("createAndDealDeck: creates the deck based on persistence and grid size, sends .insert effect for each piece")
     func createAndDealDeck2() async throws {
         persistence.string = ["Animals"]
         let subject = BoardProcessor(gridSize: (4, 11))
-        subject.presenter = boardView
+        subject.presenter = presenter
         try await subject.createAndDealDeck()
         #expect(persistence.methodsCalled == ["loadString(forKey:)"])
         #expect(persistence.loadKeys == [.style])
         let deck = subject.state.deckAtStartOfStage
         #expect(deck.count == 44)
-        let pix = deck.map { $0.picName }
-        #expect(Set(pix).count == 11) // 9 basic images plus two additional
-        #expect(Set(pix) == ["11", "12", "13", "14", "15", "16", "17", "18", "19", "110", "111"])
+        #expect(Set(deck).count == 11) // 9 basic images plus two additional
+        #expect(Set(deck) == ["11", "12", "13", "14", "15", "16", "17", "18", "19", "110", "111"])
         for pic in ["11", "12", "13", "14", "15", "16", "17", "18", "19", "110", "111"] {
-            #expect(pix.count(where: {$0 == pic}) == 4)
+            #expect(deck.count(where: {$0 == pic}) == 4)
         }
         var gridPieces = [PieceReducer?]()
         // "undeal"!
@@ -89,9 +87,9 @@ struct BoardProcessorTests {
                 gridPieces.append(subject.grid[column: column, row: row])
             }
         }
-        #expect(gridPieces.compactMap {$0}.map { $0.picName } == deck.map { $0.picName}.reversed())
+        #expect(gridPieces.compactMap {$0}.map { $0.picName } == deck.reversed())
         // what we said to the presenter
-        #expect(boardView.thingsReceived.count == 44)
+        #expect(presenter.thingsReceived.count == 44)
         var expectedEffects = [BoardEffect]()
         for column in 0 ..< 4 {
             for row in 0 ..< 11 {
@@ -100,25 +98,25 @@ struct BoardProcessorTests {
             }
         }
         #expect(expectedEffects.count == 44)
-        #expect(boardView.thingsReceived == expectedEffects)
+        #expect(presenter.thingsReceived == expectedEffects)
     }
 
     @Test("populate: populates grid from old grid, sets deckAtStartOfStage")
     func populate() async throws {
         let subject = BoardProcessor(gridSize: (2,3))
-        subject.presenter = boardView
+        subject.presenter = presenter
         var grid = Grid(columns: 2, rows: 3)
         let piece = PieceReducer(picName: "howdy", column: 1, row: 1)
         grid[column: 1, row: 1] = "howdy"
-        await subject.populateFrom(oldGrid: grid, deckAtStartOfStage: [.init(picName: "hello")])
+        await subject.populateFrom(oldGrid: grid, deckAtStartOfStage: ["hello"])
         let gridPiece = try #require(subject.grid[column: 1, row: 1])
         #expect(gridPiece.picName == "howdy")
         #expect(gridPiece.column == 1) // has proper knowledge of position
         #expect(gridPiece.row == 1)
-        #expect(boardView.thingsReceived.count == 1)
-        #expect(boardView.thingsReceived.first == .insert(piece: piece))
+        #expect(presenter.thingsReceived.count == 1)
+        #expect(presenter.thingsReceived.first == .insert(piece: piece))
         #expect(subject.grid[column: 0, row: 0] == nil) // good enough, no need to check them all
-        #expect(subject.state.deckAtStartOfStage == [.init(picName: "hello")])
+        #expect(subject.state.deckAtStartOfStage == ["hello"])
     }
 
     @Test("receive tapped: if hilitedPieces contains piece, it is removed; present state")
@@ -126,12 +124,12 @@ struct BoardProcessorTests {
         let piece = PieceReducer(picName: "howdy", column: 0, row: 0)
         subject.state.hilitedPieces = [piece]
         await subject.receive(.tapped(piece))
-        #expect(boardView.statesPresented.count == 1)
-        #expect(boardView.statesPresented[0].hilitedPieces.isEmpty)
-        await #while(boardView.thingsReceived.count < 2)
-        #expect(boardView.thingsReceived.count == 2)
-        #expect(boardView.thingsReceived[0] == .userInteraction(false))
-        #expect(boardView.thingsReceived[1] == .userInteraction(true))
+        #expect(presenter.statesPresented.count == 1)
+        #expect(presenter.statesPresented[0].hilitedPieces.isEmpty)
+        await #while(presenter.thingsReceived.count < 2)
+        #expect(presenter.thingsReceived.count == 2)
+        #expect(presenter.thingsReceived[0] == .userInteraction(false))
+        #expect(presenter.thingsReceived[1] == .userInteraction(true))
     }
 
     @Test("receive tapped: if hilitedPieces does not contain piece, it is added; present state")
@@ -139,12 +137,12 @@ struct BoardProcessorTests {
         let piece = PieceReducer(picName: "howdy", column: 0, row: 0)
         subject.state.hilitedPieces = []
         await subject.receive(.tapped(piece))
-        #expect(boardView.statesPresented.count == 1)
-        #expect(boardView.statesPresented[0].hilitedPieces[0] == piece)
-        await #while(boardView.thingsReceived.count < 2)
-        #expect(boardView.thingsReceived.count == 2)
-        #expect(boardView.thingsReceived[0] == .userInteraction(false))
-        #expect(boardView.thingsReceived[1] == .userInteraction(true))
+        #expect(presenter.statesPresented.count == 1)
+        #expect(presenter.statesPresented[0].hilitedPieces[0] == piece)
+        await #while(presenter.thingsReceived.count < 2)
+        #expect(presenter.thingsReceived.count == 2)
+        #expect(presenter.thingsReceived[0] == .userInteraction(false))
+        #expect(presenter.thingsReceived[1] == .userInteraction(true))
     }
 
     @Test("receive tapped: reaches two hilited pieces, trivially not a match, unhilited")
@@ -155,9 +153,9 @@ struct BoardProcessorTests {
         await subject.receive(.tapped(piece2))
         #expect(subject.state.hilitedPieces.isEmpty)
         // first the view is told to hilite both, then it is told to hilite neither
-        #expect(boardView.statesPresented.count == 2)
-        #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
-        #expect(boardView.statesPresented.last?.hilitedPieces == [])
+        #expect(presenter.statesPresented.count == 2)
+        #expect(presenter.statesPresented.first?.hilitedPieces == [piece, piece2])
+        #expect(presenter.statesPresented.last?.hilitedPieces == [])
         #expect(delegate.methodsCalled.isEmpty)
     }
 
@@ -175,9 +173,9 @@ struct BoardProcessorTests {
         await subject.receive(.tapped(piece2))
         // they have the same name, but they are diagonal and blocked, no legal path
         #expect(subject.state.hilitedPieces.isEmpty)
-        #expect(boardView.statesPresented.count == 2)
-        #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
-        #expect(boardView.statesPresented.last?.hilitedPieces == [])
+        #expect(presenter.statesPresented.count == 2)
+        #expect(presenter.statesPresented.first?.hilitedPieces == [piece, piece2])
+        #expect(presenter.statesPresented.last?.hilitedPieces == [])
         #expect(subject.grid[column: 1, row: 0] == piece)
         #expect(subject.grid[column: 0, row: 1] == piece2)
         #expect(delegate.methodsCalled.isEmpty)
@@ -202,17 +200,17 @@ struct BoardProcessorTests {
             await subject.receive(.doubleTappedPiece)
         }
         #expect(subject.state.hilitedPieces.isEmpty)
-        #expect(boardView.statesPresented.count == 2)
-        #expect(boardView.statesPresented.first?.hilitedPieces == [piece2, piece])
-        #expect(boardView.statesPresented.last?.hilitedPieces == [])
+        #expect(presenter.statesPresented.count == 2)
+        #expect(presenter.statesPresented.first?.hilitedPieces == [piece2, piece])
+        #expect(presenter.statesPresented.last?.hilitedPieces == [])
         #expect(subject.grid[column: 1, row: 0] == nil)
         #expect(subject.grid[column: 0, row: 1] == nil)
-        #expect(boardView.thingsReceived.contains(.remove(piece: piece)))
-        #expect(boardView.thingsReceived.contains(.remove(piece: piece2)))
+        #expect(presenter.thingsReceived.contains(.remove(piece: piece)))
+        #expect(presenter.thingsReceived.contains(.remove(piece: piece2)))
         // and we flashed the path
         let expectedPath = [Slot(0, 1), Slot(1, 1), Slot(1, 0)]
-        #expect(boardView.thingsReceived.contains(.illuminate(path: expectedPath)))
-        #expect(boardView.thingsReceived.contains(.unilluminate))
+        #expect(presenter.thingsReceived.contains(.illuminate(path: expectedPath)))
+        #expect(presenter.thingsReceived.contains(.unilluminate))
         #expect(delegate.methodsCalled.isEmpty)
     }
 
@@ -227,18 +225,18 @@ struct BoardProcessorTests {
         subject.state.hilitedPieces = [piece]
         await subject.receive(.tapped(piece2))
         #expect(subject.state.hilitedPieces.isEmpty)
-        #expect(boardView.statesPresented.count == 2)
-        #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
-        #expect(boardView.statesPresented.last?.hilitedPieces == [])
+        #expect(presenter.statesPresented.count == 2)
+        #expect(presenter.statesPresented.first?.hilitedPieces == [piece, piece2])
+        #expect(presenter.statesPresented.last?.hilitedPieces == [])
         #expect(subject.grid[column: 0, row: 0] == nil)
         #expect(subject.grid[column: 0, row: 2] == nil)
-        #expect(boardView.thingsReceived.contains(.remove(piece: piece)))
-        #expect(boardView.thingsReceived.contains(.remove(piece: piece2)))
+        #expect(presenter.thingsReceived.contains(.remove(piece: piece)))
+        #expect(presenter.thingsReceived.contains(.remove(piece: piece2)))
         // and we flashed the path — and the path is the shorter path, which goes outside the
         // left grid bounds, rather than going all the way around the piece at (1, 1)
         let expectedPath = [Slot(0, 0), Slot(-1, 0), Slot(-1, 2), Slot(0, 2)]
-        #expect(boardView.thingsReceived.contains(.illuminate(path: expectedPath)))
-        #expect(boardView.thingsReceived.contains(.unilluminate))
+        #expect(presenter.thingsReceived.contains(.illuminate(path: expectedPath)))
+        #expect(presenter.thingsReceived.contains(.unilluminate))
         #expect(delegate.methodsCalled.isEmpty)
     }
 
@@ -254,18 +252,18 @@ struct BoardProcessorTests {
         subject.state.hilitedPieces = [piece]
         await subject.receive(.tapped(piece2))
         #expect(subject.state.hilitedPieces.isEmpty)
-        #expect(boardView.statesPresented.count == 2)
-        #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
-        #expect(boardView.statesPresented.last?.hilitedPieces == [])
+        #expect(presenter.statesPresented.count == 2)
+        #expect(presenter.statesPresented.first?.hilitedPieces == [piece, piece2])
+        #expect(presenter.statesPresented.last?.hilitedPieces == [])
         #expect(subject.grid[column: 1, row: 0] == nil)
         #expect(subject.grid[column: 1, row: 2] == nil)
-        #expect(boardView.thingsReceived.contains(.remove(piece: piece)))
-        #expect(boardView.thingsReceived.contains(.remove(piece: piece2)))
+        #expect(presenter.thingsReceived.contains(.remove(piece: piece)))
+        #expect(presenter.thingsReceived.contains(.remove(piece: piece2)))
         // and we flashed the path — and the path is the shorter path, which goes outside the
         // right grid bounds, rather than going all the way around the piece at (0, 1)
         let expectedPath = [Slot(1, 0), Slot(2, 0), Slot(2, 2), Slot(1, 2)]
-        #expect(boardView.thingsReceived.contains(.illuminate(path: expectedPath)))
-        #expect(boardView.thingsReceived.contains(.unilluminate))
+        #expect(presenter.thingsReceived.contains(.illuminate(path: expectedPath)))
+        #expect(presenter.thingsReceived.contains(.unilluminate))
         #expect(delegate.methodsCalled.isEmpty)
     }
 
@@ -279,16 +277,16 @@ struct BoardProcessorTests {
         subject.state.hilitedPieces = [piece]
         await subject.receive(.tapped(piece2))
         #expect(subject.state.hilitedPieces.isEmpty)
-        #expect(boardView.statesPresented.count == 2)
-        #expect(boardView.statesPresented.first?.hilitedPieces == [piece, piece2])
-        #expect(boardView.statesPresented.last?.hilitedPieces == [])
+        #expect(presenter.statesPresented.count == 2)
+        #expect(presenter.statesPresented.first?.hilitedPieces == [piece, piece2])
+        #expect(presenter.statesPresented.last?.hilitedPieces == [])
         #expect(subject.grid[column: 1, row: 0] == nil)
         #expect(subject.grid[column: 1, row: 2] == nil)
-        #expect(boardView.thingsReceived.contains(.remove(piece: piece)))
-        #expect(boardView.thingsReceived.contains(.remove(piece: piece2)))
+        #expect(presenter.thingsReceived.contains(.remove(piece: piece)))
+        #expect(presenter.thingsReceived.contains(.remove(piece: piece2)))
         let expectedPath = [Slot(1, 0), Slot(1, 2)]
-        #expect(boardView.thingsReceived.contains(.illuminate(path: expectedPath)))
-        #expect(boardView.thingsReceived.contains(.unilluminate))
+        #expect(presenter.thingsReceived.contains(.illuminate(path: expectedPath)))
+        #expect(presenter.thingsReceived.contains(.unilluminate))
         #expect(delegate.methodsCalled == ["stageEnded()"])
     }
 
@@ -305,13 +303,40 @@ struct BoardProcessorTests {
         subject.state.hilitedPieces = [piece]
         await subject.receive(.tapped(piece2))
         #expect(gravity.methodsCalled == ["exerciseGravity(grid:stageNumber:)"])
-        #expect(boardView.thingsReceived.contains(.move(movenda)))
+        #expect(presenter.thingsReceived.contains(.move(movenda)))
     }
 
     @Test("receive tappedPathView: calls delegate userTappedPathView")
     func receiveTappedPathView() async {
         await subject.receive(.tappedPathView)
         #expect(delegate.methodsCalled == ["userTappedPathView()"])
+    }
+
+    @Test("restartStage: replaces the grid with deckAtStartOfStage, tells presenter to remove old pieces and insert new ones")
+    func restartStage() async throws {
+        var deck = [String]()
+        var oldPieces = [PieceReducer?]()
+        for column in 0 ..< subject.columns {
+            for row in 0 ..< subject.rows {
+                subject.grid[column: column, row: row] = "old\(column)\(row)"
+                oldPieces.append(subject.grid[column: column, row: row])
+                deck.append("new\(column)\(row)")
+            }
+        }
+        subject.state.deckAtStartOfStage = deck
+        try await subject.restartStage()
+        var newPieces = [PieceReducer?]()
+        for column in 0 ..< subject.columns {
+            for row in 0 ..< subject.rows {
+                newPieces.append(subject.grid[column: column, row: row])
+            }
+        }
+        var expected = [BoardEffect]()
+        for pieces in zip(oldPieces.compactMap{$0}, newPieces.compactMap{$0}) {
+            expected.append(.remove(piece: pieces.0))
+            expected.append(.insert(piece: pieces.1))
+        }
+        #expect(presenter.thingsReceived == expected)
     }
 
     @Test("showHint(false): removes hilite, sets path view tappable to false, unilluminates presenter")
@@ -321,9 +346,9 @@ struct BoardProcessorTests {
         await subject.showHint(false)
         #expect(subject.state.hilitedPieces == [])
         #expect(subject.state.pathViewTappable == false)
-        #expect(boardView.statesPresented.first?.hilitedPieces == [])
-        #expect(boardView.statesPresented.first?.pathViewTappable == false)
-        #expect(boardView.thingsReceived == [.unilluminate])
+        #expect(presenter.statesPresented.first?.hilitedPieces == [])
+        #expect(presenter.statesPresented.first?.pathViewTappable == false)
+        #expect(presenter.thingsReceived == [.unilluminate])
     }
 
     @Test("showHint(true): removes hilite, sets path view tappable to true, illuminates hint path")
@@ -338,9 +363,9 @@ struct BoardProcessorTests {
         await subject.showHint(true) // calculates hint path
         #expect(subject.state.hilitedPieces == [])
         #expect(subject.state.pathViewTappable == true)
-        #expect(boardView.statesPresented.first?.hilitedPieces == [])
-        #expect(boardView.statesPresented.first?.pathViewTappable == true)
-        #expect(boardView.thingsReceived == [.illuminate(path: [Slot(0, 1), Slot(1, 1), Slot(1, 0)])])
+        #expect(presenter.statesPresented.first?.hilitedPieces == [])
+        #expect(presenter.statesPresented.first?.pathViewTappable == true)
+        #expect(presenter.thingsReceived == [.illuminate(path: [Slot(0, 1), Slot(1, 1), Slot(1, 0)])])
     }
 
     @Test("showHint(true): if there is _already_ a hint path (and there should be), just uses it")
@@ -349,8 +374,8 @@ struct BoardProcessorTests {
         subject.state.pathViewTappable = false
         await subject.showHint(true)
         #expect(subject.state.pathViewTappable == true)
-        #expect(boardView.statesPresented.first?.pathViewTappable == true)
-        #expect(boardView.thingsReceived == [.illuminate(path: [Slot(0, 1)])])
+        #expect(presenter.statesPresented.first?.pathViewTappable == true)
+        #expect(presenter.thingsReceived == [.illuminate(path: [Slot(0, 1)])])
     }
 
     @Test("stageNumber and setStageNumber: accesses the state stageNumber")
@@ -370,20 +395,20 @@ struct BoardProcessorTests {
         subject.state.hilitedPieces = [PieceReducer(picName: "yoho", column: 1, row: 0)]
         await subject.shuffle()
         #expect(subject.state.hilitedPieces == [])
-        #expect(boardView.statesPresented.first?.hilitedPieces == [])
-        #expect(boardView.thingsReceived.first == .unilluminate)
+        #expect(presenter.statesPresented.first?.hilitedPieces == [])
+        #expect(presenter.thingsReceived.first == .unilluminate)
         let gridPieces = subject.grid.grid.flatMap {$0}.compactMap {$0}
         #expect(gridPieces.count == 4)
         let picNames = gridPieces.map { $0.picName }
         let slots = gridPieces.map { Slot(column: $0.column, row: $0.row) }
         #expect(picNames.sorted() == ["teehee", "teehee", "yoho", "yoho"])
         #expect(Set(slots) == [Slot(column: 1, row: 0), Slot(column: 0, row: 1), Slot(column: 1, row: 2), Slot(column: 1, row: 1)])
-        #expect(boardView.thingsReceived.count == 7)
-        #expect(boardView.thingsReceived.contains(.userInteraction(false)))
-        #expect(boardView.thingsReceived.contains(.userInteraction(true)))
+        #expect(presenter.thingsReceived.count == 7)
+        #expect(presenter.thingsReceived.contains(.userInteraction(false)))
+        #expect(presenter.thingsReceived.contains(.userInteraction(true)))
         var effectPieces = [PieceReducer]()
         var effectPix = [String]()
-        for thing in boardView.thingsReceived {
+        for thing in presenter.thingsReceived {
             if case .transition(let piece, let picName) = thing {
                 effectPieces.append(piece)
                 effectPix.append(picName)

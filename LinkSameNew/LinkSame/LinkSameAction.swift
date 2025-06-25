@@ -10,6 +10,8 @@ enum LinkSameAction: Equatable {
     case hamburger
     /// The user tapped the hint button. This could mean show the hint or hide the hint.
     case hint
+    /// The user has asked to restart this stage.
+    case restartStage
     /// Save state.
     case saveBoardState
     /// Display the Help popover.
@@ -35,6 +37,7 @@ extension LinkSameAction {
         case (.didInitialLayout, .didInitialLayout): return true
         case (.hamburger, .hamburger): return true
         case (.hint, .hint): return true
+        case (.restartStage, .restartStage): return true
         case (.saveBoardState, .saveBoardState): return true
         case (let .showHelp(sender), let .showHelp(sender2)): return sender === sender2
         case (let .showNewGame(sender), let .showNewGame(sender2)): return sender === sender2

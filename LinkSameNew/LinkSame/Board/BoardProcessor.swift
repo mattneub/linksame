@@ -9,9 +9,10 @@ protocol BoardProcessorType: AnyObject {
     func stageNumber() -> Int
     func setStageNumber(_: Int)
     var grid: Grid { get }
-    var deckAtStartOfStage: [PieceReducer] { get }
+    var deckAtStartOfStage: [String] { get }
     func createAndDealDeck() async throws
-    func populateFrom(oldGrid: Grid, deckAtStartOfStage: [PieceReducer]) async
+    func populateFrom(oldGrid: Grid, deckAtStartOfStage: [String]) async
+    func restartStage() async throws
     func showHint(_: Bool) async
     func shuffle() async
     func unhilite() async
@@ -19,7 +20,7 @@ protocol BoardProcessorType: AnyObject {
 
 /// Extension implementing some trivial state getters and setters from the protocol.
 extension BoardProcessorType where Self: BoardProcessor {
-    var deckAtStartOfStage: [PieceReducer] {
+    var deckAtStartOfStage: [String] {
         state.deckAtStartOfStage
     }
 
@@ -116,7 +117,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             deck.shuffle()
         }
         // store a copy so we can restart the stage if we have to
-        state.deckAtStartOfStage = deck.map { PieceReducer(picName: $0) }
+        state.deckAtStartOfStage = deck
         // create actual pieces and we're all set!
         for column in 0 ..< columns {
             for row in 0 ..< rows {
@@ -132,7 +133,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
     /// Given a grid and a deck, make our grid look like the old grid, making all the same
     /// pieces appear in the interface, and keep a copy of the deck in case we have to restart
     /// the stage.
-    func populateFrom(oldGrid: Grid, deckAtStartOfStage oldDeck: [PieceReducer]) async {
+    func populateFrom(oldGrid: Grid, deckAtStartOfStage oldDeck: [String]) async {
         for column in 0 ..< oldGrid.columns {
             for row in 0 ..< oldGrid.rows {
                 if let oldPiece = oldGrid[column: column, row: row] {
@@ -145,23 +146,25 @@ final class BoardProcessor: BoardProcessorType, Processor {
         state.hintPath = self.legalPath() // generate initial hint
     }
 
+    /// Restart the current stage, by replacing the current pieces with the deck that we saved off
+    /// when the stage began.
+    /// - Throws: If anything goes wrong. This is an attempt to deal with crashes that could occur;
+    /// I never tracked these down, but it's hard to see what _could_ be crashing except some
+    /// size mismatch resulting in a bad `removeLast`.
     func restartStage() async throws {
-        // deal stored deck; remove existing pieces as we go
-        // attempt to deal with crashes, hard to see what could be crashing except maybe removeLast
         guard state.deckAtStartOfStage.count == columns * rows else {
             throw DeckSizeError.oops
         }
-        var deck = state.deckAtStartOfStage // do not change deckAtStartOfStage, we might need it again!
+        var deck = state.deckAtStartOfStage // do not change deckAtStartOfStage itself, we might need it again!
         for column in 0 ..< self.columns {
             for row in 0 ..< self.rows {
-                // TODO: This looks like it should be otiose: addPiece should remove if a piece is already slotted in
                 if let oldPiece = grid[column: column, row: row] {
                     await self.removePiece(oldPiece)
                 }
                 guard !deck.isEmpty else {
                     throw DeckSizeError.oops
                 }
-                await addPieceAt(Slot(column: column, row: row), withPicture: deck.removeLast().picName)
+                await addPieceAt(Slot(column: column, row: row), withPicture: deck.removeLast())
             }
         }
         state.hintPath = self.legalPath() // generate initial hint
@@ -542,5 +545,5 @@ nonisolated
 struct BoardSaveableData: Codable, Equatable {
     let stageNumber: Int
     let grid: Grid
-    let deckAtStartOfStage: [PieceReducer]
+    let deckAtStartOfStage: [String]
 }

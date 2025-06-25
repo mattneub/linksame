@@ -137,7 +137,7 @@ struct LinkSameProcessorTests {
           arguments: AwakeningType.allCases
     )
     func awakenSavedData(awakeningType: AwakeningType) async throws {
-        let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
+        let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["hello"])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
         persistence.data = data
@@ -186,7 +186,7 @@ struct LinkSameProcessorTests {
           arguments: AwakeningType.allCases
     )
     func awakenStateSavedData(awakeningType: AwakeningType) async throws {
-        let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
+        let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["hello"])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
         persistence.data = data
@@ -255,7 +255,7 @@ struct LinkSameProcessorTests {
           arguments: AwakeningType.allCases
     )
     func awakenThenWhatSavedData(awakeningType: AwakeningType) async throws {
-        let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "hello")])
+        let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["hello"])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
         persistence.data = data
@@ -279,7 +279,7 @@ struct LinkSameProcessorTests {
         #expect(board._stageNumber == 5)
         #expect(board.methodsCalled == ["setStageNumber(_:)", "populateFrom(oldGrid:deckAtStartOfStage:)", "stageNumber()"])
         #expect(board.grid == Grid(columns: 3, rows: 2))
-        #expect(board._deckAtStartOfStage == [.init(picName: "hello")])
+        #expect(board._deckAtStartOfStage == ["hello"])
         let stage = try #require(subject.stage)
         #expect(stage.score == 42)
     }
@@ -328,12 +328,46 @@ struct LinkSameProcessorTests {
         #expect(board.show == false)
     }
 
+    @Test("receive restartStage: hides hint and unhilites, calls board restartStage, sends effects to presenter")
+    func restartStage() async {
+        subject.state.hintShowing = true
+        subject.state.hintButtonTitle = .hide
+        await subject.receive(.restartStage)
+        #expect(subject.state.hintShowing == false)
+        #expect(subject.state.hintButtonTitle == .show)
+        #expect(presenter.statesPresented.last?.hintShowing == false)
+        #expect(presenter.statesPresented.last?.hintButtonTitle == .show)
+        #expect(board.methodsCalled.prefix(3) == ["unhilite()", "showHint(_:)", "restartStage()"])
+        #expect(board.show == false)
+        #expect(presenter.thingsReceived == [.userInteraction(false), .animateBoardTransition(.fade), .animateStageLabel, .userInteraction(true)])
+    }
+
+    @Test("receive restartStage: saves the board state to persistence")
+    func restartStageSaves() async throws {
+        subject.stage = stage
+        stage.score = 1
+        board._stageNumber = 2
+        board._deckAtStartOfStage = ["howdy"]
+        board.grid = Grid(columns: 3, rows: 2)
+        await subject.receive(.restartStage)
+        await #while(persistence.methodsCalled.isEmpty)
+        #expect(persistence.methodsCalled == ["save(_:forKey:)"])
+        #expect(persistence.saveKeys == [.boardData])
+        let value = try #require(persistence.values.last as? Data)
+        let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
+        #expect(persistentState == .init(
+            board: .init(stageNumber: 2, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"]),
+            score: 1,
+            timed: true
+        ))
+    }
+
     @Test("receive saveBoardState: saves the board state to persistence")
     func saveBoardState() async throws {
         subject.stage = stage
         stage.score = 1
         board._stageNumber = 2
-        board._deckAtStartOfStage = [.init(picName: "howdy")]
+        board._deckAtStartOfStage = ["howdy"]
         board.grid = Grid(columns: 3, rows: 2)
         await subject.receive(.saveBoardState)
         await #while(persistence.methodsCalled.isEmpty)
@@ -342,7 +376,7 @@ struct LinkSameProcessorTests {
         let value = try #require(persistence.values.last as? Data)
         let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
         #expect(persistentState == .init(
-            board: .init(stageNumber: 2, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "howdy")]),
+            board: .init(stageNumber: 2, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"]),
             score: 1,
             timed: true
         ))
@@ -450,7 +484,7 @@ struct LinkSameProcessorTests {
         subject.stage = stage
         stage.score = 1
         board._stageNumber = 2
-        board._deckAtStartOfStage = [.init(picName: "howdy")]
+        board._deckAtStartOfStage = ["howdy"]
         board.grid = Grid(columns: 3, rows: 2)
         await subject.receive(.viewDidLoad)
         try? await Task.sleep(for: .seconds(0.1))
@@ -461,7 +495,7 @@ struct LinkSameProcessorTests {
         let value = try #require(persistence.values.last as? Data)
         let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
         #expect(persistentState == .init(
-            board: .init(stageNumber: 2, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: [.init(picName: "howdy")]),
+            board: .init(stageNumber: 2, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"]),
             score: 1,
             timed: false
         ))
@@ -539,7 +573,7 @@ struct LinkSameProcessorTests {
         board._stageNumber = 5
         persistence.int = 6
         board.grid = Grid(columns: 3, rows: 4)
-        board._deckAtStartOfStage = [.init(picName: "howdy")]
+        board._deckAtStartOfStage = ["howdy"]
         subject.stage = stage
         stage.score = 10
         subject.stageEnded()
@@ -565,7 +599,7 @@ struct LinkSameProcessorTests {
         let value = try #require(persistence.values.last as? Data)
         let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
         #expect(persistentState == .init(
-            board: .init(stageNumber: 6, grid: Grid(columns: 3, rows: 4), deckAtStartOfStage: [.init(picName: "howdy")]),
+            board: .init(stageNumber: 6, grid: Grid(columns: 3, rows: 4), deckAtStartOfStage: ["howdy"]),
             score: 0,
             timed: true
         ))

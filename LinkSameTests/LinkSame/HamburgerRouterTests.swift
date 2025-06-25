@@ -33,7 +33,7 @@ struct HamburgerRouterTests {
         processor.thingsReceived = []
         do {
             await subject.doChoice("Restart Stage", processor: processor)
-            #expect(processor.thingsReceived.first == nil)
+            #expect(processor.thingsReceived.first == .restartStage)
         }
         processor.thingsReceived = []
         do {

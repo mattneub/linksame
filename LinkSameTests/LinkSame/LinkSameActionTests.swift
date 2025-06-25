@@ -12,6 +12,7 @@ struct LinkSameActionTests {
         theTest(.didInitialLayout)
         theTest(.hamburger)
         theTest(.hint)
+        theTest(.restartStage)
         theTest(.saveBoardState)
         theTest(.showHelp(sender: sourceItem))
         theTest(.showNewGame(sender: sourceItem))
@@ -34,6 +35,8 @@ struct LinkSameActionTests {
             #expect(whichCase == .hamburger)
         case .hint:
             #expect(whichCase == .hint)
+        case .restartStage:
+            #expect(whichCase == .restartStage)
         case .saveBoardState:
             #expect(whichCase == .saveBoardState)
         case .showHelp:

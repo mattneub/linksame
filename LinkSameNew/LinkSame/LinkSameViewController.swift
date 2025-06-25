@@ -204,6 +204,14 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
 
     private func animateBoardTransition(_ transition: BoardTransition) async {
         guard let boardView = self.boardView else { return }
+        // In the case of a fade, esp. during restart stage where we fade from one board full of
+        // pieces to another, it looks much better if the old board remains visible as a sort of
+        // ground behind the new one that fades in. Hence this snapshot.
+        let snapshot = boardView.snapshotView(afterScreenUpdates: false) ?? UIView()
+        if transition == .fade {
+            backgroundView.insertSubview(snapshot, belowSubview: boardView)
+        }
+        // Okay, here we go!
         boardView.layer.isHidden = true
         CATransaction.flush() // crucial! interface must settle before transition
         let t = CATransition()
@@ -218,6 +226,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         let transitionProvider = services.transitionProviderMaker.makeTransitionProvider()
         boardView.layer.isHidden = false
         await transitionProvider.performTransition(transition: t, layer: boardView.layer)
+        snapshot.removeFromSuperview()
     }
     
     // called from startNewGame (n is nil), which itself is called by Done button and at launch
@@ -347,25 +356,10 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         }
     }
     
-    @IBAction private func doRestartStage(_:Any?) {
-//        if self.board.showingHint {
-//            self.toggleHint(nil)
-//        }
-//        self.board.unhilite()
-        let alert = UIAlertController(title: "Restart Stage", message: "Really restart this stage?", preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
-        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: {
-            _ in
-            do {
-                // try self.board.restartStage()
-                // self.stage = Stage(lsvc: self, score: self.stage!.scoreAtStartOfStage)
-                Task {
-                    await self.animateBoardTransition(.fade)
-                    await self.processor?.receive(.saveBoardState)
-                }
-            } catch { print(error) }
-        }))
-        self.present(alert, animated: true)
+    @IBAction func doRestartStage(_: Any?) {
+        Task {
+            await processor?.receive(.restartStage)
+        }
     }
 }
 
