@@ -56,8 +56,8 @@ struct LinkSameViewControllerTests {
         screen.traitCollection = .init(userInterfaceIdiom: .pad)
         subject.loadViewIfNeeded()
         // #expect(subject.hintButton.possibleTitles == ["Show Hint", "Hide Hint"]) // not that it matters
-        #expect(subject.hintButton.title == "Show Hint")
-        #expect(subject.hintButton.width == 110)
+        #expect(subject.hintButton?.title == "Show Hint")
+        #expect(subject.hintButton?.width == 110)
     }
 
     @Test("viewDidLoad: sends viewDidLoad")
@@ -97,15 +97,15 @@ struct LinkSameViewControllerTests {
         await subject.present(LinkSameState(interfaceMode: .practice))
         #expect(subject.scoreLabel.isHidden == true)
         #expect(subject.prevLabel.isHidden == true)
-        #expect(subject.timedPractice.selectedSegmentIndex == 1)
-        #expect(subject.timedPractice.isEnabled == false)
-        #expect(subject.restartStageButton.isEnabled == false)
+        #expect(subject.timedPractice?.selectedSegmentIndex == 1)
+        #expect(subject.timedPractice?.isEnabled == false)
+        #expect(subject.restartStageButton?.isEnabled == false)
         await subject.present(LinkSameState(interfaceMode: .timed))
         #expect(subject.scoreLabel.isHidden == false)
         #expect(subject.prevLabel.isHidden == false)
-        #expect(subject.timedPractice.selectedSegmentIndex == 0)
-        #expect(subject.timedPractice.isEnabled == true)
-        #expect(subject.restartStageButton.isEnabled == true)
+        #expect(subject.timedPractice?.selectedSegmentIndex == 0)
+        #expect(subject.timedPractice?.isEnabled == true)
+        #expect(subject.restartStageButton?.isEnabled == true)
     }
 
     @Test("present: stageLabelText configures stageLabel")

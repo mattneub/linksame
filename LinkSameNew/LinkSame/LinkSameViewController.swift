@@ -9,15 +9,17 @@ enum BoardTransition {
 
 final class LinkSameViewController: UIViewController, ReceiverPresenter {
 
-    /// Outlets referencing the interface. Some of these don't exist on iPhone!
-    @IBOutlet weak var backgroundView : UIView!
-    @IBOutlet weak var stageLabel : UILabel!
-    @IBOutlet weak var scoreLabel : UILabel!
-    @IBOutlet weak var prevLabel : UILabel!
-    @IBOutlet weak var hintButton : UIBarButtonItem!
-    @IBOutlet weak var timedPractice : UISegmentedControl!
-    @IBOutlet weak var restartStageButton : UIBarButtonItem!
-    @IBOutlet weak var toolbar : UIToolbar!
+    /// Outlets referencing the interface.
+    @IBOutlet weak var backgroundView: UIView!
+    @IBOutlet weak var stageLabel: UILabel!
+    @IBOutlet weak var scoreLabel: UILabel!
+    @IBOutlet weak var prevLabel: UILabel!
+
+    /// More outlets. These don't exist on the iPhone, so they are true Optionals so we don't crash.
+    @IBOutlet weak var hintButton: UIBarButtonItem?
+    @IBOutlet weak var timedPractice: UISegmentedControl?
+    @IBOutlet weak var restartStageButton: UIBarButtonItem?
+    @IBOutlet weak var toolbar: UIToolbar? // TODO: unused?
 
     /// Reference to the boardView; we need this because we are responsible for showing and hiding it and for transitioning it with animation.
     var boardView: UIView? { backgroundView.subviews.first as? BoardView }
@@ -35,9 +37,10 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         super.viewDidLoad()
         // increase font size on triple-resolution screen
         if on3xScreen {
-            for lab in [self.scoreLabel!, self.prevLabel!, self.stageLabel!] {
-                let f = lab.font!
-                lab.font = f.withSize(f.pointSize + 2)
+            for label in [self.scoreLabel, self.prevLabel, self.stageLabel] {
+                if let font = label?.font {
+                    label?.font = font.withSize(font.pointSize + 2)
+                }
             }
         }
 
@@ -146,8 +149,8 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
 
         // adjust interface for interface mode (timed or practice)
         let timed: Bool = state.interfaceMode == .timed
-        scoreLabel?.isHidden = !timed
-        prevLabel?.isHidden = !timed
+        scoreLabel.isHidden = !timed
+        prevLabel.isHidden = !timed
         timedPractice?.selectedSegmentIndex = state.interfaceMode.rawValue
         timedPractice?.isEnabled = timed
         restartStageButton?.isEnabled = timed
