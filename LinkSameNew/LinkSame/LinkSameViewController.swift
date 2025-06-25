@@ -366,7 +366,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
     }
 }
 
-extension LinkSameViewController { // buttons in hamburger button alert on iPhone, "toolbar" on iPad
+extension LinkSameViewController { // buttons in hamburger button alert on iPhone, toolbar on iPad
 
     @IBAction func doNew(_ sender: (any UIPopoverPresentationControllerSourceItem)?) {
         Task {
@@ -394,43 +394,11 @@ extension LinkSameViewController : UIToolbarDelegate {
 }
 
 extension LinkSameViewController { // hamburger button on phone
-    @IBAction func doHamburgerButton (_: Any) {
+    @IBAction func doHamburgerButton(_ sender: Any?) {
         Task {
-            await processor?.receive(.hamburger)
+            await processor?.receive(.hamburger) // phone only, so no need for a source view
         }
-
-        return ()
-//        if self.board.showingHint {
-//            self.toggleHint(nil)
-//        }
-//        self.board.unhilite()
-
-        let action = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-        action.addAction(UIAlertAction(title: "Game", style: .default, handler: {
-            _ in
-            self.doNew(nil)
-        }))
-        action.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
-        action.addAction(UIAlertAction(title: "Hint", style: .default, handler: {
-            _ in
-            self.toggleHint(nil)
-        }))
-        action.addAction(UIAlertAction(title: "Shuffle", style: .default, handler: {
-            _ in
-            self.doShuffle(nil)
-        }))
-        action.addAction(UIAlertAction(title: "Restart Stage", style: .default, handler: {
-            _ in
-            self.doRestartStage(nil)
-        }))
-        action.addAction(UIAlertAction(title: "Help", style: .default, handler: {
-            _ in
-            self.doHelp(nil)
-        }))
-        self.present(action, animated: true)
     }
-    
-
 }
 
 

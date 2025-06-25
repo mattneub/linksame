@@ -20,6 +20,9 @@ final class LinkSameProcessor: Processor {
     /// This is a strong reference! The board processor is rooted here.
     var boardProcessor: (any BoardProcessorType)?
 
+    /// Helper object that manages the hamburger button choices and responses.
+    var hamburgerRouter: (any HamburgerRouterType) = HamburgerRouter()
+
     /// Storage for our never-ending task containing eternal for-loops. See the Lifetime object.
     var subscriptionsTask: Task<(), Never>?
 
@@ -56,7 +59,10 @@ final class LinkSameProcessor: Processor {
             } else {
                 await showHintAndUnhilite()
             }
-        case .hamburger: break // TODO: write this!
+        case .hamburger:
+            await hideHintAndUnhilite()
+            let choice = await coordinator?.showActionSheet(title: nil, options: hamburgerRouter.options)
+            await hamburgerRouter.doChoice(choice, processor: self)
         case .saveBoardState:
             saveBoardState()
         case .showHelp(sender: let sender):
@@ -299,7 +305,7 @@ final class LinkSameProcessor: Processor {
 
     func saveBoardState() {
         guard let board = boardProcessor else { return }
-        let boardData = BoardSaveableData(stageNumber: board.stageNumber(), grid: board.grid, deckAtStartOfStage: board.deckAtStartOfStage())
+        let boardData = BoardSaveableData(stageNumber: board.stageNumber(), grid: board.grid, deckAtStartOfStage: board.deckAtStartOfStage)
         guard let score = stage?.score else { return }
         let state = PersistentState(
             board: boardData,
@@ -369,7 +375,6 @@ extension LinkSameProcessor: NewGamePopoverDismissalButtonDelegate {
         await receive(.cancelNewGame)
     }
 }
-
 
 /// Reducer representing a clump of saveable game state.
 @MainActor

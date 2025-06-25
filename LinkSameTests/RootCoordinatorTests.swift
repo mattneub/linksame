@@ -135,4 +135,27 @@ struct RootCoordinatorTests {
         subject.hideBoardView()
         #expect(boardView.isHidden == true)
     }
+
+    @Test("showActionSheet: shows action sheet")
+    func showActionSheet() async throws {
+        let rootViewController = UIViewController()
+        makeWindow(viewController: rootViewController)
+        subject.rootViewController = rootViewController
+        var result: String?
+        Task {
+            result = await subject.showActionSheet(title: "title", options: ["hey", "ho"])
+        }
+        await #while(rootViewController.presentedViewController == nil)
+        let alert = try #require(rootViewController.presentedViewController as? UIAlertController)
+        #expect(alert.title == "title")
+        #expect(alert.actions.count == 3)
+        #expect(alert.actions[0].title == "hey")
+        #expect(alert.actions[1].title == "ho")
+        #expect(alert.actions[2].title == "Cancel")
+        #expect(alert.preferredStyle == .actionSheet)
+        // test that `showActionSheet` returns the tapped button's title to the caller
+        alert.tapButton(atIndex: 0)
+        await #while(result == nil)
+        #expect(result == "hey")
+    }
 }

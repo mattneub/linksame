@@ -15,15 +15,14 @@ final class MockBoardProcessor: BoardProcessorType {
         _view
     }
 
-    func createAndDealDeck() {
-        methodsCalled.append(#function)
-    }
-
-    func deckAtStartOfStage() -> [PieceReducer] {
+    var deckAtStartOfStage: [PieceReducer] {
         methodsCalled.append(#function)
         return _deckAtStartOfStage
     }
 
+    func createAndDealDeck() {
+        methodsCalled.append(#function)
+    }
 
     func populateFrom(oldGrid: Grid, deckAtStartOfStage: [PieceReducer]) {
         methodsCalled.append(#function)

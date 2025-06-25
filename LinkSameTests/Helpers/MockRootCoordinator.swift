@@ -9,6 +9,7 @@ final class MockRootCoordinator: RootCoordinatorType {
     var dismissalDelegate: (any NewGamePopoverDismissalButtonDelegate)?
     var popoverPresentationDelegate: (any UIPopoverPresentationControllerDelegate)?
     var gridSize: (Int, Int)?
+    var options = [String]()
 
     func createInitialInterface(window: UIWindow) {
         methodsCalled.append(#function)
@@ -47,5 +48,12 @@ final class MockRootCoordinator: RootCoordinatorType {
     func hideBoardView() {
         methodsCalled.append(#function)
     }
+
+    func showActionSheet(title: String?, options: [String]) async -> String? {
+        methodsCalled.append(#function)
+        self.options = options
+        return options.first
+    }
+
 
 }

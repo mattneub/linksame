@@ -20,6 +20,8 @@ protocol RootCoordinatorType: AnyObject {
     func makeBoardProcessor(gridSize: (Int, Int))
 
     func hideBoardView()
+
+    func showActionSheet(title: String?, options: [String]) async -> String?
 }
 
 @MainActor
@@ -134,5 +136,21 @@ final class RootCoordinator: RootCoordinatorType {
         // and indeed I might not even bother
         rootViewController?.view.subviews(ofType: BoardView.self).first?.isHidden = true
     }
+
+    func showActionSheet(title: String?, options: [String]) async -> String? {
+        await withCheckedContinuation { continuation in
+            let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+            for option in options {
+                alert.addAction(UIAlertAction(title: option, style: .default, handler: { action in
+                    continuation.resume(returning: action.title)
+                }))
+            }
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
+                continuation.resume(returning: nil)
+            }))
+            rootViewController?.present(alert, animated: unlessTesting(true))
+        }
+    }
+
 
 }

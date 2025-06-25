@@ -13,11 +13,13 @@ struct LinkSameProcessorTests {
     let stage = MockStage()
     let application = MockApplication()
     let board = MockBoardProcessor()
+    let router = MockHamburgerRouter()
 
     init() {
         subject.presenter = presenter
         subject.coordinator = coordinator
         subject.boardProcessor = board
+        subject.hamburgerRouter = router
         services.persistence = persistence
         services.screen = screen
         services.application = application
@@ -234,7 +236,7 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[2] == .animateStageLabel)
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board._stageNumber == 0)
-        #expect(board.methodsCalled == ["setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage()"])
+        #expect(board.methodsCalled == ["setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
         let stage = try #require(subject.stage)
         #expect(stage.score == 0)
         // and we save board state
@@ -280,6 +282,24 @@ struct LinkSameProcessorTests {
         #expect(board._deckAtStartOfStage == [.init(picName: "hello")])
         let stage = try #require(subject.stage)
         #expect(stage.score == 42)
+    }
+
+    @Test("receive hamburger: hides hint, calls coordinator showActionSheet")
+    func hamburger() async {
+        subject.state.hintShowing = true
+        subject.state.hintButtonTitle = .hide
+        router.options = ["Heyho"]
+        await subject.receive(.hamburger)
+        #expect(subject.state.hintShowing == false)
+        #expect(subject.state.hintButtonTitle == .show)
+        #expect(presenter.statesPresented.last?.hintShowing == false)
+        #expect(presenter.statesPresented.last?.hintButtonTitle == .show)
+        #expect(board.methodsCalled == ["unhilite()", "showHint(_:)"])
+        #expect(board.show == false)
+        #expect(coordinator.methodsCalled == ["showActionSheet(title:options:)"])
+        #expect(coordinator.options == ["Heyho"])
+        #expect(router.methodsCalled == ["doChoice(_:processor:)"])
+        #expect(router.choice == "Heyho")
     }
 
     @Test("receive hint: if no hint is showing, configures and presents state, tells board processor to show hint")
@@ -536,7 +556,7 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[2] == .animateStageLabel)
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board._stageNumber == 6) // NB incrementing stage number
-        #expect(board.methodsCalled ==  ["stageNumber()", "setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage()"])
+        #expect(board.methodsCalled ==  ["stageNumber()", "setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
         let stage = try #require(subject.stage)
         #expect(stage.score == 0) // TODO: Score is not carrying forward! I don't expect this to be true ultimately!
         // and we save board state

@@ -9,7 +9,7 @@ protocol BoardProcessorType: AnyObject {
     func stageNumber() -> Int
     func setStageNumber(_: Int)
     var grid: Grid { get }
-    func deckAtStartOfStage() -> [PieceReducer]
+    var deckAtStartOfStage: [PieceReducer] { get }
     func createAndDealDeck() async throws
     func populateFrom(oldGrid: Grid, deckAtStartOfStage: [PieceReducer]) async
     func showHint(_: Bool) async
@@ -19,16 +19,16 @@ protocol BoardProcessorType: AnyObject {
 
 /// Extension implementing some trivial state getters and setters from the protocol.
 extension BoardProcessorType where Self: BoardProcessor {
+    var deckAtStartOfStage: [PieceReducer] {
+        state.deckAtStartOfStage
+    }
+
     func stageNumber() -> Int {
         state.stageNumber
     }
 
     func setStageNumber(_ stageNumber: Int) {
         state.stageNumber = stageNumber
-    }
-
-    func deckAtStartOfStage() -> [PieceReducer] {
-        state.deckAtStartOfStage
     }
 }
 
