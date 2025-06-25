@@ -81,7 +81,7 @@ struct RootCoordinatorTests {
         #expect(viewController.popoverPresentationDelegate === popoverDelegate)
     }
 
-    @Test("dismiss: dismisses view controller presented on root view controller")
+    @Test("dismiss: dismisses view controller presented on root view controller, resumes and nilifies continuation")
     func dismiss() async {
         let rootViewController = UIViewController()
         makeWindow(viewController: rootViewController)
@@ -89,11 +89,23 @@ struct RootCoordinatorTests {
         let presentedViewController = UIViewController()
         rootViewController.present(presentedViewController, animated: false)
         #expect(rootViewController.presentedViewController != nil)
+        // test for proper continuation management, in case we are presenting action sheet
+        var result: String? = "yoho"
+        Task {
+            result = await withCheckedContinuation { continuation in
+                subject.actionSheetContinuation = continuation
+            }
+        }
+        await #while(subject.actionSheetContinuation == nil)
+        #expect(subject.actionSheetContinuation != nil)
         // That was prep, here comes the test
         subject.dismiss()
         await #while(rootViewController.presentedViewController != nil)
         #expect(rootViewController.presentedViewController == nil)
         #expect(presentedViewController.presentingViewController == nil)
+        // if there is an action sheet continuation, subject resumes it with nil and nilifies it
+        #expect(subject.actionSheetContinuation == nil)
+        #expect(result == nil)
     }
 
     @Test("makeBoardProcessor: creates Board module")
@@ -141,6 +153,7 @@ struct RootCoordinatorTests {
         let rootViewController = UIViewController()
         makeWindow(viewController: rootViewController)
         subject.rootViewController = rootViewController
+        #expect(subject.actionSheetContinuation == nil)
         var result: String?
         Task {
             result = await subject.showActionSheet(title: "title", options: ["hey", "ho"])
@@ -153,9 +166,11 @@ struct RootCoordinatorTests {
         #expect(alert.actions[1].title == "ho")
         #expect(alert.actions[2].title == "Cancel")
         #expect(alert.preferredStyle == .actionSheet)
+        #expect(subject.actionSheetContinuation != nil)
         // test that `showActionSheet` returns the tapped button's title to the caller
         alert.tapButton(atIndex: 0)
         await #while(result == nil)
         #expect(result == "hey")
+        #expect(subject.actionSheetContinuation == nil)
     }
 }

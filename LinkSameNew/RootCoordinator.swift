@@ -33,6 +33,10 @@ final class RootCoordinator: RootCoordinatorType {
     /// Reference to the root view controller of the app.
     weak var rootViewController: UIViewController?
 
+    /// If `showActionSheet` is called, it posts a reference to its continuation here,
+    /// so we can resume it when dismissing the action sheet externally (in `dismiss`).
+    var actionSheetContinuation: CheckedContinuation<String?, Never>?
+
     func createInitialInterface(window: UIWindow) {
         let viewController = LinkSameViewController()
         let processor = LinkSameProcessor()
@@ -106,6 +110,9 @@ final class RootCoordinator: RootCoordinatorType {
     }
 
     func dismiss() {
+        // see `showActionSheet`: don't leak the continuation
+        actionSheetContinuation?.resume(returning: nil)
+        actionSheetContinuation = nil
         rootViewController?.dismiss(animated: unlessTesting(true))
     }
 
@@ -139,18 +146,19 @@ final class RootCoordinator: RootCoordinatorType {
 
     func showActionSheet(title: String?, options: [String]) async -> String? {
         await withCheckedContinuation { continuation in
+            self.actionSheetContinuation = continuation
             let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
             for option in options {
                 alert.addAction(UIAlertAction(title: option, style: .default, handler: { action in
+                    self.actionSheetContinuation = nil
                     continuation.resume(returning: action.title)
                 }))
             }
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
+                self.actionSheetContinuation = nil
                 continuation.resume(returning: nil)
             }))
             rootViewController?.present(alert, animated: unlessTesting(true))
         }
     }
-
-
 }
