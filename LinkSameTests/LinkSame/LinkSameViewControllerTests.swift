@@ -116,6 +116,18 @@ struct LinkSameViewControllerTests {
         #expect(subject.stageLabel?.text == "howdy")
     }
 
+    @Test("present: score configures score label")
+    func presentScore() async {
+        subject.loadViewIfNeeded()
+        subject.scoreLabel.textColor = .blue
+        await(subject.present(LinkSameState(score: .init(score: 100, direction: .up))))
+        #expect(subject.scoreLabel.text == "100")
+        #expect(subject.scoreLabel.textColor == .black)
+        await(subject.present(LinkSameState(score: .init(score: 100, direction: .down))))
+        #expect(subject.scoreLabel.text == "100")
+        #expect(subject.scoreLabel.textColor == .red)
+    }
+
     @Test("present: hintButtonTitle configures hint button")
     func presentHintButtonTitle() async {
         screen.traitCollection = .init(userInterfaceIdiom: .pad)

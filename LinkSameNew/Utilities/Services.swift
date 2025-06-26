@@ -9,6 +9,7 @@ final class Services {
 
     var application: any ApplicationType = UIApplication.shared
     var bundle: any BundleType = Bundle.main
+    var cancelableTimer: any CancelableTimerType.Type = CancelableTimer.self
     var lifetime: any LifetimeType = Lifetime()
     var persistence: any PersistenceType = Persistence()
     var screen: any ScreenType = UIScreen.main

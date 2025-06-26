@@ -7,7 +7,7 @@ import QuartzCore
 @MainActor
 protocol BoardProcessorType: AnyObject {
     var scoreKeeper: (any ScoreKeeperType)? { get } // TODO: fix communication so we don't need this?
-    func setScoreKeeper(score: Int)
+    func setScoreKeeper(score: Int, delegate: any ScoreKeeperDelegate)
     func stageNumber() -> Int
     func setStageNumber(_: Int)
     var grid: Grid { get }
@@ -71,8 +71,8 @@ final class BoardProcessor: BoardProcessorType, Processor {
     var scoreKeeper: (any ScoreKeeperType)?
 
     /// Accessor to allow LinkSameProcessor to set up our score keeper.
-    func setScoreKeeper(score: Int) {
-        self.scoreKeeper = ScoreKeeper(score: score)
+    func setScoreKeeper(score: Int, delegate: any ScoreKeeperDelegate) {
+        self.scoreKeeper = ScoreKeeper(score: score, delegate: delegate)
     }
 
     /// Initializer.
@@ -379,6 +379,8 @@ final class BoardProcessor: BoardProcessorType, Processor {
             return
         }
         if let path = self.checkPair(p1, and: p2) {
+            // legal move! tell the score keeper
+            await scoreKeeper?.userMadeLegalMove()
             // flash the path
             await presenter?.receive(.illuminate(path: path))
             try? await unlessTesting {

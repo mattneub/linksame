@@ -235,7 +235,7 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[2] == .animateStageLabel)
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board._stageNumber == 0)
-        #expect(board.methodsCalled == ["setStageNumber(_:)", "setScoreKeeper(score:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
+        #expect(board.methodsCalled == ["setStageNumber(_:)", "setScoreKeeper(score:delegate:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
         let scoreKeeper = try #require(board.scoreKeeper)
         #expect(scoreKeeper.score == 0)
         // and we save board state
@@ -276,7 +276,7 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[2] == .animateStageLabel)
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board._stageNumber == 5)
-        #expect(board.methodsCalled == ["setStageNumber(_:)", "populateFrom(oldGrid:deckAtStartOfStage:)", "setScoreKeeper(score:)", "stageNumber()"])
+        #expect(board.methodsCalled == ["setStageNumber(_:)", "populateFrom(oldGrid:deckAtStartOfStage:)", "setScoreKeeper(score:delegate:)", "stageNumber()"])
         #expect(board.grid == Grid(columns: 3, rows: 2))
         #expect(board._deckAtStartOfStage == ["hello"])
         let scoreKeeper = try #require(board.scoreKeeper)
@@ -586,7 +586,7 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[2] == .animateStageLabel)
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board._stageNumber == 6) // NB incrementing stage number
-        #expect(board.methodsCalled ==  ["stageNumber()", "setStageNumber(_:)", "setScoreKeeper(score:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
+        #expect(board.methodsCalled ==  ["stageNumber()", "setStageNumber(_:)", "setScoreKeeper(score:delegate:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
         #expect(scoreKeeper.score == 10)
         // and we save board state
         #expect(persistence.methodsCalled.last == "save(_:forKey:)")
@@ -612,6 +612,13 @@ struct LinkSameProcessorTests {
         #expect(presenter.statesPresented.last?.hintButtonTitle == .show)
         #expect(board.methodsCalled == ["unhilite()", "showHint(_:)"])
         #expect(board.show == false)
+    }
+
+    @Test("scoreChanged: sets the state and presents it")
+    func scoreChanged() async {
+        await subject.scoreChanged(.init(score: 100, direction: .up))
+        #expect(subject.state.score == .init(score: 100, direction: .up))
+        #expect(presenter.statesPresented.first?.score == .init(score: 100, direction: .up))
     }
 }
 

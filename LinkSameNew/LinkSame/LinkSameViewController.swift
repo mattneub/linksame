@@ -161,6 +161,10 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
             stageLabel.sizeToFit()
         }
 
+        // score label
+        scoreLabel.text = String(state.score.score)
+        scoreLabel.textColor = state.score.direction == .up ? .black : .red
+
         // hint button
         hintButton?.title = state.hintButtonTitle.rawValue
     }

@@ -14,6 +14,8 @@ struct LinkSameState: Equatable {
     var hintShowing = false
     /// Whether the game mode should be timed or practice.
     var interfaceMode: InterfaceMode = .timed
+    /// Score to display in the score label.
+    var score: Score = Score(score: 0, direction: .up)
     /// Content of the stage label.
     var stageLabelText = ""
 

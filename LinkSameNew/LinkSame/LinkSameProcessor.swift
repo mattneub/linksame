@@ -155,7 +155,7 @@ final class LinkSameProcessor: Processor {
         boardProcessor?.setStageNumber(stageNumber)
         // self.board.stage = 8 // testing game end behavior, comment out!
 
-        boardProcessor?.setScoreKeeper(score: 0)
+        boardProcessor?.setScoreKeeper(score: 0, delegate: self)
 
         // build and display board
         // TODO: do better error handling here
@@ -200,7 +200,7 @@ final class LinkSameProcessor: Processor {
         boardProcessor?.setStageNumber(boardData.stageNumber) // TODO: Is this right?
         await boardProcessor?.populateFrom(oldGrid: grid, deckAtStartOfStage: boardData.deckAtStartOfStage)
 
-        boardProcessor?.setScoreKeeper(score: savedState.score)
+        boardProcessor?.setScoreKeeper(score: savedState.score, delegate: self)
 
         await presenter?.receive(.animateBoardTransition(.fade))
 
@@ -388,6 +388,13 @@ extension LinkSameProcessor: NewGamePopoverDismissalButtonDelegate {
 
     func cancelNewGame() async {
         await receive(.cancelNewGame)
+    }
+}
+
+extension LinkSameProcessor: ScoreKeeperDelegate {
+    func scoreChanged(_ score: Score) async {
+        state.score = score
+        await presenter?.present(state)
     }
 }
 

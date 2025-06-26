@@ -10,12 +10,14 @@ struct BoardProcessorTests {
     let subject = BoardProcessor(gridSize: (columns: 2, rows: 3))
     let gravity = MockGravity()
     let delegate = MockBoardDelegate()
+    let scoreKeeper = MockScoreKeeper()
 
     init() {
         services.persistence = persistence
         subject.presenter = presenter
         subject.gravity = gravity
         subject.delegate = delegate
+        subject.scoreKeeper = scoreKeeper
     }
 
     @Test("initializer: creates grid")
@@ -157,6 +159,7 @@ struct BoardProcessorTests {
         #expect(presenter.statesPresented.first?.hilitedPieces == [piece, piece2])
         #expect(presenter.statesPresented.last?.hilitedPieces == [])
         #expect(delegate.methodsCalled.isEmpty)
+        #expect(scoreKeeper.methodsCalled.isEmpty)
     }
 
     // okay, now we get into the heart of the app, the logic of board analysis
@@ -179,6 +182,7 @@ struct BoardProcessorTests {
         #expect(subject.grid[column: 1, row: 0] == piece)
         #expect(subject.grid[column: 0, row: 1] == piece2)
         #expect(delegate.methodsCalled.isEmpty)
+        #expect(scoreKeeper.methodsCalled.isEmpty)
     }
 
     // incidentally test developer double tap, just the once
@@ -212,6 +216,8 @@ struct BoardProcessorTests {
         #expect(presenter.thingsReceived.contains(.illuminate(path: expectedPath)))
         #expect(presenter.thingsReceived.contains(.unilluminate))
         #expect(delegate.methodsCalled.isEmpty)
+        // and we told the scorekeeper about it
+        #expect(scoreKeeper.methodsCalled == ["userMadeLegalMove()"])
     }
 
     @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed")
@@ -238,6 +244,8 @@ struct BoardProcessorTests {
         #expect(presenter.thingsReceived.contains(.illuminate(path: expectedPath)))
         #expect(presenter.thingsReceived.contains(.unilluminate))
         #expect(delegate.methodsCalled.isEmpty)
+        // and we told the scorekeeper about it
+        #expect(scoreKeeper.methodsCalled == ["userMadeLegalMove()"])
     }
 
     @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed")
@@ -265,6 +273,8 @@ struct BoardProcessorTests {
         #expect(presenter.thingsReceived.contains(.illuminate(path: expectedPath)))
         #expect(presenter.thingsReceived.contains(.unilluminate))
         #expect(delegate.methodsCalled.isEmpty)
+        // and we told the scorekeeper about it
+        #expect(scoreKeeper.methodsCalled == ["userMadeLegalMove()"])
     }
 
     @Test("receive tapped: reaches two hilited pieces, match, last pair! unhilited, removed, call delegate stageEnded")
@@ -288,6 +298,8 @@ struct BoardProcessorTests {
         #expect(presenter.thingsReceived.contains(.illuminate(path: expectedPath)))
         #expect(presenter.thingsReceived.contains(.unilluminate))
         #expect(delegate.methodsCalled == ["stageEnded()"])
+        // and we told the scorekeeper about it
+        #expect(scoreKeeper.methodsCalled == ["userMadeLegalMove()"])
     }
 
     @Test("receive tapped: exercises gravity, calls presenter move")

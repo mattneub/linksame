@@ -37,8 +37,9 @@ func calcBonus(_ diff: Double) -> Int {
 /// Protocol describing the public face of our ScoreKeeper object, so we can mock it for testing.
 @MainActor
 protocol ScoreKeeperType {
-    var score: Int { get set }
+    var score: Int { get set } // TODO: can I drop this?
     func didBecomeActive()
+    func userMadeLegalMove() async
 }
 
 /// The ScoreKeeper object maintains and controls the timer, and keeps the score.
@@ -50,12 +51,15 @@ protocol ScoreKeeperType {
 final class ScoreKeeper: ScoreKeeperType {
     var score: Int
     let scoreAtStartOfStage: Int
-    private var timer: CancelableTimer? // no timer initially (user has not moved yet)
+    var timer: (any CancelableTimerType)? // no timer initially (user has not moved yet)
     private var lastTime: Date = Date.distantPast
 
-    init(score: Int) { // initial score for this stage
+    weak var delegate: (any ScoreKeeperDelegate)?
+
+    init(score: Int, delegate: any ScoreKeeperDelegate) { // initial score for this stage
         self.score = score
         self.scoreAtStartOfStage = score // might need this if we restart this stage later
+        self.delegate = delegate
         print("new ScoreKeeper object!", self)
 
 //        self.lsvc.scoreLabel?.text = String(self.score)
@@ -97,15 +101,18 @@ final class ScoreKeeper: ScoreKeeperType {
 //                           name: UIApplication.didBecomeActiveNotification, object: nil)
 //        }
     }
-    private func restartTimer() { // private utility: start counting down from 10
-        self.timer = CancelableTimer(interval: 10) { [weak self] in
+
+    /// Utility: start the timer counting down from 10, and if it times out, have it call our
+    /// `timerTimedOut` method.
+    private func restartTimer() {
+        self.timer = services.cancelableTimer.init(interval: 10) { [weak self] in
             await self?.timerTimedOut()
         }
     }
 
+    /// Called back from the timer if it times out. This means the user has failed to move in time.
+    /// Adjust the score, notify the delegate.
     private func timerTimedOut() {
-        // timed out! user failed to move, adjust score, interface
-        // this is our main job!
         self.score -= 1
 //        self.lsvc.scoreLabel?.text = String(self.score)
 //        self.lsvc.scoreLabel?.textColor = .red
@@ -138,20 +145,31 @@ final class ScoreKeeper: ScoreKeeperType {
 //        self.lsvc.scoreLabel?.textColor = .red
     }
 
-    @objc private func userMadeLegalMove() { // notification from Board
+    func userMadeLegalMove() async {
         self.restartTimer()
-        // calculate time between moves, award points (and remember, points mean prizes)
+        // calculate time between moves, award points
         let now = Date()
         let diff = now.timeIntervalSinceReferenceDate - self.lastTime.timeIntervalSinceReferenceDate
         self.lastTime = now
-        // THIS IS A MAJOR CHANGE, whole new way of calculating the score
-        // therefore I have invalidated past scores
-        // let bonus = (diff < 10) ? Int((10.0/diff).rounded(.up)) : 0
         let bonus = calcBonus(diff)
         print("diff", diff)
         print("bonus", bonus)
         self.score += 1 + bonus
-//        self.lsvc.scoreLabel?.text = String(self.score)
-//        self.lsvc.scoreLabel?.textColor = .black
+        // tell the delegate
+        await delegate?.scoreChanged(Score(score: self.score, direction: .up))
+    }
+}
+
+@MainActor
+protocol ScoreKeeperDelegate: AnyObject {
+    func scoreChanged(_: Score) async
+}
+
+struct Score: Equatable {
+    let score: Int
+    let direction: ScoreDirection
+    enum ScoreDirection {
+        case up
+        case down
     }
 }
