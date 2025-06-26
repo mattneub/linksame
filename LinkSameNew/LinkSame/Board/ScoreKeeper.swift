@@ -56,7 +56,7 @@ final class ScoreKeeper: ScoreKeeperType {
 
     weak var delegate: (any ScoreKeeperDelegate)?
 
-    init(score: Int, delegate: any ScoreKeeperDelegate) { // initial score for this stage
+    init(score: Int, delegate: (any ScoreKeeperDelegate)?) { // initial score for this stage
         self.score = score
         self.scoreAtStartOfStage = score // might need this if we restart this stage later
         self.delegate = delegate

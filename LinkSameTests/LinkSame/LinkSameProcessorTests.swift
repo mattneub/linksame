@@ -73,11 +73,10 @@ struct LinkSameProcessorTests {
             await subject.didBecomeActive()
         }
         #expect(!persistence.loadKeys.contains(.size)) // on iPhone we don't ask persistence for size
-        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:scoreKeeper:)")
+        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (10, 6)) // on iPhone, persistence size is ignored, we only do Easy
-        #expect(coordinator.scoreKeeperScore == 0)
-        #expect(coordinator.scoreKeeperDelegate === subject)
+        #expect(coordinator.score == 0)
     }
 
     @Test("awakening with no saved data, gets board size from persistence, or Easy on phone (3x); asks coordinator to make board processor",
@@ -101,11 +100,10 @@ struct LinkSameProcessorTests {
             await subject.didBecomeActive()
         }
         #expect(!persistence.loadKeys.contains(.size)) // on iPhone we don't ask persistence for size
-        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:scoreKeeper:)")
+        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (12, 7)) // on iPhone, persistence size is ignored, we only do Easy
-        #expect(coordinator.scoreKeeperScore == 0)
-        #expect(coordinator.scoreKeeperDelegate === subject)
+        #expect(coordinator.score == 0)
     }
 
     @Test("awakening with no saved data, gets board size from persistence on iPad; asks coordinator to make board processor",
@@ -131,11 +129,10 @@ struct LinkSameProcessorTests {
         }
         #expect(persistence.methodsCalled.contains("loadString(forKey:)"))
         #expect(persistence.loadKeys.contains(.size))
-        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:scoreKeeper:)")
+        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (16, 9)) // hard size
-        #expect(coordinator.scoreKeeperScore == 0)
-        #expect(coordinator.scoreKeeperDelegate === subject)
+        #expect(coordinator.score == 0)
     }
 
     @Test("awakening with saved data, gets board size from saved data, asks coordinator to make board processor",
@@ -160,11 +157,10 @@ struct LinkSameProcessorTests {
         print(persistence.methodsCalled)
         #expect(persistence.methodsCalled.contains("loadData(forKey:)"))
         #expect(persistence.loadKeys.contains(.boardData))
-        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:scoreKeeper:)")
+        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
         let gridSize = try #require(coordinator.gridSize)
         #expect(gridSize == (3, 2))
-        #expect(coordinator.scoreKeeperScore == 42)
-        #expect(coordinator.scoreKeeperDelegate === subject)
+        #expect(coordinator.score == 42)
     }
 
     @Test("awakening with no saved data configures state interface mode and stage label text",
@@ -237,7 +233,7 @@ struct LinkSameProcessorTests {
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
         }
-        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:scoreKeeper:)")
+        #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
         #expect(presenter.thingsReceived.count == 4)
         #expect(presenter.thingsReceived[0] == .userInteraction(false))
         #expect(presenter.thingsReceived[1] == .animateBoardTransition(.fade))
@@ -276,9 +272,8 @@ struct LinkSameProcessorTests {
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
         }
-        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:scoreKeeper:)"])
-        #expect(coordinator.scoreKeeperScore == 42)
-        #expect(coordinator.scoreKeeperDelegate === subject)
+        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:score:)"])
+        #expect(coordinator.score == 42)
         #expect(presenter.thingsReceived.count == 4)
         #expect(presenter.thingsReceived[0] == .userInteraction(false))
         #expect(presenter.thingsReceived[1] == .animateBoardTransition(.fade))
@@ -582,10 +577,9 @@ struct LinkSameProcessorTests {
         subject.stageEnded()
         #expect(persistence.methodsCalled == ["loadInt(forKey:)"])
         #expect(persistence.loadKeys.first == .lastStage)
-        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:scoreKeeper:)"])
+        #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:score:)"])
         #expect(coordinator.gridSize! == (3, 4))
-        #expect(coordinator.scoreKeeperScore == 10)
-        #expect(coordinator.scoreKeeperDelegate === subject)
+        #expect(coordinator.score == 10)
         // and the rest is like "then what" when launching,
         // but board transition is slide and stage number is incremented
         await #while(presenter.thingsReceived.count < 4)

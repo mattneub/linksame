@@ -113,12 +113,16 @@ struct RootCoordinatorTests {
     func makeBoardProcessor() async throws {
         let window = makeWindow()
         subject.createInitialInterface(window: window)
-        subject.makeBoardProcessor(gridSize: (3, 2), scoreKeeper: scoreKeeper)
+        subject.makeBoardProcessor(gridSize: (3, 2), score: 42)
         let linkSameProcessor = try #require(subject.linkSameProcessor as? LinkSameProcessor)
         let boardProcessor = try #require(linkSameProcessor.boardProcessor as? BoardProcessor)
         let boardView = try #require(boardProcessor.presenter as? BoardView)
         #expect(boardView.processor === boardProcessor)
-        #expect(boardProcessor.delegate === linkSameProcessor)
+        let boardProcessorDelegate = try #require(boardProcessor.delegate)
+        #expect(boardProcessorDelegate === linkSameProcessor)
+        let scoreKeeper = try #require(boardProcessor.scoreKeeper as? ScoreKeeper)
+        let scoreKeeperDelegate = try #require(scoreKeeper.delegate)
+        #expect(scoreKeeperDelegate === linkSameProcessor)
         let linkSameViewController = try #require(subject.rootViewController as? LinkSameViewController)
         #expect(boardView.translatesAutoresizingMaskIntoConstraints == false)
         let constraints = linkSameViewController.backgroundView.constraints.filter { $0.secondItem as? UIView === boardView }
@@ -141,7 +145,7 @@ struct RootCoordinatorTests {
     func hideBoardView() throws {
         let window = makeWindow()
         subject.createInitialInterface(window: window)
-        subject.makeBoardProcessor(gridSize: (3, 2), scoreKeeper: scoreKeeper)
+        subject.makeBoardProcessor(gridSize: (3, 2), score: 42)
         let linkSameProcessor = try #require(subject.linkSameProcessor as? LinkSameProcessor)
         let boardProcessor = try #require(linkSameProcessor.boardProcessor as? BoardProcessor)
         let boardView = try #require(boardProcessor.presenter as? BoardView)

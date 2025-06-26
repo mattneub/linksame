@@ -140,8 +140,7 @@ final class LinkSameProcessor: Processor {
             Sizes.boardSize(services.persistence.loadString(forKey: .size))
         }
 
-        let scoreKeeper = ScoreKeeper(score: 0, delegate: self)
-        coordinator?.makeBoardProcessor(gridSize: (boardColumns, boardRows), scoreKeeper: scoreKeeper)
+        coordinator?.makeBoardProcessor(gridSize: (boardColumns, boardRows), score: 0)
 
         await setUpNewStage(stageNumber: 0)
     }
@@ -191,8 +190,7 @@ final class LinkSameProcessor: Processor {
         // let deckAtStartOfStage: [PieceReducer]
         let boardData = savedState.board
         let grid = boardData.grid
-        let scoreKeeper = ScoreKeeper(score: savedState.score, delegate: self)
-        coordinator?.makeBoardProcessor(gridSize: (grid.columns, grid.rows), scoreKeeper: scoreKeeper)
+        coordinator?.makeBoardProcessor(gridSize: (grid.columns, grid.rows), score: savedState.score)
 
         await presenter?.receive(.userInteraction(false))
 
@@ -365,8 +363,7 @@ extension LinkSameProcessor: BoardDelegate {
         }
 
         let gridSize = (board.grid.columns, board.grid.rows)
-        let scoreKeeper = ScoreKeeper(score: board.score, delegate: self)
-        coordinator?.makeBoardProcessor(gridSize: gridSize, scoreKeeper: scoreKeeper)
+        coordinator?.makeBoardProcessor(gridSize: gridSize, score: board.score)
 
         Task {
             await setUpNewStage(stageNumber: stageNumber + 1)
