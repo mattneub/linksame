@@ -6,6 +6,8 @@ import QuartzCore
 /// that the LinkSameProcessor can send to the BoardProcessor.
 @MainActor
 protocol BoardProcessorType: AnyObject {
+    var scoreKeeper: (any ScoreKeeperType)? { get } // TODO: fix communication so we don't need this?
+    func setScoreKeeper(score: Int)
     func stageNumber() -> Int
     func setStageNumber(_: Int)
     var grid: Grid { get }
@@ -64,6 +66,14 @@ final class BoardProcessor: BoardProcessorType, Processor {
     /// Shortcut for accessing the dimensions of the grid.
     var columns: Int { grid.columns }
     var rows: Int { grid.rows }
+
+    /// ScoreKeeper object that will help manage timer and score while a stage is being played.
+    var scoreKeeper: (any ScoreKeeperType)?
+
+    /// Accessor to allow LinkSameProcessor to set up our score keeper.
+    func setScoreKeeper(score: Int) {
+        self.scoreKeeper = ScoreKeeper(score: score)
+    }
 
     /// Initializer.
     /// - Parameter gridSize: The size of our grid, which will be created, empty, at initialization.
