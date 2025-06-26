@@ -140,8 +140,8 @@ final class LinkSameProcessor: Processor {
             Sizes.boardSize(services.persistence.loadString(forKey: .size))
         }
 
-        // create new board object and configure it
-        coordinator?.makeBoardProcessor(gridSize: (boardColumns, boardRows))
+        let scoreKeeper = ScoreKeeper(score: 0, delegate: self)
+        coordinator?.makeBoardProcessor(gridSize: (boardColumns, boardRows), scoreKeeper: scoreKeeper)
 
         await setUpNewStage(stageNumber: 0)
     }
@@ -154,8 +154,6 @@ final class LinkSameProcessor: Processor {
 
         boardProcessor?.setStageNumber(stageNumber)
         // self.board.stage = 8 // testing game end behavior, comment out!
-
-        boardProcessor?.setScoreKeeper(score: 0, delegate: self)
 
         // build and display board
         // TODO: do better error handling here
@@ -193,14 +191,13 @@ final class LinkSameProcessor: Processor {
         // let deckAtStartOfStage: [PieceReducer]
         let boardData = savedState.board
         let grid = boardData.grid
-        coordinator?.makeBoardProcessor(gridSize: (grid.columns, grid.rows))
+        let scoreKeeper = ScoreKeeper(score: savedState.score, delegate: self)
+        coordinator?.makeBoardProcessor(gridSize: (grid.columns, grid.rows), scoreKeeper: scoreKeeper)
 
         await presenter?.receive(.userInteraction(false))
 
         boardProcessor?.setStageNumber(boardData.stageNumber) // TODO: Is this right?
         await boardProcessor?.populateFrom(oldGrid: grid, deckAtStartOfStage: boardData.deckAtStartOfStage)
-
-        boardProcessor?.setScoreKeeper(score: savedState.score, delegate: self)
 
         await presenter?.receive(.animateBoardTransition(.fade))
 
@@ -262,7 +259,8 @@ final class LinkSameProcessor: Processor {
                 await setUpGameFromScratch()
             }
         } else {
-            boardProcessor?.scoreKeeper?.didBecomeActive()
+            // TODO: deal with this
+            // boardProcessor?.scoreKeeper?.didBecomeActive()
         }
     }
 
@@ -306,10 +304,9 @@ final class LinkSameProcessor: Processor {
     func saveBoardState() {
         guard let board = boardProcessor else { return }
         let boardData = BoardSaveableData(stageNumber: board.stageNumber(), grid: board.grid, deckAtStartOfStage: board.deckAtStartOfStage)
-        guard let score = boardProcessor?.scoreKeeper?.score else { return }
         let state = PersistentState(
             board: boardData,
-            score: score,
+            score: board.score,
             timed: state.interfaceMode == .timed
         )
         if let stateData = try? PropertyListEncoder().encode(state) {
@@ -366,8 +363,11 @@ extension LinkSameProcessor: BoardDelegate {
             // TODO: Obviously we would restart the whole game with the dialog
             return
         }
+
         let gridSize = (board.grid.columns, board.grid.rows)
-        coordinator?.makeBoardProcessor(gridSize: gridSize)
+        let scoreKeeper = ScoreKeeper(score: board.score, delegate: self)
+        coordinator?.makeBoardProcessor(gridSize: gridSize, scoreKeeper: scoreKeeper)
+
         Task {
             await setUpNewStage(stageNumber: stageNumber + 1)
         }

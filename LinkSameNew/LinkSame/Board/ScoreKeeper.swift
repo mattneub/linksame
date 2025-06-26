@@ -36,9 +36,9 @@ func calcBonus(_ diff: Double) -> Int {
 
 /// Protocol describing the public face of our ScoreKeeper object, so we can mock it for testing.
 @MainActor
-protocol ScoreKeeperType {
+protocol ScoreKeeperType: AnyObject {
+    var delegate: (any ScoreKeeperDelegate)? { get }
     var score: Int { get set } // TODO: can I drop this?
-    func didBecomeActive()
     func userMadeLegalMove() async
 }
 

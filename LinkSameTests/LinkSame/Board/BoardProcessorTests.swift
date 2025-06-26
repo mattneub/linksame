@@ -7,12 +7,13 @@ import WaitWhile
 struct BoardProcessorTests {
     let persistence = MockPersistence()
     let presenter = MockReceiverPresenter<BoardEffect, BoardState>()
-    let subject = BoardProcessor(gridSize: (columns: 2, rows: 3))
+    let subject: BoardProcessor!
     let gravity = MockGravity()
     let delegate = MockBoardDelegate()
     let scoreKeeper = MockScoreKeeper()
 
     init() {
+        subject = BoardProcessor(gridSize: (columns: 2, rows: 3), scoreKeeper: scoreKeeper)
         services.persistence = persistence
         subject.presenter = presenter
         subject.gravity = gravity
@@ -20,21 +21,22 @@ struct BoardProcessorTests {
         subject.scoreKeeper = scoreKeeper
     }
 
-    @Test("initializer: creates grid")
+    @Test("initializer: creates grid, sets scoreKeeper")
     func initializer() {
-        let subject = BoardProcessor(gridSize: (columns: 2, rows: 3))
+        let subject = BoardProcessor(gridSize: (columns: 2, rows: 3), scoreKeeper: scoreKeeper)
         #expect(subject.grid.columns == 2)
         #expect(subject.grid.rows == 3)
         #expect(subject.columns == 2)
         #expect(subject.rows == 3)
         #expect(subject.grid.grid.flatMap{$0}.count == 6)
         #expect(subject.grid.grid.flatMap{$0}.allSatisfy { $0 == nil })
+        #expect(subject.scoreKeeper === scoreKeeper)
     }
 
     @Test("createAndDealDeck: creates the deck based on persistence and grid size, sends .insert effect for each piece")
     func createAndDealDeck() async throws {
         persistence.string = ["Snacks"]
-        let subject = BoardProcessor(gridSize: (2, 18)) // tee-hee
+        let subject = BoardProcessor(gridSize: (2, 18), scoreKeeper: scoreKeeper) // tee-hee
         subject.presenter = presenter
         try await subject.createAndDealDeck()
         #expect(persistence.methodsCalled == ["loadString(forKey:)"])
@@ -70,7 +72,7 @@ struct BoardProcessorTests {
     @Test("createAndDealDeck: creates the deck based on persistence and grid size, sends .insert effect for each piece")
     func createAndDealDeck2() async throws {
         persistence.string = ["Animals"]
-        let subject = BoardProcessor(gridSize: (4, 11))
+        let subject = BoardProcessor(gridSize: (4, 11), scoreKeeper: scoreKeeper)
         subject.presenter = presenter
         try await subject.createAndDealDeck()
         #expect(persistence.methodsCalled == ["loadString(forKey:)"])
@@ -103,9 +105,15 @@ struct BoardProcessorTests {
         #expect(presenter.thingsReceived == expectedEffects)
     }
 
+    @Test("deckAtStartOfStage: fetches state deckAtStartOfStage")
+    func deckAtStartOfState() {
+        subject.state.deckAtStartOfStage = ["howdy"]
+        #expect(subject.deckAtStartOfStage == ["howdy"])
+    }
+
     @Test("populate: populates grid from old grid, sets deckAtStartOfStage")
     func populate() async throws {
-        let subject = BoardProcessor(gridSize: (2,3))
+        let subject = BoardProcessor(gridSize: (2,3), scoreKeeper: scoreKeeper)
         subject.presenter = presenter
         var grid = Grid(columns: 2, rows: 3)
         let piece = PieceReducer(picName: "howdy", column: 1, row: 1)
@@ -388,6 +396,12 @@ struct BoardProcessorTests {
         #expect(subject.state.pathViewTappable == true)
         #expect(presenter.statesPresented.first?.pathViewTappable == true)
         #expect(presenter.thingsReceived == [.illuminate(path: [Slot(0, 1)])])
+    }
+
+    @Test("score: access scorekeeper's score")
+    func score() {
+        subject.scoreKeeper.score = 42
+        #expect(subject.score == 42)
     }
 
     @Test("stageNumber and setStageNumber: accesses the state stageNumber")

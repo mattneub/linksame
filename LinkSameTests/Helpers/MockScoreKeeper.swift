@@ -3,6 +3,7 @@ import Foundation
 
 @MainActor
 final class MockScoreKeeper: ScoreKeeperType {
+    var delegate: (any LinkSame.ScoreKeeperDelegate)?
 
     var score: Int = -1
     var methodsCalled = [String]()

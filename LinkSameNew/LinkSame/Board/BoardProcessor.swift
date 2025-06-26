@@ -6,8 +6,7 @@ import QuartzCore
 /// that the LinkSameProcessor can send to the BoardProcessor.
 @MainActor
 protocol BoardProcessorType: AnyObject {
-    var scoreKeeper: (any ScoreKeeperType)? { get } // TODO: fix communication so we don't need this?
-    func setScoreKeeper(score: Int, delegate: any ScoreKeeperDelegate)
+    var score: Int { get }
     func stageNumber() -> Int
     func setStageNumber(_: Int)
     var grid: Grid { get }
@@ -24,6 +23,10 @@ protocol BoardProcessorType: AnyObject {
 extension BoardProcessorType where Self: BoardProcessor {
     var deckAtStartOfStage: [String] {
         state.deckAtStartOfStage
+    }
+
+    var score: Int {
+        scoreKeeper.score
     }
 
     func stageNumber() -> Int {
@@ -68,18 +71,17 @@ final class BoardProcessor: BoardProcessorType, Processor {
     var rows: Int { grid.rows }
 
     /// ScoreKeeper object that will help manage timer and score while a stage is being played.
-    var scoreKeeper: (any ScoreKeeperType)?
-
-    /// Accessor to allow LinkSameProcessor to set up our score keeper.
-    func setScoreKeeper(score: Int, delegate: any ScoreKeeperDelegate) {
-        self.scoreKeeper = ScoreKeeper(score: score, delegate: delegate)
-    }
+    /// We always have one; its score and delegate are determined at creation time.
+    var scoreKeeper: any ScoreKeeperType
 
     /// Initializer.
     /// - Parameter gridSize: The size of our grid, which will be created, empty, at initialization.
     ///   We cannot live without a grid, and a grid cannot live without a size, which is immutable.
-    init(gridSize: (columns: Int, rows: Int)) {
+    /// - Parameter scoreKeeper: Our scorekeeper, which will be given its score and delegate
+    ///   at initialization.
+    init(gridSize: (columns: Int, rows: Int), scoreKeeper: any ScoreKeeperType) {
         self.grid = Grid(columns: gridSize.columns, rows: gridSize.rows)
+        self.scoreKeeper = scoreKeeper
     }
 
     func receive(_ action: BoardAction) async {
@@ -380,7 +382,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
         }
         if let path = self.checkPair(p1, and: p2) {
             // legal move! tell the score keeper
-            await scoreKeeper?.userMadeLegalMove()
+            await scoreKeeper.userMadeLegalMove()
             // flash the path
             await presenter?.receive(.illuminate(path: path))
             try? await unlessTesting {

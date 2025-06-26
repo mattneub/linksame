@@ -17,7 +17,7 @@ protocol RootCoordinatorType: AnyObject {
 
     func dismiss()
 
-    func makeBoardProcessor(gridSize: (Int, Int))
+    func makeBoardProcessor(gridSize: (Int, Int), scoreKeeper: any ScoreKeeperType)
 
     func hideBoardView()
 
@@ -116,8 +116,8 @@ final class RootCoordinator: RootCoordinatorType {
         rootViewController?.dismiss(animated: unlessTesting(true))
     }
 
-    func makeBoardProcessor(gridSize: (Int, Int)) {
-        let boardProcessor = BoardProcessor(gridSize: gridSize)
+    func makeBoardProcessor(gridSize: (Int, Int), scoreKeeper: any ScoreKeeperType) {
+        let boardProcessor = BoardProcessor(gridSize: gridSize, scoreKeeper: scoreKeeper)
         (linkSameProcessor as? LinkSameProcessor)?.boardProcessor = boardProcessor
         let boardView = BoardView(columns: gridSize.0, rows: gridSize.1)
         boardProcessor.presenter = boardView

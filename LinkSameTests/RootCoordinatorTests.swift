@@ -7,6 +7,7 @@ import WaitWhile
 struct RootCoordinatorTests {
     let subject = RootCoordinator()
     let screen = MockScreen()
+    let scoreKeeper = MockScoreKeeper()
 
     init() {
         services.screen = screen
@@ -108,11 +109,11 @@ struct RootCoordinatorTests {
         #expect(result == nil)
     }
 
-    @Test("makeBoardProcessor: creates Board module")
+    @Test("makeBoardProcessor: creates Board module, configures board processor")
     func makeBoardProcessor() async throws {
         let window = makeWindow()
         subject.createInitialInterface(window: window)
-        subject.makeBoardProcessor(gridSize: (3, 2))
+        subject.makeBoardProcessor(gridSize: (3, 2), scoreKeeper: scoreKeeper)
         let linkSameProcessor = try #require(subject.linkSameProcessor as? LinkSameProcessor)
         let boardProcessor = try #require(linkSameProcessor.boardProcessor as? BoardProcessor)
         let boardView = try #require(boardProcessor.presenter as? BoardView)
@@ -133,13 +134,14 @@ struct RootCoordinatorTests {
         #expect(grid.rows == 2)
         #expect(boardView.columns == 3)
         #expect(boardView.rows == 2)
+        #expect(boardProcessor.scoreKeeper === scoreKeeper)
     }
 
     @Test("hideBoardView: hides board view")
     func hideBoardView() throws {
         let window = makeWindow()
         subject.createInitialInterface(window: window)
-        subject.makeBoardProcessor(gridSize: (3, 2))
+        subject.makeBoardProcessor(gridSize: (3, 2), scoreKeeper: scoreKeeper)
         let linkSameProcessor = try #require(subject.linkSameProcessor as? LinkSameProcessor)
         let boardProcessor = try #require(linkSameProcessor.boardProcessor as? BoardProcessor)
         let boardView = try #require(boardProcessor.presenter as? BoardView)

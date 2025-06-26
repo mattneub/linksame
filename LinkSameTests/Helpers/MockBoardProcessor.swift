@@ -4,15 +4,13 @@ import Foundation
 @MainActor
 final class MockBoardProcessor: BoardProcessorType {
 
-
-    var scoreKeeper: (any ScoreKeeperType)? = MockScoreKeeper()
     var methodsCalled = [String]()
     var _stageNumber = -1
     var _view = MockBoardView(columns: 1, rows: 1)
     var grid = Grid(columns: 1, rows: 1)
     var _deckAtStartOfStage = [String]()
     var show: Bool?
-    var scoreKeeperDelegate: (any LinkSame.ScoreKeeperDelegate)?
+    var score: Int = -1
 
     var view: BoardView {
         _view
@@ -49,14 +47,6 @@ final class MockBoardProcessor: BoardProcessorType {
     func stageNumber() -> Int {
         methodsCalled.append(#function)
         return _stageNumber
-    }
-
-    func setScoreKeeper(score: Int, delegate: any LinkSame.ScoreKeeperDelegate) {
-        methodsCalled.append(#function)
-        let keeper = MockScoreKeeper()
-        keeper.score = score
-        self.scoreKeeper = keeper
-        self.scoreKeeperDelegate = delegate
     }
 
 

@@ -10,6 +10,8 @@ final class MockRootCoordinator: RootCoordinatorType {
     var popoverPresentationDelegate: (any UIPopoverPresentationControllerDelegate)?
     var gridSize: (Int, Int)?
     var options = [String]()
+    var scoreKeeperScore: Int?
+    var scoreKeeperDelegate: (any ScoreKeeperDelegate)?
 
     func createInitialInterface(window: UIWindow) {
         methodsCalled.append(#function)
@@ -40,9 +42,11 @@ final class MockRootCoordinator: RootCoordinatorType {
         methodsCalled.append(#function)
     }
 
-    func makeBoardProcessor(gridSize: (Int, Int)) {
+    func makeBoardProcessor(gridSize: (Int, Int), scoreKeeper: any ScoreKeeperType) {
         methodsCalled.append(#function)
         self.gridSize = gridSize
+        self.scoreKeeperScore = scoreKeeper.score
+        self.scoreKeeperDelegate = scoreKeeper.delegate
     }
 
     func hideBoardView() {
