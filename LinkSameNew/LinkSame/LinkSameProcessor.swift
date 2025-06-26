@@ -13,8 +13,8 @@ final class LinkSameProcessor: Processor {
     /// State to be passed to the presenter for reflection in the interface.
     var state = LinkSameState()
 
-    /// Stage object that will help manage timer and score while a stage is being played.
-    var stage: (any StageType)?
+    /// ScoreKeeper object that will help manage timer and score while a stage is being played.
+    var scoreKeeper: (any ScoreKeeperType)?
 
     /// Board processor that will manage the board view where the game action takes place.
     /// This is a strong reference! The board processor is rooted here.
@@ -158,7 +158,7 @@ final class LinkSameProcessor: Processor {
         boardProcessor?.setStageNumber(stageNumber)
         // self.board.stage = 8 // testing game end behavior, comment out!
 
-        self.stage = Stage(score: 0)
+        self.scoreKeeper = ScoreKeeper(score: 0)
 
         // build and display board
         // TODO: do better error handling here
@@ -203,7 +203,7 @@ final class LinkSameProcessor: Processor {
         boardProcessor?.setStageNumber(boardData.stageNumber) // TODO: Is this right?
         await boardProcessor?.populateFrom(oldGrid: grid, deckAtStartOfStage: boardData.deckAtStartOfStage)
 
-        self.stage = Stage(score: savedState.score)
+        self.scoreKeeper = ScoreKeeper(score: savedState.score)
 
         await presenter?.receive(.animateBoardTransition(.fade))
 
@@ -265,7 +265,7 @@ final class LinkSameProcessor: Processor {
                 await setUpGameFromScratch()
             }
         } else {
-            stage?.didBecomeActive()
+            scoreKeeper?.didBecomeActive()
         }
     }
 
@@ -309,7 +309,7 @@ final class LinkSameProcessor: Processor {
     func saveBoardState() {
         guard let board = boardProcessor else { return }
         let boardData = BoardSaveableData(stageNumber: board.stageNumber(), grid: board.grid, deckAtStartOfStage: board.deckAtStartOfStage)
-        guard let score = stage?.score else { return }
+        guard let score = scoreKeeper?.score else { return }
         let state = PersistentState(
             board: boardData,
             score: score,
@@ -337,8 +337,8 @@ final class LinkSameProcessor: Processor {
             state.hintButtonTitle = .hide
             await presenter?.present(state)
             await boardProcessor?.showHint(true)
-            // TODO: tell the stage so we can penalize the user's score
-            //            self.stage?.userAskedForHint()
+            // TODO: tell the scoreKeeper so we can penalize the user's score
+            //            self.scoreKeeper?.userAskedForHint()
         }
     }
 

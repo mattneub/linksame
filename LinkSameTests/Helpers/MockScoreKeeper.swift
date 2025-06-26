@@ -2,7 +2,7 @@ import Foundation
 @testable import LinkSame
 
 @MainActor
-final class MockStage: StageType {
+final class MockScoreKeeper: ScoreKeeperType {
     var score: Int = -1
     var methodsCalled = [String]()
 

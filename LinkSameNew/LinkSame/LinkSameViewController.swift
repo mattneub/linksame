@@ -54,7 +54,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         }
     }
 
-    var stage: Stage?
+    var stage: ScoreKeeper?
     
     init() {
         super.init(nibName: nil, bundle: nil)
@@ -64,7 +64,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         fatalError("NSCoding not supported")
     }
     
-    fileprivate var scoresKey : String { // fileprivate so Stage can see it
+    fileprivate var scoresKey : String { // fileprivate so ScoreKeeper can see it
         let size = services.persistence.loadString(forKey: .size)
         let stages = services.persistence.loadInt(forKey: .lastStage)
         let key = "\(size)\(stages)"
@@ -198,7 +198,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
             self.restoreGameFromSavedDataOrStartNewGame()
         }
         // and if merely reactivating from deactive and not between stages,
-        // do nothing and let Stage restart timer
+        // do nothing and let ScoreKeeper restart timer
     }
      */
 
@@ -280,11 +280,11 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         func newBoard(newGame:Bool) {
             /*
             if newGame {
-                self.stage = Stage(lsvc: self)
+                self.scoreKeeper = ScoreKeeper(lsvc: self)
                 // TODO: need to restore this somehow
                 // self.interfaceMode = .timed // every new game is a timed game
             } else {
-                self.stage = Stage(lsvc: self, score: self.stage!.score) // score carries over
+                self.scoreKeeper = ScoreKeeper(lsvc: self, score: self.stage!.score) // score carries over
             }
             let boardTransition : BoardTransition = newGame ? .fade : .slide
             Task {

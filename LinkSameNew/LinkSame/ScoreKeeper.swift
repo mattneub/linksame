@@ -34,19 +34,20 @@ func calcBonus(_ diff: Double) -> Int {
     return Int(bonus)
 }
 
-/// Protocol describing the public face of our Stage object, so we can mock it for testing.
+/// Protocol describing the public face of our ScoreKeeper object, so we can mock it for testing.
 @MainActor
-protocol StageType {
+protocol ScoreKeeperType {
     var score: Int { get set }
     func didBecomeActive()
 }
 
-/// The Stage object brings together the score, the timer, and control over the score display in the interface.
-/// The idea is to make a new Stage object every time a new timed stage begins,
-/// and then communicate with it only in terms of game-related events.
+/// The ScoreKeeper object maintains and controls the timer, and keeps the score.
+/// The idea is to make a new ScoreKeeper object every time a new timed stage begins,
+/// and then communicate with it only in terms of game-related events, telling it
+/// (for example) what the user did.
 ///
 @MainActor
-final class Stage: StageType {
+final class ScoreKeeper: ScoreKeeperType {
     var score: Int
     let scoreAtStartOfStage: Int
     private var timer: CancelableTimer? // no timer initially (user has not moved yet)
@@ -55,7 +56,7 @@ final class Stage: StageType {
     init(score: Int) { // initial score for this stage
         self.score = score
         self.scoreAtStartOfStage = score // might need this if we restart this stage later
-        print("new Stage object!", self)
+        print("new ScoreKeeper object!", self)
 
 //        self.lsvc.scoreLabel?.text = String(self.score)
 //        self.lsvc.scoreLabel?.textColor = .black
@@ -78,7 +79,7 @@ final class Stage: StageType {
          */
     }
     deinit {
-        print("farewell from Stage object", self)
+        print("farewell from ScoreKeeper object", self)
         // self.timer?.cancel()
         // nc.removeObserver(self) // probably not needed, but whatever
     }

@@ -10,7 +10,7 @@ struct LinkSameProcessorTests {
     let coordinator = MockRootCoordinator()
     let persistence = MockPersistence()
     let screen = MockScreen()
-    let stage = MockStage()
+    let scoreKeeper = MockScoreKeeper()
     let application = MockApplication()
     let board = MockBoardProcessor()
     let router = MockHamburgerRouter()
@@ -208,7 +208,7 @@ struct LinkSameProcessorTests {
         #expect(state.boardViewHidden == false)
     }
 
-    @Test("awakening with no saved data sends .userInteraction, .putBoard, .animatedBoardTransition, sets stageNumber, makes stage, tells board create deck",
+    @Test("awakening with no saved data sends .userInteraction, .putBoard, .animatedBoardTransition, sets stageNumber, makes scoreKeeper, tells board create deck",
           arguments: AwakeningType.allCases
     )
     func awakenThenWhatNoSavedData(awakeningType: AwakeningType) async throws {
@@ -237,8 +237,8 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board._stageNumber == 0)
         #expect(board.methodsCalled == ["setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
-        let stage = try #require(subject.stage)
-        #expect(stage.score == 0)
+        let scoreKeeper = try #require(subject.scoreKeeper)
+        #expect(scoreKeeper.score == 0)
         // and we save board state
         #expect(persistence.methodsCalled.last == "save(_:forKey:)")
         #expect(persistence.saveKeys.last == .boardData)
@@ -251,7 +251,7 @@ struct LinkSameProcessorTests {
         ))
     }
 
-    @Test("awakening with saved data sends .userInteraction, .putBoard, .animatedBoardTransition, sets stageNumber, makes stage, tells board create deck",
+    @Test("awakening with saved data sends .userInteraction, .putBoard, .animatedBoardTransition, sets stageNumber, makes scoreKeeper, tells board create deck",
           arguments: AwakeningType.allCases
     )
     func awakenThenWhatSavedData(awakeningType: AwakeningType) async throws {
@@ -280,8 +280,8 @@ struct LinkSameProcessorTests {
         #expect(board.methodsCalled == ["setStageNumber(_:)", "populateFrom(oldGrid:deckAtStartOfStage:)", "stageNumber()"])
         #expect(board.grid == Grid(columns: 3, rows: 2))
         #expect(board._deckAtStartOfStage == ["hello"])
-        let stage = try #require(subject.stage)
-        #expect(stage.score == 42)
+        let scoreKeeper = try #require(subject.scoreKeeper)
+        #expect(scoreKeeper.score == 42)
     }
 
     @Test("receive hamburger: hides hint, calls coordinator showActionSheet")
@@ -344,8 +344,8 @@ struct LinkSameProcessorTests {
 
     @Test("receive restartStage: saves the board state to persistence")
     func restartStageSaves() async throws {
-        subject.stage = stage
-        stage.score = 1
+        subject.scoreKeeper = scoreKeeper
+        scoreKeeper.score = 1
         board._stageNumber = 2
         board._deckAtStartOfStage = ["howdy"]
         board.grid = Grid(columns: 3, rows: 2)
@@ -364,8 +364,8 @@ struct LinkSameProcessorTests {
 
     @Test("receive saveBoardState: saves the board state to persistence")
     func saveBoardState() async throws {
-        subject.stage = stage
-        stage.score = 1
+        subject.scoreKeeper = scoreKeeper
+        scoreKeeper.score = 1
         board._stageNumber = 2
         board._deckAtStartOfStage = ["howdy"]
         board.grid = Grid(columns: 3, rows: 2)
@@ -481,8 +481,8 @@ struct LinkSameProcessorTests {
     @Test("after .viewDidLoad, lifetime didEnterBackground if state interface mode is .practice saves the board state to persistence")
     func didEnterBackgroundPractice() async throws {
         subject.state.interfaceMode = .practice
-        subject.stage = stage
-        stage.score = 1
+        subject.scoreKeeper = scoreKeeper
+        scoreKeeper.score = 1
         board._stageNumber = 2
         board._deckAtStartOfStage = ["howdy"]
         board.grid = Grid(columns: 3, rows: 2)
@@ -537,15 +537,15 @@ struct LinkSameProcessorTests {
         #expect(persistence.values.first as? Bool == false)
     }
 
-    @Test("after .viewDidLoad, lifetime didBecomeActive, if not coming back from background, calls stage didBecomeActive")
+    @Test("after .viewDidLoad, lifetime didBecomeActive, if not coming back from background, calls scoreKeeper didBecomeActive")
     func didBecomeActiveNotComingBack() async throws {
-        subject.stage = stage
+        subject.scoreKeeper = scoreKeeper
         subject.state.comingBackFromBackground = false
         await subject.receive(.viewDidLoad)
         try? await Task.sleep(for: .seconds(0.1))
         services.lifetime.didBecomeActivePublisher.send()
-        await #while(stage.methodsCalled.isEmpty)
-        #expect(stage.methodsCalled == ["didBecomeActive()"])
+        await #while(scoreKeeper.methodsCalled.isEmpty)
+        #expect(scoreKeeper.methodsCalled == ["didBecomeActive()"])
     }
 
     @Test("after .viewDidLoad, lifetime willEnterForeground sets state comingBack to true")
@@ -574,8 +574,8 @@ struct LinkSameProcessorTests {
         persistence.int = 6
         board.grid = Grid(columns: 3, rows: 4)
         board._deckAtStartOfStage = ["howdy"]
-        subject.stage = stage
-        stage.score = 10
+        subject.scoreKeeper = scoreKeeper
+        scoreKeeper.score = 10
         subject.stageEnded()
         #expect(persistence.methodsCalled == ["loadInt(forKey:)"])
         #expect(persistence.loadKeys.first == .lastStage)
@@ -591,8 +591,8 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board._stageNumber == 6) // NB incrementing stage number
         #expect(board.methodsCalled ==  ["stageNumber()", "setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
-        let stage = try #require(subject.stage)
-        #expect(stage.score == 0) // TODO: Score is not carrying forward! I don't expect this to be true ultimately!
+        let scoreKeeper = try #require(subject.scoreKeeper)
+        #expect(scoreKeeper.score == 0) // TODO: Score is not carrying forward! I don't expect this to be true ultimately!
         // and we save board state
         #expect(persistence.methodsCalled.last == "save(_:forKey:)")
         #expect(persistence.saveKeys.last == .boardData)
