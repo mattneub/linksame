@@ -332,7 +332,7 @@ struct BoardProcessorTests {
         #expect(delegate.methodsCalled == ["userTappedPathView()"])
     }
 
-    @Test("restartStage: replaces the grid with deckAtStartOfStage, tells presenter to remove old pieces and insert new ones")
+    @Test("restartStage: replaces the grid with deckAtStartOfStage, tells presenter to remove old pieces and insert new ones, tells scorekeeper")
     func restartStage() async throws {
         var deck = [String]()
         var oldPieces = [PieceReducer?]()
@@ -357,6 +357,7 @@ struct BoardProcessorTests {
             expected.append(.insert(piece: pieces.1))
         }
         #expect(presenter.thingsReceived == expected)
+        #expect(scoreKeeper.methodsCalled == ["userRestartedStage()"])
     }
 
     @Test("showHint(false): removes hilite, sets path view tappable to false, unilluminates presenter")

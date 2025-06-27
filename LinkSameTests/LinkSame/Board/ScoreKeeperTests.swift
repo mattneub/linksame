@@ -11,17 +11,23 @@ struct ScoreKeeperTests {
     }
 
     @Test("initializer behaves correctly")
-    func initialize() {
+    func initialize() async {
         let subject = ScoreKeeper(score: 10, delegate: delegate)
         #expect(subject.score == 10)
         #expect(subject.scoreAtStartOfStage == 10)
         #expect(subject.delegate === delegate)
+        await #while(delegate.methodsCalled.isEmpty)
+        #expect(delegate.methodsCalled == ["scoreChanged(_:)"])
+        #expect(delegate.score?.score == subject.score)
+        #expect(delegate.score?.direction == .up)
     }
 
     @Test("timerTimedOut: makes new timer, decrements score, calls delegate")
     func timerTimedOut() async throws {
         let oldTimer = MockCancelableTimer(interval: 1) {}
         let subject = ScoreKeeper(score: 20, delegate: delegate)
+        await #while(delegate.methodsCalled.isEmpty)
+        delegate.methodsCalled = []
         subject.timer = oldTimer
         #expect(subject.timer === oldTimer)
         await subject.timerTimedOut()
@@ -37,6 +43,8 @@ struct ScoreKeeperTests {
     @Test("stopTimer: cancels timer")
     func stopTimer() async throws {
         let subject = ScoreKeeper(score: 20, delegate: delegate)
+        await #while(delegate.methodsCalled.isEmpty)
+        delegate.methodsCalled = []
         let timer = MockCancelableTimer(interval: 20, timeOutHandler: {})
         subject.timer = timer
         await subject.stopTimer()
@@ -47,6 +55,8 @@ struct ScoreKeeperTests {
     func userAskedForHint() async throws {
         let oldTimer = MockCancelableTimer(interval: 1) {}
         let subject = ScoreKeeper(score: 20, delegate: delegate)
+        await #while(delegate.methodsCalled.isEmpty)
+        delegate.methodsCalled = []
         subject.timer = oldTimer
         #expect(subject.timer === oldTimer)
         await subject.userAskedForHint()
@@ -63,6 +73,8 @@ struct ScoreKeeperTests {
     func userAskedForShuffle() async throws {
         let oldTimer = MockCancelableTimer(interval: 1) {}
         let subject = ScoreKeeper(score: 20, delegate: delegate)
+        await #while(delegate.methodsCalled.isEmpty)
+        delegate.methodsCalled = []
         subject.timer = oldTimer
         #expect(subject.timer === oldTimer)
         await subject.userAskedForShuffle()
@@ -75,12 +87,12 @@ struct ScoreKeeperTests {
         #expect(delegate.score?.direction == .down)
     }
 
-    
-
     @Test("userMadeLegalMove: makes new timer, increases score, calls delegate")
     func userMadeLegalMove() async throws {
         let oldTimer = MockCancelableTimer(interval: 1) {}
         let subject = ScoreKeeper(score: 10, delegate: delegate)
+        await #while(delegate.methodsCalled.isEmpty)
+        delegate.methodsCalled = []
         subject.timer = oldTimer
         #expect(subject.timer === oldTimer)
         await subject.userMadeLegalMove()
@@ -88,6 +100,22 @@ struct ScoreKeeperTests {
         let newTimer = try #require(subject.timer as? MockCancelableTimer)
         #expect(await newTimer.interval == 10)
         #expect(subject.score >= 11)
+        #expect(delegate.methodsCalled == ["scoreChanged(_:)"])
+        #expect(delegate.score?.score == subject.score)
+        #expect(delegate.score?.direction == .up)
+    }
+
+    @Test("userRestartedStage: stops the timer, resets the score, calls delegate")
+    func userRestartedStage() async throws {
+        let subject = ScoreKeeper(score: 20, delegate: delegate)
+        await #while(delegate.methodsCalled.isEmpty)
+        delegate.methodsCalled = []
+        let timer = MockCancelableTimer(interval: 20, timeOutHandler: {})
+        subject.timer = timer
+        subject.scoreAtStartOfStage = 200
+        await subject.userRestartedStage()
+        #expect(await timer.methodsCalled == ["cancel()"])
+        #expect(subject.score == 200)
         #expect(delegate.methodsCalled == ["scoreChanged(_:)"])
         #expect(delegate.score?.score == subject.score)
         #expect(delegate.score?.direction == .up)

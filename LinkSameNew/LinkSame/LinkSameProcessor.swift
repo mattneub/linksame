@@ -352,24 +352,30 @@ final class LinkSameProcessor: Processor {
 
 /// Messages from the BoardProcessor.
 extension LinkSameProcessor: BoardDelegate {
+    /// The stage ended; there are no more pieces on the board. Either the entire game has now
+    /// ended, or else we need to proceed to a new stage.
     func stageEnded() {
         guard let board = boardProcessor else {
             return
         }
+
+        // If game has just ended, start a whole new game and notify the user somehow.
         let stageNumber = board.stageNumber()
         if stageNumber == services.persistence.loadInt(forKey: .lastStage) {
             // TODO: Obviously we would restart the whole game with the dialog
             return
         }
 
+        // The game has not ended, so make a new board and start a new stage.
         let gridSize = (board.grid.columns, board.grid.rows)
         coordinator?.makeBoardProcessor(gridSize: gridSize, score: board.score)
-
         Task {
             await setUpNewStage(stageNumber: stageNumber + 1)
         }
     }
 
+    /// The user tapped the path view. This can happen only while a hint is showing,
+    /// and means we should hide the hint.
     func userTappedPathView() {
         Task {
             await hideHintAndUnhilite()
@@ -388,7 +394,10 @@ extension LinkSameProcessor: NewGamePopoverDismissalButtonDelegate {
     }
 }
 
+/// Messages from the ScoreKeeper.
 extension LinkSameProcessor: ScoreKeeperDelegate {
+    /// The score keeper is telling us what the score should be, so set the state and present
+    /// it. This should be the _only_ way that the display of the score is affected!
     func scoreChanged(_ score: Score) async {
         state.score = score
         await presenter?.present(state)

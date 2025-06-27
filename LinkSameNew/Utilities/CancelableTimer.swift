@@ -32,7 +32,7 @@ actor CancelableTimer: CancelableTimerType {
         timerTask?.cancel()
     }
 
-    deinit {
+    deinit { // A released timer cancels its task, and thus tears down in good order.
         timerTask?.cancel()
         print("farewell from timer")
     }

@@ -167,6 +167,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
         guard state.deckAtStartOfStage.count == columns * rows else {
             throw DeckSizeError.oops
         }
+        await scoreKeeper.userRestartedStage()
         var deck = state.deckAtStartOfStage // do not change deckAtStartOfStage itself, we might need it again!
         for column in 0 ..< self.columns {
             for row in 0 ..< self.rows {

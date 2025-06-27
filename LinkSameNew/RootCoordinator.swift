@@ -137,6 +137,8 @@ final class RootCoordinator: RootCoordinatorType {
             // important: we need the boardView to attain its actual size, immediately
             viewController.backgroundView.layoutIfNeeded()
         }
+        print(linkSameProcessor)
+        print((linkSameProcessor as? LinkSameProcessor)?.boardProcessor)
     }
 
     func hideBoardView() {

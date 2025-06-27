@@ -111,10 +111,13 @@ struct RootCoordinatorTests {
 
     @Test("makeBoardProcessor: creates Board module, configures board processor")
     func makeBoardProcessor() async throws {
-        let window = makeWindow()
-        subject.createInitialInterface(window: window)
+        let linkSameProcessor = LinkSameProcessor()
+        subject.linkSameProcessor = linkSameProcessor
+        let linkSameViewController = LinkSameViewController()
+        subject.rootViewController = linkSameViewController
+        let window = makeWindow(viewController: linkSameViewController)
+        window.layoutIfNeeded()
         subject.makeBoardProcessor(gridSize: (3, 2), score: 42)
-        let linkSameProcessor = try #require(subject.linkSameProcessor as? LinkSameProcessor)
         let boardProcessor = try #require(linkSameProcessor.boardProcessor as? BoardProcessor)
         let boardView = try #require(boardProcessor.presenter as? BoardView)
         #expect(boardView.processor === boardProcessor)
@@ -123,7 +126,6 @@ struct RootCoordinatorTests {
         let scoreKeeper = try #require(boardProcessor.scoreKeeper as? ScoreKeeper)
         let scoreKeeperDelegate = try #require(scoreKeeper.delegate)
         #expect(scoreKeeperDelegate === linkSameProcessor)
-        let linkSameViewController = try #require(subject.rootViewController as? LinkSameViewController)
         #expect(boardView.translatesAutoresizingMaskIntoConstraints == false)
         let constraints = linkSameViewController.backgroundView.constraints.filter { $0.secondItem as? UIView === boardView }
         #expect(constraints.count == 4)
@@ -143,10 +145,13 @@ struct RootCoordinatorTests {
 
     @Test("hideBoardView: hides board view")
     func hideBoardView() throws {
-        let window = makeWindow()
-        subject.createInitialInterface(window: window)
+        let linkSameProcessor = LinkSameProcessor()
+        subject.linkSameProcessor = linkSameProcessor
+        let linkSameViewController = LinkSameViewController()
+        subject.rootViewController = linkSameViewController
+        let window = makeWindow(viewController: linkSameViewController)
+        window.layoutIfNeeded()
         subject.makeBoardProcessor(gridSize: (3, 2), score: 42)
-        let linkSameProcessor = try #require(subject.linkSameProcessor as? LinkSameProcessor)
         let boardProcessor = try #require(linkSameProcessor.boardProcessor as? BoardProcessor)
         let boardView = try #require(boardProcessor.presenter as? BoardView)
         #expect(boardView.isHidden == false)

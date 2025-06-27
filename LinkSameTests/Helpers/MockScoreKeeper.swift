@@ -25,6 +25,10 @@ final class MockScoreKeeper: ScoreKeeperType {
         methodsCalled.append(#function)
     }
 
+    func userRestartedStage() async {
+        methodsCalled.append(#function)
+    }
+
     func stopTimer() async {
         methodsCalled.append(#function)
     }

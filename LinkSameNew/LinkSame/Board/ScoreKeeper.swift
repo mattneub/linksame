@@ -42,6 +42,7 @@ protocol ScoreKeeperType: AnyObject {
     func userMadeLegalMove() async
     func userAskedForShuffle() async
     func userAskedForHint() async
+    func userRestartedStage() async
     func stopTimer() async
 }
 
@@ -52,28 +53,42 @@ protocol ScoreKeeperType: AnyObject {
 ///
 @MainActor
 final class ScoreKeeper: ScoreKeeperType {
+    /// The current score.
     var score: Int
-    let scoreAtStartOfStage: Int
-    var timer: (any CancelableTimerType)? // no timer initially (user has not moved yet)
+    /// The score when we were created. We are created on every stage, so this allows us
+    /// to implement restarting the stage if needed. It's a var only for testing purposes.
+    var scoreAtStartOfStage: Int
+    /// The all-important timer. If a timer exists, it is timing unless (1) it is canceled or
+    /// (2) it times out. A timer does _not_ exist when we are created, as the user has not
+    /// yet made a move.
+    var timer: (any CancelableTimerType)?
+    /// When the user last moved. This is used to calculate bonus points for speed in moving.
     private var lastTime: Date = Date.distantPast
 
+    /// Reference to our delegate, to whom we will report any change in the score.
     weak var delegate: (any ScoreKeeperDelegate)?
-
-    init(score: Int, delegate: (any ScoreKeeperDelegate)?) { // initial score for this stage
+    
+    /// Initializer. A new ScoreKeeper is created together with the BoardProcessor, which
+    /// happens when the app awakens and every time a new stage begins.
+    /// - Parameters:
+    ///   - score: The score at the start of the stage.
+    ///   - delegate: Delegate to whom we will report the score.
+    init(score: Int, delegate: (any ScoreKeeperDelegate)?) {
         self.score = score
         self.scoreAtStartOfStage = score // might need this if we restart this stage later
         self.delegate = delegate
-        print("new ScoreKeeper object!", self)
-
-//        self.lsvc.scoreLabel?.text = String(self.score)
-//        self.lsvc.scoreLabel?.textColor = .black
+        // And immediately report the score, thus causing it to be displayed.
+        Task {
+            await delegate?.scoreChanged(Score(score: score, direction: .up))
+        }
+        // TODO: restore scores dictionary management, high score display
 //        if let scoresDict: [String: Int] = services.persistence.loadDictionary(forKey: .scores),
 //            let prev = scoresDict[self.lsvc.scoresKey] {
 //            self.lsvc.prevLabel?.text = "High score: \(prev)"
 //        } else {
 //            self.lsvc.prevLabel?.text = ""
 //        }
-
+        // TODO: lifetime events do affect the score, so work out a new mechanism for this
         /*
         // application lifetime events affect our timer
         nc.addObserver(self, selector: #selector(resigningActive),
@@ -85,28 +100,10 @@ final class ScoreKeeper: ScoreKeeperType {
                        name: Board.gameOver, object: nil)
          */
     }
-    deinit {
-        print("farewell from ScoreKeeper object", self)
-        // self.timer?.cancel()
-        // nc.removeObserver(self) // probably not needed, but whatever
-    }
-    // okay, you're never going to believe this one
-    // I finally saw how to register for become active without triggering on the first one:
-    // register in the first resign active! what a dummy I am not to have realized this
-    private var didResign = false
-    @objc private func resigningActive() { // notification
-        Task {
-            await self.timer?.cancel()
-        }
-//        if !self.didResign {
-//            self.didResign = true
-//            nc.addObserver(self, selector: #selector(didBecomeActive),
-//                           name: UIApplication.didBecomeActiveNotification, object: nil)
-//        }
-    }
 
     /// Utility: start the timer counting down from 10, and if it times out, have it call our
-    /// `timerTimedOut` method.
+    /// `timerTimedOut` method. This is done by _creating_ the timer; if it exists and has not
+    /// been canceled or timed out, it is counting.
     private func restartTimer() {
         self.timer = services.cancelableTimer.init(interval: 10) { [weak self] in
             await self?.timerTimedOut()
@@ -156,6 +153,12 @@ final class ScoreKeeper: ScoreKeeperType {
         self.score += 1 + bonus
         // tell the delegate
         await delegate?.scoreChanged(Score(score: self.score, direction: .up))
+    }
+
+    func userRestartedStage() async {
+        await self.timer?.cancel()
+        self.score = self.scoreAtStartOfStage
+        await delegate?.scoreChanged(Score(score: score, direction: .up))
     }
 }
 
