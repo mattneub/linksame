@@ -195,7 +195,7 @@ struct BoardProcessorTests {
 
     // incidentally test developer double tap, just the once
     @Test(
-        "receive tapped: reaches two hilited pieces, topologically a match, two segments, unhilited and removed",
+        "receive tapped: reaches two hilited pieces, topologically a match, two segments, unhilited and removed, tell scoreKeeper",
         arguments: [1,2]
     )
     func receiveTappedTwoHilitedMatchLegalPairTwoSegments(which: Int) async throws {
@@ -228,7 +228,7 @@ struct BoardProcessorTests {
         #expect(scoreKeeper.methodsCalled == ["userMadeLegalMove()"])
     }
 
-    @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed")
+    @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed, tell scoreKeeper")
     func receiveTappedTwoHilitedMatchLegalPairThreeSegments() async throws {
         let piece = PieceReducer(picName: "yoho", column: 0, row: 0)
         subject.grid[column: 0, row: 0] = "yoho"
@@ -256,7 +256,7 @@ struct BoardProcessorTests {
         #expect(scoreKeeper.methodsCalled == ["userMadeLegalMove()"])
     }
 
-    @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed")
+    @Test("receive tapped: reaches two hilited pieces, topologically a match, three segments, unhilited and removed, tell scoreKeeper")
     func receiveTappedTwoHilitedMatchLegalPairThreeSegments2() async throws {
         // same as the preceding but flipped horizontally
         let piece = PieceReducer(picName: "yoho", column: 1, row: 0)
@@ -285,7 +285,7 @@ struct BoardProcessorTests {
         #expect(scoreKeeper.methodsCalled == ["userMadeLegalMove()"])
     }
 
-    @Test("receive tapped: reaches two hilited pieces, match, last pair! unhilited, removed, call delegate stageEnded")
+    @Test("receive tapped: reaches two hilited pieces, match, last pair! unhilited, removed, call delegate stageEnded, tell scorekeeper")
     func receiveTappedTwoHilitedMatchLegalPairLastPair() async throws {
         // same as the preceding but no other pieces except tapped pieces
         let piece = PieceReducer(picName: "yoho", column: 1, row: 0)
@@ -307,7 +307,7 @@ struct BoardProcessorTests {
         #expect(presenter.thingsReceived.contains(.unilluminate))
         #expect(delegate.methodsCalled == ["stageEnded()"])
         // and we told the scorekeeper about it
-        #expect(scoreKeeper.methodsCalled == ["userMadeLegalMove()"])
+        #expect(scoreKeeper.methodsCalled == ["userMadeLegalMove()", "stopTimer()"])
     }
 
     @Test("receive tapped: exercises gravity, calls presenter move")
@@ -371,7 +371,7 @@ struct BoardProcessorTests {
         #expect(presenter.thingsReceived == [.unilluminate])
     }
 
-    @Test("showHint(true): removes hilite, sets path view tappable to true, illuminates hint path")
+    @Test("showHint(true): removes hilite, sets path view tappable to true, illuminates hint path, tells scorekeeper")
     func showHintTrue() async {
         subject.grid[column: 0, row: 0] = "howdy"
         let piece = PieceReducer(picName: "yoho", column: 1, row: 0)
@@ -386,9 +386,10 @@ struct BoardProcessorTests {
         #expect(presenter.statesPresented.first?.hilitedPieces == [])
         #expect(presenter.statesPresented.first?.pathViewTappable == true)
         #expect(presenter.thingsReceived == [.illuminate(path: [Slot(0, 1), Slot(1, 1), Slot(1, 0)])])
+        #expect(scoreKeeper.methodsCalled == ["userAskedForHint()"])
     }
 
-    @Test("showHint(true): if there is _already_ a hint path (and there should be), just uses it")
+    @Test("showHint(true): if there is _already_ a hint path (and there should be), just uses it, tells scorekeeper")
     func showHintTrueLegalPathExists() async {
         subject.state.hintPath = [Slot(0, 1)]
         subject.state.pathViewTappable = false
@@ -396,6 +397,7 @@ struct BoardProcessorTests {
         #expect(subject.state.pathViewTappable == true)
         #expect(presenter.statesPresented.first?.pathViewTappable == true)
         #expect(presenter.thingsReceived == [.illuminate(path: [Slot(0, 1)])])
+        #expect(scoreKeeper.methodsCalled == ["userAskedForHint()"])
     }
 
     @Test("score: access scorekeeper's score")
@@ -412,7 +414,7 @@ struct BoardProcessorTests {
         #expect(subject.stageNumber() == 8)
     }
 
-    @Test("shuffle: unhilites and presents, unilluminates, turns user interaction off and on, rewrites grid, sends corresponding transition")
+    @Test("shuffle: unhilites and presents, unilluminates, turns user interaction off and on, rewrites grid, sends corresponding transition, tells scorekeeper")
     func shuffle() async throws {
         subject.grid[column: 1, row: 0] = "yoho"
         subject.grid[column: 0, row: 1] = "yoho"
@@ -452,6 +454,7 @@ struct BoardProcessorTests {
             PieceReducer(picName: $1, column: $0.column, row: $0.row)
         }
         #expect(Set(resultantPieces) == Set(gridPieces))
+        #expect(scoreKeeper.methodsCalled == ["userAskedForShuffle()"])
     }
 }
 

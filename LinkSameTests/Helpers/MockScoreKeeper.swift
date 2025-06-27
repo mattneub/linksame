@@ -3,6 +3,7 @@ import Foundation
 
 @MainActor
 final class MockScoreKeeper: ScoreKeeperType {
+
     var delegate: (any LinkSame.ScoreKeeperDelegate)?
 
     var score: Int = -1
@@ -13,6 +14,18 @@ final class MockScoreKeeper: ScoreKeeperType {
     }
 
     func userMadeLegalMove() async {
+        methodsCalled.append(#function)
+    }
+
+    func userAskedForShuffle() async {
+        methodsCalled.append(#function)
+    }
+
+    func userAskedForHint() async {
+        methodsCalled.append(#function)
+    }
+
+    func stopTimer() async {
         methodsCalled.append(#function)
     }
 

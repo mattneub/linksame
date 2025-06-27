@@ -40,6 +40,9 @@ protocol ScoreKeeperType: AnyObject {
     var delegate: (any ScoreKeeperDelegate)? { get }
     var score: Int { get set } // TODO: can I drop this?
     func userMadeLegalMove() async
+    func userAskedForShuffle() async
+    func userAskedForHint() async
+    func stopTimer() async
 }
 
 /// The ScoreKeeper object maintains and controls the timer, and keeps the score.
@@ -112,11 +115,10 @@ final class ScoreKeeper: ScoreKeeperType {
 
     /// Called back from the timer if it times out. This means the user has failed to move in time.
     /// Adjust the score, notify the delegate.
-    private func timerTimedOut() {
+    func timerTimedOut() async {
         self.score -= 1
-//        self.lsvc.scoreLabel?.text = String(self.score)
-//        self.lsvc.scoreLabel?.textColor = .red
-//        restartTimer()
+        await delegate?.scoreChanged(Score(score: score, direction: .down))
+        restartTimer()
     }
 
     /// Called by the processor to let us know that we have become active after becoming inactive
@@ -126,23 +128,20 @@ final class ScoreKeeper: ScoreKeeperType {
         self.restartTimer()
     }
 
-    @objc private func gameEnded() { // notification from Board
-        Task {
-            await self.timer?.cancel()
-        }
-    }
-    func userAskedForHint() { // called by LinkSameViewController
-        self.restartTimer()
-        self.score -= 10
-//        self.lsvc.scoreLabel?.text = String(self.score)
-//        self.lsvc.scoreLabel?.textColor = .red
+    func stopTimer() async {
+        await self.timer?.cancel()
     }
 
-    func userAskedForShuffle() { // called by LinkSameViewController
+    func userAskedForHint() async {
+        self.restartTimer()
+        self.score -= 10
+        await delegate?.scoreChanged(Score(score: score, direction: .down))
+    }
+
+    func userAskedForShuffle() async {
         self.restartTimer()
         self.score -= 20
-//        self.lsvc.scoreLabel?.text = String(self.score)
-//        self.lsvc.scoreLabel?.textColor = .red
+        await delegate?.scoreChanged(Score(score: score, direction: .down))
     }
 
     func userMadeLegalMove() async {

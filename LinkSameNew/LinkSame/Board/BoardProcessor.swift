@@ -399,6 +399,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             if grid.isEmpty {
                 // stage is over! tell the delegate, we're out of here
                 await presenter?.receive(.userInteraction(true))
+                await scoreKeeper.stopTimer()
                 delegate?.stageEnded()
                 return
             }
@@ -512,6 +513,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             // no need to waste time calling legalPath(); path is ready (or not) in hintPath
             if let path = state.hintPath {
                 await presenter?.receive(.illuminate(path: path))
+                await scoreKeeper.userAskedForHint()
             } else { // this part shouldn't happen, but just in case, waste time after all
                 state.hintPath = self.legalPath()
                 if state.hintPath != nil {
@@ -533,8 +535,8 @@ final class BoardProcessor: BoardProcessorType, Processor {
         state.hilitedPieces = []
         await presenter?.present(state)
         await presenter?.receive(.unilluminate)
-        // TODO: Penalize user
         await redeal()
+        await scoreKeeper.userAskedForShuffle()
     }
 
     deinit {
