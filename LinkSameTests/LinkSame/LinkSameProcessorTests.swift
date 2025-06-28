@@ -149,6 +149,7 @@ struct LinkSameProcessorTests {
           arguments: AwakeningType.allCases
     )
     func awakenStateNoSavedData(awakeningType: AwakeningType) async throws {
+        subject.state.interfaceMode = .practice
         persistence.values = [.lastStage: 4]
         switch awakeningType {
         case .didInitialLayout:
@@ -159,7 +160,7 @@ struct LinkSameProcessorTests {
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
         }
-        let state = try #require(presenter.statePresented)
+        let state = try #require(presenter.statesPresented.last)
         #expect(state.interfaceMode == .timed)
         #expect(state.stageLabelText == "Stage 1 of 5")
     }
@@ -181,7 +182,7 @@ struct LinkSameProcessorTests {
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
         }
-        let state = try #require(presenter.statePresented)
+        let state = try #require(presenter.statesPresented.last)
         #expect(state.interfaceMode == .practice)
         #expect(state.stageLabelText == "Stage 6 of 5")
         #expect(state.boardViewHidden == false)
@@ -365,6 +366,7 @@ struct LinkSameProcessorTests {
 
     @Test("receive restartStage: saves the board state to persistence")
     func restartStageSaves() async throws {
+        subject.state.interfaceMode = .practice
         board.score = 1
         board._stageNumber = 2
         board._deckAtStartOfStage = ["howdy"]
@@ -378,12 +380,13 @@ struct LinkSameProcessorTests {
         #expect(persistentState == .init(
             board: .init(stageNumber: 2, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"]),
             score: 1,
-            timed: true
+            timed: false
         ))
     }
 
     @Test("receive saveBoardState: saves the board state to persistence")
     func saveBoardState() async throws {
+        subject.state.interfaceMode = .practice
         board.score = 1
         board._stageNumber = 2
         board._deckAtStartOfStage = ["howdy"]
@@ -397,7 +400,7 @@ struct LinkSameProcessorTests {
         #expect(persistentState == .init(
             board: .init(stageNumber: 2, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"]),
             score: 1,
-            timed: true
+            timed: false
         ))
     }
 
@@ -570,7 +573,7 @@ struct LinkSameProcessorTests {
         persistence.values = [.size: "Easy", .lastStage: 5]
         await subject.stageEnded()
         #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 10])
-        #expect(presenter.statesPresented.first?.highScore == "High score: 10")
+        #expect(presenter.statesPresented.last?.highScore == "High score: 10")
     }
 
     @Test("stageEnded: if game ended with lower previous high score, saves into scores, displays new high score")
@@ -581,7 +584,7 @@ struct LinkSameProcessorTests {
         persistence.values = [.size: "Easy", .lastStage: 5, .scores: ["Easy5": 9]] // lower
         await subject.stageEnded()
         #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 10])
-        #expect(presenter.statesPresented.first?.highScore == "High score: 10")
+        #expect(presenter.statesPresented.last?.highScore == "High score: 10")
     }
 
     @Test("stageEnded: if game ended with higher previous high score, no save of scores")
@@ -593,11 +596,12 @@ struct LinkSameProcessorTests {
         await subject.stageEnded()
         #expect(!persistence.saveKeys.contains(.scores))
         #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 11])
-        #expect(presenter.statesPresented.first?.highScore == "howdy")
+        #expect(presenter.statesPresented.last?.highScore == "High score: 11")
     }
 
     @Test("stageEnded: if game ended, continues by starting a new game")
     func stageEndedGameEndedNewGame() async throws {
+        subject.state.interfaceMode = .practice
         board._stageNumber = 5
         board.score = 10
         persistence.values = [.size: "Easy", .lastStage: 5, .scores: ["Easy5": 11]] // higher
@@ -623,6 +627,7 @@ struct LinkSameProcessorTests {
             score: 10,
             timed: true
         ))
+        #expect(presenter.statesPresented.last?.interfaceMode == .timed)
     }
 
     @Test("stageEnded: if game didn't end yet, calls coordinator makeBoardProcessor with incremented stage")
@@ -677,7 +682,7 @@ struct LinkSameProcessorTests {
     func scoreChanged() async {
         await subject.scoreChanged(.init(score: 100, direction: .up))
         #expect(subject.state.score == .init(score: 100, direction: .up))
-        #expect(presenter.statesPresented.first?.score == .init(score: 100, direction: .up))
+        #expect(presenter.statesPresented.last?.score == .init(score: 100, direction: .up))
     }
 }
 

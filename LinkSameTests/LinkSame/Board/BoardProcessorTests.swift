@@ -382,8 +382,8 @@ struct BoardProcessorTests {
         await subject.showHint(true) // calculates hint path
         #expect(subject.state.hilitedPieces == [])
         #expect(subject.state.pathViewTappable == true)
-        #expect(presenter.statesPresented.first?.hilitedPieces == [])
-        #expect(presenter.statesPresented.first?.pathViewTappable == true)
+        #expect(presenter.statesPresented.last?.hilitedPieces == [])
+        #expect(presenter.statesPresented.last?.pathViewTappable == true)
         #expect(presenter.thingsReceived == [.illuminate(path: [Slot(0, 1), Slot(1, 1), Slot(1, 0)])])
         #expect(scoreKeeper.methodsCalled == ["userAskedForHint()"])
     }
@@ -394,7 +394,7 @@ struct BoardProcessorTests {
         subject.state.pathViewTappable = false
         await subject.showHint(true)
         #expect(subject.state.pathViewTappable == true)
-        #expect(presenter.statesPresented.first?.pathViewTappable == true)
+        #expect(presenter.statesPresented.last?.pathViewTappable == true)
         #expect(presenter.thingsReceived == [.illuminate(path: [Slot(0, 1)])])
         #expect(scoreKeeper.methodsCalled == ["userAskedForHint()"])
     }

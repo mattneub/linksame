@@ -10,12 +10,10 @@ final class MockReceiver<T>: Receiver {
 }
 
 final class MockReceiverPresenter<T, U>: UIViewController, ReceiverPresenter {
-    var statePresented: U?
     var statesPresented = [U]()
     var thingsReceived: [T] = []
 
     func present(_ state: U) async {
-        statePresented = state
         statesPresented.append(state)
     }
 
