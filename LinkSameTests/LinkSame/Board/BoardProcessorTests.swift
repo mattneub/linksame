@@ -35,7 +35,7 @@ struct BoardProcessorTests {
 
     @Test("createAndDealDeck: creates the deck based on persistence and grid size, sends .insert effect for each piece")
     func createAndDealDeck() async throws {
-        persistence.valuePairs = [(.style, "Snacks")]
+        persistence.values = [.style: "Snacks"]
         let subject = BoardProcessor(gridSize: (2, 18), scoreKeeper: scoreKeeper) // tee-hee
         subject.presenter = presenter
         try await subject.createAndDealDeck()
@@ -70,7 +70,7 @@ struct BoardProcessorTests {
 
     @Test("createAndDealDeck: creates the deck based on persistence and grid size, sends .insert effect for each piece")
     func createAndDealDeck2() async throws {
-        persistence.valuePairs = [(.style, "Animals")]
+        persistence.values = [.style: "Animals"]
         let subject = BoardProcessor(gridSize: (4, 11), scoreKeeper: scoreKeeper)
         subject.presenter = presenter
         try await subject.createAndDealDeck()

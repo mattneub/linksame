@@ -27,7 +27,7 @@ struct LinkSameProcessorTests {
     @Test("stageLabelText: returns expected value")
     func stageLabelText() {
         board._stageNumber = 7
-        persistence.valuePairs = [(.lastStage, 8)]
+        persistence.values = [.lastStage: 8]
         #expect(subject.stageLabelText == "Stage 8 of 9") // adds 1 to each of those values
         #expect(persistence.loads[0] == ("loadInt(forKey:)", .lastStage))
     }
@@ -61,14 +61,14 @@ struct LinkSameProcessorTests {
             traits.userInterfaceIdiom = .phone
             traits.displayScale = 2
         }
-        persistence.valuePairs = [] // no saved .size info on iPhone
+        persistence.values = [:] // no saved .size info on iPhone
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
-            persistence.valuePairs = [(.gameEnded, true)]
+            persistence.values = [.gameEnded: true]
             await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
@@ -87,14 +87,14 @@ struct LinkSameProcessorTests {
             traits.userInterfaceIdiom = .phone
             traits.displayScale = 3
         }
-        persistence.valuePairs = [] // no saved .size info on iPhone
+        persistence.values = [:] // no saved .size info on iPhone
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
-            persistence.valuePairs = [(.gameEnded, true)]
+            persistence.values = [.gameEnded: true]
             await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
@@ -113,14 +113,14 @@ struct LinkSameProcessorTests {
             traits.userInterfaceIdiom = .pad
             traits.displayScale = 2
         }
-        persistence.valuePairs = [(.size, "Hard")]
+        persistence.values = [.size: "Hard"]
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
-            persistence.valuePairs = [(.gameEnded, true), (.size, "Hard")]
+            persistence.values = [.gameEnded: true, .size: "Hard"]
             await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
@@ -138,7 +138,7 @@ struct LinkSameProcessorTests {
         let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["hello"])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
-        persistence.valuePairs = [(.boardData, data)]
+        persistence.values = [.boardData: data]
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
@@ -161,14 +161,14 @@ struct LinkSameProcessorTests {
           arguments: AwakeningType.allCases
     )
     func awakenStateNoSavedData(awakeningType: AwakeningType) async throws {
-        persistence.valuePairs = [(.lastStage, 4)]
+        persistence.values = [.lastStage: 4]
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
-            persistence.valuePairs = [(.gameEnded, true), (.lastStage, 4)]
+            persistence.values = [.gameEnded: true, .lastStage: 4]
             await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
@@ -186,7 +186,7 @@ struct LinkSameProcessorTests {
         let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["hello"])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
-        persistence.valuePairs = [(.boardData, data), (.lastStage, 4)]
+        persistence.values = [.boardData: data, .lastStage: 4]
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
@@ -208,7 +208,7 @@ struct LinkSameProcessorTests {
           arguments: AwakeningType.allCases
     )
     func awakenThenWhatNoSavedData(awakeningType: AwakeningType) async throws {
-        persistence.valuePairs = [(.size, "Hard")]
+        persistence.values = [.size: "Hard"]
         screen.traitCollection = UITraitCollection { traits in
             traits.userInterfaceIdiom = .pad
             traits.displayScale = 2
@@ -220,7 +220,7 @@ struct LinkSameProcessorTests {
         case .startNewGame:
             await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
-            persistence.valuePairs = [(.gameEnded, true), (.size, "Hard")]
+            persistence.values = [.gameEnded: true, .size: "Hard"]
             await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
@@ -253,7 +253,7 @@ struct LinkSameProcessorTests {
         let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["hello"])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
-        persistence.valuePairs = [(.boardData, data)]
+        persistence.values = [.boardData: data]
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
@@ -284,8 +284,7 @@ struct LinkSameProcessorTests {
     )
     func awakeHighScore(awakeningType: AwakeningType) async throws {
         do {
-            // we expect .size and .lastStage to be loaded twice along the way, so we include them twice
-            persistence.valuePairs = [(.size, "Hard"), (.lastStage, 7), (.size, "Hard"), (.lastStage, 7), (.scores, ["Hard7": 42])]
+            persistence.values = [.size: "Hard", .lastStage: 7, .scores: ["Hard7": 42]]
             switch awakeningType {
             case .didInitialLayout:
                 await subject.receive(.didInitialLayout)
@@ -301,7 +300,7 @@ struct LinkSameProcessorTests {
         }
         do {
             // if the scores dictionary doesn't contain the key, empty string
-            persistence.valuePairs = [(.size, "Hard"), (.lastStage, 7), (.size, "Hard"), (.lastStage, 7), (.scores, ["Hard8": 42])]
+            persistence.values = [.size: "Hard", .lastStage: 7, .scores: ["Hard8": 42]]
             switch awakeningType {
             case .didInitialLayout:
                 await subject.receive(.didInitialLayout)
@@ -317,7 +316,7 @@ struct LinkSameProcessorTests {
         }
         do {
             // if the scores dictionary is absent, empty string
-            persistence.valuePairs = [(.size, "Hard"), (.lastStage, 7), (.size, "Hard"), (.lastStage, 7)]
+            persistence.values = [.size: "Hard", .lastStage: 7]
             subject.state.highScore = "High score: 42"
             switch awakeningType {
             case .didInitialLayout:
@@ -573,13 +572,13 @@ struct LinkSameProcessorTests {
 
     @Test("after .viewDidLoad, lifetime didBecomeActive checks persistence gameEnded, and if so, sets it to false")
     func didBecomeActiveGameEnded() async throws {
-        persistence.valuePairs = [(.gameEnded, true)]
+        persistence.values = [.gameEnded: true]
         await subject.receive(.viewDidLoad)
         try? await Task.sleep(for: .seconds(0.1))
         services.lifetime.didBecomeActivePublisher.send()
         await #while(!persistence.methodsCalled.contains("loadBool(forKey:)"))
         #expect(persistence.methodsCalled.contains("loadBool(forKey:)"))
-        #expect(persistence.loads.contains(where: { $0.0 == "loadBool(forKey:)" && $0.1 == .gameEnded }))
+        #expect(persistence.loads[0] == ("loadBool(forKey:)", .gameEnded))
         #expect(persistence.saveKeys.contains(.gameEnded))
         #expect(persistence.savedValues.first as? Bool == false)
     }
@@ -611,10 +610,9 @@ struct LinkSameProcessorTests {
         subject.state.highScore = "howdy"
         board._stageNumber = 5
         board.score = 10
-        persistence.valuePairs = [(.size, "Easy"), (.lastStage, 5)]
+        persistence.values = [.size: "Easy", .lastStage: 5]
         await subject.stageEnded()
-        #expect(persistence.saveKeys.contains(.scores))
-        #expect(persistence.savedValues.contains(where: { $0 as? [String: Int] == ["Easy5": 10] }))
+        #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 10])
         #expect(presenter.statesPresented.first?.highScore == "High score: 10")
     }
 
@@ -623,10 +621,9 @@ struct LinkSameProcessorTests {
         subject.state.highScore = "howdy"
         board._stageNumber = 5
         board.score = 10
-        persistence.valuePairs = [(.size, "Easy"), (.lastStage, 5), (.scores, ["Easy5": 9])] // lower
+        persistence.values = [.size: "Easy", .lastStage: 5, .scores: ["Easy5": 9]] // lower
         await subject.stageEnded()
-        #expect(persistence.saveKeys.contains(.scores))
-        #expect(persistence.savedValues.contains(where: { $0 as? [String: Int] == ["Easy5": 10] }))
+        #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 10])
         #expect(presenter.statesPresented.first?.highScore == "High score: 10")
     }
 
@@ -635,10 +632,10 @@ struct LinkSameProcessorTests {
         subject.state.highScore = "howdy"
         board._stageNumber = 5
         board.score = 10
-        persistence.valuePairs = [(.size, "Easy"), (.lastStage, 5), (.scores, ["Easy5": 11])] // higher
+        persistence.values = [.size: "Easy", .lastStage: 5, .scores: ["Easy5": 11]] // higher
         await subject.stageEnded()
         #expect(!persistence.saveKeys.contains(.scores))
-        #expect(!persistence.savedValues.contains(where: { $0 as? [String: Int] == ["Easy5": 10] }))
+        #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 11])
         #expect(presenter.statesPresented.first?.highScore == "howdy")
     }
 
@@ -646,7 +643,7 @@ struct LinkSameProcessorTests {
     func stageEndedGameEndedNewGame() async throws {
         board._stageNumber = 5
         board.score = 10
-        persistence.valuePairs = [(.size, "Easy"), (.lastStage, 5), (.scores, ["Easy5": 11])] // higher
+        persistence.values = [.size: "Easy", .lastStage: 5, .scores: ["Easy5": 11]] // higher
         board.grid = Grid(columns: 3, rows: 4)
         board._deckAtStartOfStage = ["howdy"]
         await subject.stageEnded()
@@ -674,7 +671,7 @@ struct LinkSameProcessorTests {
     @Test("stageEnded: if game didn't end yet, calls coordinator makeBoardProcessor with incremented stage")
     func stageEndedGameNotEnded() async throws {
         board._stageNumber = 5
-        persistence.valuePairs = [(.lastStage, 6)]
+        persistence.values = [.lastStage: 6]
         board.grid = Grid(columns: 3, rows: 4)
         board._deckAtStartOfStage = ["howdy"]
         board.score = 10

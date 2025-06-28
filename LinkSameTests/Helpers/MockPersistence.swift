@@ -15,8 +15,8 @@ final class MockPersistence: PersistenceType {
     // after a save, the value(s)
     var savedValues = [Any]()
 
-    // before a load, the key-value pairs
-    var valuePairs = [(DefaultKey, Any)]()
+    // the backing store of key-value pairs: we are imitating user defaults here
+    var values = [DefaultKey: Any]()
 
     func register(_ dictionary: [DefaultKey: Any]) {
         methodsCalled.append(#function)
@@ -26,52 +26,38 @@ final class MockPersistence: PersistenceType {
     func loadDictionary<ValueType>(forKey key: DefaultKey) -> [String: ValueType]? {
         methodsCalled.append(#function)
         loads.append((#function, key))
-        if let index = valuePairs.firstIndex(where: { $0.0 == key }) {
-            return valuePairs.remove(at: index).1 as? Dictionary<String, ValueType> ?? nil
-        }
-        return nil
+        return values[key] as? [String: ValueType]
     }
     
     func loadBool(forKey key: DefaultKey) -> Bool {
         methodsCalled.append(#function)
         loads.append((#function, key))
-        if let index = valuePairs.firstIndex(where: { $0.0 == key }) {
-            return valuePairs.remove(at: index).1 as? Bool ?? false
-        }
-        return false
+        return values[key] as? Bool ?? false
     }
     
     func loadInt(forKey key: DefaultKey) -> Int {
         methodsCalled.append(#function)
         loads.append((#function, key))
-        if let index = valuePairs.firstIndex(where: { $0.0 == key }) {
-            return valuePairs.remove(at: index).1 as? Int ?? -1000
-        }
-        return -1000
+        return values[key] as? Int ?? -1000
     }
     
     func loadString(forKey key: DefaultKey) -> String? {
         methodsCalled.append(#function)
         loads.append((#function, key))
-        if let index = valuePairs.firstIndex(where: { $0.0 == key }) {
-            return valuePairs.remove(at: index).1 as? Optional<String> ?? nil
-        }
-        return nil
+        return values[key] as? String
     }
-    
+
     func loadData(forKey key: DefaultKey) -> Data? {
         methodsCalled.append(#function)
         loads.append((#function, key))
-        if let index = valuePairs.firstIndex(where: { $0.0 == key }) {
-            return valuePairs.remove(at: index).1 as? Optional<Data> ?? nil
-        }
-        return nil
+        return values[key] as? Data
     }
     
     func save(_ value: Any, forKey key: DefaultKey) {
         methodsCalled.append(#function)
         saveKeys.append((key))
         savedValues.append(value)
+        values[key] = value
     }
     
     func loadAsDictionary(_ keys: [DefaultKey]) -> [DefaultKey: Any] {

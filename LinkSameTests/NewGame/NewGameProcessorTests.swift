@@ -20,7 +20,7 @@ struct NewGameProcessorTests {
 
     @Test("receive initialInterfaceIsReady: fetches last stage from persistence, sends .selectPickerRow")
     func initialInterfaceIsReady() async {
-        persistence.valuePairs = [(.lastStage, 5)]
+        persistence.values = [.lastStage: 5]
         await subject.receive(.initialInterfaceIsReady)
         #expect(persistence.methodsCalled.first == "loadInt(forKey:)")
         #expect(persistence.loads.first?.1 == .lastStage)
@@ -29,7 +29,7 @@ struct NewGameProcessorTests {
 
     @Test("receive initialInterfaceIsReady: updates checkmark rows in state, presents state")
     func initialInterfaceIsReadyCheckmarks() async throws {
-        persistence.valuePairs = [(.lastStage, 5), (.style, "Animals"), (.size, "Hard")]
+        persistence.values = [.lastStage: 5, .style: "Animals", .size: "Hard"]
         subject.state.tableViewSections = [.init(title: "hey", rows: []), .init(title: "ho", rows: [])]
         await subject.receive(.initialInterfaceIsReady)
         #expect(persistence.loads[1] == ("loadString(forKey:)", .style))
@@ -41,7 +41,7 @@ struct NewGameProcessorTests {
 
     @Test("receive initialInterfaceIsReady: updates checkmark row if there is just one section")
     func initialInterfaceIsReadyCheckmarksOneRow() async throws {
-        persistence.valuePairs = [(.lastStage, 5), (.style, "Animals"), (.size, "Hard")]
+        persistence.values = [.lastStage: 5, .style: "Animals", .size: "Hard"]
         subject.state.tableViewSections = [.init(title: "hey", rows: [])]
         await subject.receive(.initialInterfaceIsReady)
         #expect(persistence.loads[1] == ("loadString(forKey:)", .style))
@@ -102,7 +102,7 @@ struct NewGameProcessorTests {
 
     @Test("receive userSelectedTableRow: updates checkmarks in state, presents state")
     func userSelectedTableRowCheckmarks() async throws {
-        persistence.valuePairs = [(.lastStage, 5), (.style, "Animals"), (.size, "Hard")]
+        persistence.values = [.lastStage: 5, .style: "Animals", .size: "Hard"]
         subject.state.tableViewSections = [.init(title: "hey", rows: []), .init(title: "ho", rows: [])]
         await subject.receive(.userSelectedTableRow(.init(row: 0, section: 0)))
         #expect(persistence.loads[0] == ("loadString(forKey:)", .style))
