@@ -27,8 +27,9 @@ struct LinkSameProcessorTests {
     @Test("stageLabelText: returns expected value")
     func stageLabelText() {
         board._stageNumber = 7
-        persistence.int = 8
+        persistence.valuePairs = [(.lastStage, 8)]
         #expect(subject.stageLabelText == "Stage 8 of 9") // adds 1 to each of those values
+        #expect(persistence.loads[0] == ("loadInt(forKey:)", .lastStage))
     }
 
     @Test("receive cancelNewGame: calls coordinator dismiss, saves prepopover defaults to real defaults, set prepover defaults to nil")
@@ -60,22 +61,21 @@ struct LinkSameProcessorTests {
             traits.userInterfaceIdiom = .phone
             traits.displayScale = 2
         }
+        persistence.valuePairs = [] // no saved .size info on iPhone
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
-            persistence.bool = true
+            persistence.valuePairs = [(.gameEnded, true)]
             await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
         }
-        #expect(!persistence.loadKeys.contains(.size)) // on iPhone we don't ask persistence for size
         #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
-        let gridSize = try #require(coordinator.gridSize)
-        #expect(gridSize == (10, 6)) // on iPhone, persistence size is ignored, we only do Easy
+        #expect(coordinator.gridSize == (10, 6)) // easy by default
         #expect(coordinator.score == 0)
     }
 
@@ -87,22 +87,21 @@ struct LinkSameProcessorTests {
             traits.userInterfaceIdiom = .phone
             traits.displayScale = 3
         }
+        persistence.valuePairs = [] // no saved .size info on iPhone
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
-            persistence.bool = true
+            persistence.valuePairs = [(.gameEnded, true)]
             await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
         }
-        #expect(!persistence.loadKeys.contains(.size)) // on iPhone we don't ask persistence for size
         #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
-        let gridSize = try #require(coordinator.gridSize)
-        #expect(gridSize == (12, 7)) // on iPhone, persistence size is ignored, we only do Easy
+        #expect(coordinator.gridSize == (12, 7)) // easy by default, but easy is bigger on 3x iPhone
         #expect(coordinator.score == 0)
     }
 
@@ -110,28 +109,25 @@ struct LinkSameProcessorTests {
           arguments: AwakeningType.allCases
     )
     func awakenNoSavedDataPad(awakeningType: AwakeningType) async throws {
-        persistence.string = ["Hard"]
         screen.traitCollection = UITraitCollection { traits in
             traits.userInterfaceIdiom = .pad
             traits.displayScale = 2
         }
+        persistence.valuePairs = [(.size, "Hard")]
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
-            persistence.bool = true
+            persistence.valuePairs = [(.gameEnded, true), (.size, "Hard")]
             await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
         }
-        #expect(persistence.methodsCalled.contains("loadString(forKey:)"))
-        #expect(persistence.loadKeys.contains(.size))
         #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
-        let gridSize = try #require(coordinator.gridSize)
-        #expect(gridSize == (16, 9)) // hard size
+        #expect(coordinator.gridSize == (16, 9)) // hard size
         #expect(coordinator.score == 0)
     }
 
@@ -142,7 +138,7 @@ struct LinkSameProcessorTests {
         let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["hello"])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
-        persistence.data = data
+        persistence.valuePairs = [(.boardData, data)]
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
@@ -156,10 +152,8 @@ struct LinkSameProcessorTests {
         }
         print(persistence.methodsCalled)
         #expect(persistence.methodsCalled.contains("loadData(forKey:)"))
-        #expect(persistence.loadKeys.contains(.boardData))
         #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
-        let gridSize = try #require(coordinator.gridSize)
-        #expect(gridSize == (3, 2))
+        #expect(coordinator.gridSize == (3, 2))
         #expect(coordinator.score == 42)
     }
 
@@ -167,14 +161,14 @@ struct LinkSameProcessorTests {
           arguments: AwakeningType.allCases
     )
     func awakenStateNoSavedData(awakeningType: AwakeningType) async throws {
-        persistence.int = 4
+        persistence.valuePairs = [(.lastStage, 4)]
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
-            persistence.bool = true
+            persistence.valuePairs = [(.gameEnded, true), (.lastStage, 4)]
             await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
@@ -192,8 +186,7 @@ struct LinkSameProcessorTests {
         let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["hello"])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
-        persistence.data = data
-        persistence.int = 4
+        persistence.valuePairs = [(.boardData, data), (.lastStage, 4)]
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
@@ -215,7 +208,7 @@ struct LinkSameProcessorTests {
           arguments: AwakeningType.allCases
     )
     func awakenThenWhatNoSavedData(awakeningType: AwakeningType) async throws {
-        persistence.string = ["Hard"]
+        persistence.valuePairs = [(.size, "Hard")]
         screen.traitCollection = UITraitCollection { traits in
             traits.userInterfaceIdiom = .pad
             traits.displayScale = 2
@@ -227,7 +220,7 @@ struct LinkSameProcessorTests {
         case .startNewGame:
             await subject.receive(.startNewGame)
         case .didBecomeActiveGameOver:
-            persistence.bool = true
+            persistence.valuePairs = [(.gameEnded, true), (.size, "Hard")]
             await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
@@ -242,12 +235,12 @@ struct LinkSameProcessorTests {
         #expect(board._stageNumber == 0)
         #expect(board.methodsCalled == ["setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
         // and we save board state
-        #expect(persistence.methodsCalled.last == "save(_:forKey:)")
+        #expect(persistence.methodsCalled.contains("save(_:forKey:)"))
         #expect(persistence.saveKeys.last == .boardData)
-        let value = try #require(persistence.values.last as? Data)
+        let value = try #require(persistence.savedValues.last as? Data)
         let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
         #expect(persistentState == .init(
-            board: .init(stageNumber: 0, grid: Grid(columns: 1, rows: 1), deckAtStartOfStage: []),
+            board: .init(stageNumber: 0, grid: Grid(columns: 1, rows: 1), deckAtStartOfStage: ["brand new deck"]),
             score: 42,
             timed: true
         ))
@@ -260,7 +253,7 @@ struct LinkSameProcessorTests {
         let boardSaveableData = BoardSaveableData(stageNumber: 5, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["hello"])
         let persistentState = PersistentState(board: boardSaveableData, score: 42, timed: false)
         let data = try PropertyListEncoder().encode(persistentState)
-        persistence.data = data
+        persistence.valuePairs = [(.boardData, data)]
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
@@ -283,6 +276,62 @@ struct LinkSameProcessorTests {
         #expect(board.methodsCalled == ["setStageNumber(_:)", "populateFrom(oldGrid:deckAtStartOfStage:)", "stageNumber()"])
         #expect(board.grid == Grid(columns: 3, rows: 2))
         #expect(board._deckAtStartOfStage == ["hello"])
+    }
+
+    @Test(
+        "awakening with initialData or startNewGame displays stored high score for current size and stage count",
+        arguments: AwakeningType.allCases
+    )
+    func awakeHighScore(awakeningType: AwakeningType) async throws {
+        do {
+            // we expect .size and .lastStage to be loaded twice along the way, so we include them twice
+            persistence.valuePairs = [(.size, "Hard"), (.lastStage, 7), (.size, "Hard"), (.lastStage, 7), (.scores, ["Hard7": 42])]
+            switch awakeningType {
+            case .didInitialLayout:
+                await subject.receive(.didInitialLayout)
+            case .startNewGame:
+                await subject.receive(.startNewGame)
+            case .didBecomeActiveGameOver:
+                return () // this test is not applicable
+            case .didBecomeActiveComingBack:
+                return () // this test is not applicable
+            }
+            #expect(subject.state.highScore == "High score: 42")
+            #expect(presenter.statesPresented.last?.highScore == "High score: 42")
+        }
+        do {
+            // if the scores dictionary doesn't contain the key, empty string
+            persistence.valuePairs = [(.size, "Hard"), (.lastStage, 7), (.size, "Hard"), (.lastStage, 7), (.scores, ["Hard8": 42])]
+            switch awakeningType {
+            case .didInitialLayout:
+                await subject.receive(.didInitialLayout)
+            case .startNewGame:
+                await subject.receive(.startNewGame)
+            case .didBecomeActiveGameOver:
+                return () // this test is not applicable
+            case .didBecomeActiveComingBack:
+                return () // this test is not applicable
+            }
+            #expect(subject.state.highScore == "")
+            #expect(presenter.statesPresented.last?.highScore == "")
+        }
+        do {
+            // if the scores dictionary is absent, empty string
+            persistence.valuePairs = [(.size, "Hard"), (.lastStage, 7), (.size, "Hard"), (.lastStage, 7)]
+            subject.state.highScore = "High score: 42"
+            switch awakeningType {
+            case .didInitialLayout:
+                await subject.receive(.didInitialLayout)
+            case .startNewGame:
+                await subject.receive(.startNewGame)
+            case .didBecomeActiveGameOver:
+                return () // this test is not applicable
+            case .didBecomeActiveComingBack:
+                return () // this test is not applicable
+            }
+            #expect(subject.state.highScore == "")
+            #expect(presenter.statesPresented.last?.highScore == "")
+        }
     }
 
     @Test("receive hamburger: hides hint, calls coordinator showActionSheet")
@@ -353,7 +402,7 @@ struct LinkSameProcessorTests {
         await #while(persistence.methodsCalled.isEmpty)
         #expect(persistence.methodsCalled == ["save(_:forKey:)"])
         #expect(persistence.saveKeys == [.boardData])
-        let value = try #require(persistence.values.last as? Data)
+        let value = try #require(persistence.savedValues.last as? Data)
         let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
         #expect(persistentState == .init(
             board: .init(stageNumber: 2, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"]),
@@ -372,7 +421,7 @@ struct LinkSameProcessorTests {
         await #while(persistence.methodsCalled.isEmpty)
         #expect(persistence.methodsCalled == ["save(_:forKey:)"])
         #expect(persistence.saveKeys == [.boardData])
-        let value = try #require(persistence.values.last as? Data)
+        let value = try #require(persistence.savedValues.last as? Data)
         let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
         #expect(persistentState == .init(
             board: .init(stageNumber: 2, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"]),
@@ -490,7 +539,7 @@ struct LinkSameProcessorTests {
         await #while(persistence.methodsCalled.isEmpty)
         #expect(persistence.methodsCalled == ["save(_:forKey:)"])
         #expect(persistence.saveKeys == [.boardData])
-        let value = try #require(persistence.values.last as? Data)
+        let value = try #require(persistence.savedValues.last as? Data)
         let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
         #expect(persistentState == .init(
             board: .init(stageNumber: 2, grid: Grid(columns: 3, rows: 2), deckAtStartOfStage: ["howdy"]),
@@ -524,15 +573,15 @@ struct LinkSameProcessorTests {
 
     @Test("after .viewDidLoad, lifetime didBecomeActive checks persistence gameEnded, and if so, sets it to false")
     func didBecomeActiveGameEnded() async throws {
-        persistence.bool = true
+        persistence.valuePairs = [(.gameEnded, true)]
         await subject.receive(.viewDidLoad)
         try? await Task.sleep(for: .seconds(0.1))
         services.lifetime.didBecomeActivePublisher.send()
         await #while(!persistence.methodsCalled.contains("loadBool(forKey:)"))
         #expect(persistence.methodsCalled.contains("loadBool(forKey:)"))
-        #expect(persistence.loadKeys.contains(.gameEnded))
+        #expect(persistence.loads.contains(where: { $0.0 == "loadBool(forKey:)" && $0.1 == .gameEnded }))
         #expect(persistence.saveKeys.contains(.gameEnded))
-        #expect(persistence.values.first as? Bool == false)
+        #expect(persistence.savedValues.first as? Bool == false)
     }
 
     @Test("after .viewDidLoad, lifetime didBecomeActive, if not coming back from background, calls scoreKeeper didBecomeActive")
@@ -557,28 +606,82 @@ struct LinkSameProcessorTests {
         #expect(subject.state.comingBackFromBackground == true)
     }
 
-    @Test("stageEnded: checks persistence lastStage, if not greater than stageNumber, stops")
-    func stageEndedStops() {
+    @Test("stageEnded: if game ended with no previous high score, saves into scores, displays new high score")
+    func stageEndedGameEndedNoPreviousHighScore() async {
+        subject.state.highScore = "howdy"
         board._stageNumber = 5
-        persistence.int = 5
-        subject.stageEnded()
-        #expect(persistence.methodsCalled == ["loadInt(forKey:)"])
-        #expect(persistence.loadKeys.first == .lastStage)
-        #expect(coordinator.methodsCalled.isEmpty)
+        board.score = 10
+        persistence.valuePairs = [(.size, "Easy"), (.lastStage, 5)]
+        await subject.stageEnded()
+        #expect(persistence.saveKeys.contains(.scores))
+        #expect(persistence.savedValues.contains(where: { $0 as? [String: Int] == ["Easy5": 10] }))
+        #expect(presenter.statesPresented.first?.highScore == "High score: 10")
     }
 
-    @Test("stageEnded: checks persistence lastState, if greater, continues, calls coordinator makeBoardProcessor")
-    func stageEndedContinues() async throws {
+    @Test("stageEnded: if game ended with lower previous high score, saves into scores, displays new high score")
+    func stageEndedGameEndedLowerPreviousHighScore() async {
+        subject.state.highScore = "howdy"
         board._stageNumber = 5
-        persistence.int = 6
+        board.score = 10
+        persistence.valuePairs = [(.size, "Easy"), (.lastStage, 5), (.scores, ["Easy5": 9])] // lower
+        await subject.stageEnded()
+        #expect(persistence.saveKeys.contains(.scores))
+        #expect(persistence.savedValues.contains(where: { $0 as? [String: Int] == ["Easy5": 10] }))
+        #expect(presenter.statesPresented.first?.highScore == "High score: 10")
+    }
+
+    @Test("stageEnded: if game ended with higher previous high score, no save of scores")
+    func stageEndedGameEndedHigherPreviousHighScore() async {
+        subject.state.highScore = "howdy"
+        board._stageNumber = 5
+        board.score = 10
+        persistence.valuePairs = [(.size, "Easy"), (.lastStage, 5), (.scores, ["Easy5": 11])] // higher
+        await subject.stageEnded()
+        #expect(!persistence.saveKeys.contains(.scores))
+        #expect(!persistence.savedValues.contains(where: { $0 as? [String: Int] == ["Easy5": 10] }))
+        #expect(presenter.statesPresented.first?.highScore == "howdy")
+    }
+
+    @Test("stageEnded: if game ended, continues by starting a new game")
+    func stageEndedGameEndedNewGame() async throws {
+        board._stageNumber = 5
+        board.score = 10
+        persistence.valuePairs = [(.size, "Easy"), (.lastStage, 5), (.scores, ["Easy5": 11])] // higher
+        board.grid = Grid(columns: 3, rows: 4)
+        board._deckAtStartOfStage = ["howdy"]
+        await subject.stageEnded()
+        // and the rest is like "then what" when launching,
+        await #while(presenter.thingsReceived.count < 4)
+        #expect(presenter.thingsReceived.count == 4)
+        #expect(presenter.thingsReceived[0] == .userInteraction(false))
+        #expect(presenter.thingsReceived[1] == .animateBoardTransition(.fade))
+        #expect(presenter.thingsReceived[2] == .animateStageLabel)
+        #expect(presenter.thingsReceived[3] == .userInteraction(true))
+        #expect(board._stageNumber == 0) // new game
+        #expect(board.methodsCalled ==  ["stageNumber()", "setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
+        // and we save board state
+        #expect(persistence.saveKeys.last == .boardData)
+        let value = try #require(persistence.savedValues.last as? Data)
+        let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
+        print("XXX", persistentState)
+        #expect(persistentState == .init(
+            board: .init(stageNumber: 0, grid: Grid(columns: 3, rows: 4), deckAtStartOfStage: ["brand new deck"]),
+            score: 10,
+            timed: true
+        ))
+    }
+
+    @Test("stageEnded: if game didn't end yet, calls coordinator makeBoardProcessor with incremented stage")
+    func stageEndedGameNotEnded() async throws {
+        board._stageNumber = 5
+        persistence.valuePairs = [(.lastStage, 6)]
         board.grid = Grid(columns: 3, rows: 4)
         board._deckAtStartOfStage = ["howdy"]
         board.score = 10
-        subject.stageEnded()
-        #expect(persistence.methodsCalled == ["loadInt(forKey:)"])
-        #expect(persistence.loadKeys.first == .lastStage)
+        await subject.stageEnded()
+        #expect(persistence.loads.first?.1 == .lastStage)
         #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:score:)"])
-        #expect(coordinator.gridSize! == (3, 4))
+        #expect(coordinator.gridSize == (3, 4))
         #expect(coordinator.score == 10)
         // and the rest is like "then what" when launching,
         // but board transition is slide and stage number is incremented
@@ -593,10 +696,10 @@ struct LinkSameProcessorTests {
         // and we save board state
         #expect(persistence.methodsCalled.last == "save(_:forKey:)")
         #expect(persistence.saveKeys.last == .boardData)
-        let value = try #require(persistence.values.last as? Data)
+        let value = try #require(persistence.savedValues.last as? Data)
         let persistentState = try PropertyListDecoder().decode(PersistentState.self, from: value)
         #expect(persistentState == .init(
-            board: .init(stageNumber: 6, grid: Grid(columns: 3, rows: 4), deckAtStartOfStage: ["howdy"]),
+            board: .init(stageNumber: 6, grid: Grid(columns: 3, rows: 4), deckAtStartOfStage: ["brand new deck"]),
             score: 10,
             timed: true
         ))
@@ -606,7 +709,7 @@ struct LinkSameProcessorTests {
     func userTappedPathView() async {
         subject.state.hintShowing = true
         subject.state.hintButtonTitle = .hide
-        subject.userTappedPathView()
+        await subject.userTappedPathView()
         await #while(subject.state.hintShowing == true)
         #expect(subject.state.hintShowing == false)
         #expect(subject.state.hintButtonTitle == .show)

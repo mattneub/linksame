@@ -12,6 +12,8 @@ struct LinkSameState: Equatable {
     var hintButtonTitle = HintButtonTitle.show
     /// Whether a hint is currently being displayed.
     var hintShowing = false
+    /// Content of the high score label (called `prevLabel` for historical reasons).
+    var highScore = ""
     /// Whether the game mode should be timed or practice.
     var interfaceMode: InterfaceMode = .timed
     /// Score to display in the score label.

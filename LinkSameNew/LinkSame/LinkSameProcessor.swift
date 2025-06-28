@@ -46,6 +46,7 @@ final class LinkSameProcessor: Processor {
             } else {
                 await setUpGameFromScratch()
             }
+            await showHighScore()
         case .hint:
             // This is a _toggle_, based on the state. The called methods
             // _also_ check the state, so they can be called directly elsewhere.
@@ -88,6 +89,7 @@ final class LinkSameProcessor: Processor {
             state.interfaceMode = .timed // TODO: Currently we presume that all new games start as timed
             await presenter?.present(state)
             await setUpGameFromScratch()
+            await showHighScore()
         case .timedPractice(let segment):
             await hideHintAndUnhilite()
             state.interfaceMode = .init(rawValue: segment)!
@@ -133,13 +135,7 @@ final class LinkSameProcessor: Processor {
 
     /// Set up the entire game from scratch: new board, new pieces, stage 0, score 0.
     func setUpGameFromScratch() async {
-        // determine layout dimensions
-        let (boardColumns, boardRows) = if onPhone {
-            Sizes.boardSize(Sizes.easy)
-        } else {
-            Sizes.boardSize(services.persistence.loadString(forKey: .size))
-        }
-
+        let (boardColumns, boardRows) = Sizes.boardSize(services.persistence.loadString(forKey: .size) ?? Sizes.easy)
         coordinator?.makeBoardProcessor(gridSize: (boardColumns, boardRows), score: 0)
 
         await setUpNewStage(stageNumber: 0)
@@ -250,6 +246,8 @@ final class LinkSameProcessor: Processor {
             // Well, this situation is exactly as if we had just launched: either there is saved
             // data or there isn't, and either way we want to set up the game based on that.
             // So we just repeat the `receive` code for `.didInitialLayout`.
+            // TODO: But I am not convinced that we should not be _calling_ `.didInitialLayout`.
+            // Reason: there might be other tasks to perform?
             if let savedStateData = services.persistence.loadData(forKey: .boardData),
                let savedState = try? PropertyListDecoder().decode(PersistentState.self, from: savedStateData) {
                 await setUpGameFromSavedState(savedState)
@@ -348,38 +346,68 @@ final class LinkSameProcessor: Processor {
             print(error)
         }
     }
+
+    /// Display the current high score, based on info in persistence.
+    func showHighScore() async {
+        let size = services.persistence.loadString(forKey: .size) ?? Sizes.easy
+        let lastStage = services.persistence.loadInt(forKey: .lastStage)
+        let scoresKey = "\(size)\(lastStage)"
+        let scores: [String: Int]? = services.persistence.loadDictionary(forKey: .scores)
+        if let score = scores?[scoresKey] {
+            state.highScore = "High score: \(score)"
+        } else {
+            state.highScore = ""
+        }
+        await presenter?.present(state)
+    }
+
+    /// Utility called only by `stageEnded` when it has determined that the user has finished
+    /// the entire game. If the score is a new high score for this level, record and display it.
+    /// Then start the game from scratch exactly as from the New Game popover Done button.
+    func gameEnded(lastStage: Int, score: Int) async {
+        // is this a new high score?
+        let size = services.persistence.loadString(forKey: .size) ?? Sizes.easy
+        let scoresKey = "\(size)\(lastStage)"
+        var scores: [String: Int] = services.persistence.loadDictionary(forKey: .scores) ?? [:]
+        let oldScore = scores[scoresKey] ?? Int.min
+        if score > oldScore { // this is a new high score!
+            scores[scoresKey] = score
+            services.persistence.save(scores, forKey: .scores)
+            state.highScore = "High score: \(score)"
+            await presenter?.present(state)
+        }
+        await receive(.startNewGame) // new approach: start game and _then_ show user message
+        // TODO: tell user (1) game over & score, and (2) is it new high score for this level
+    }
 }
 
 /// Messages from the BoardProcessor.
 extension LinkSameProcessor: BoardDelegate {
     /// The stage ended; there are no more pieces on the board. Either the entire game has now
     /// ended, or else we need to proceed to a new stage.
-    func stageEnded() {
+    func stageEnded() async {
         guard let board = boardProcessor else {
             return
         }
 
         // If game has just ended, start a whole new game and notify the user somehow.
         let stageNumber = board.stageNumber()
-        if stageNumber == services.persistence.loadInt(forKey: .lastStage) {
-            // TODO: Obviously we would restart the whole game with the dialog
+        let lastStage = services.persistence.loadInt(forKey: .lastStage)
+        if stageNumber >= lastStage {
+            await gameEnded(lastStage: lastStage, score: board.score)
             return
         }
 
         // The game has not ended, so make a new board and start a new stage.
         let gridSize = (board.grid.columns, board.grid.rows)
         coordinator?.makeBoardProcessor(gridSize: gridSize, score: board.score)
-        Task {
-            await setUpNewStage(stageNumber: stageNumber + 1)
-        }
+        await setUpNewStage(stageNumber: stageNumber + 1)
     }
 
     /// The user tapped the path view. This can happen only while a hint is showing,
     /// and means we should hide the hint.
-    func userTappedPathView() {
-        Task {
-            await hideHintAndUnhilite()
-        }
+    func userTappedPathView() async {
+        await hideHintAndUnhilite()
     }
 }
 

@@ -23,6 +23,7 @@ final class MockBoardProcessor: BoardProcessorType {
 
     func createAndDealDeck() {
         methodsCalled.append(#function)
+        _deckAtStartOfStage = ["brand new deck"]
     }
 
     func populateFrom(oldGrid: Grid, deckAtStartOfStage: [String]) {

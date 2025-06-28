@@ -30,8 +30,8 @@ protocol PersistenceType {
     /// Fetch the value for the given key, on the assumption that it is an Int. If not, will be zero.
     func loadInt(forKey key: DefaultKey) -> Int
 
-    /// Fetch the value for the given key, on the assumption that it is a String. If not, will be empty.
-    func loadString(forKey key: DefaultKey) -> String
+    /// Fetch the value for the given key, on the assumption that it is a String. If not, will be nil.
+    func loadString(forKey key: DefaultKey) -> String?
 
     /// Fetch the value for the given key, on the assumption that it is a Data. If not, will be nil.
     func loadData(forKey key: DefaultKey) -> Data?
@@ -70,8 +70,8 @@ struct Persistence: PersistenceType {
         Self.defaults.integer(forKey: key.rawValue)
     }
 
-    func loadString(forKey key: DefaultKey) -> String {
-        Self.defaults.string(forKey: key.rawValue) ?? ""
+    func loadString(forKey key: DefaultKey) -> String? {
+        Self.defaults.string(forKey: key.rawValue)
     }
 
     func loadData(forKey key: DefaultKey) -> Data? {

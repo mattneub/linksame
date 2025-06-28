@@ -59,8 +59,8 @@ final class NewGameProcessor: Processor {
         /// Fetch the current value for each table view section category from defaults and match
         /// against the list for that category to get the row number.
         let checkmarkedRows = [
-            Styles.stylesInOrder.firstIndex(of: services.persistence.loadString(forKey: .style)) ?? -1,
-            Sizes.sizesInOrder.firstIndex(of: services.persistence.loadString(forKey: .size)) ?? -1
+            Styles.stylesInOrder.firstIndex(of: services.persistence.loadString(forKey: .style) ?? Styles.snacks) ?? -1,
+            Sizes.sizesInOrder.firstIndex(of: services.persistence.loadString(forKey: .size) ?? Sizes.easy) ?? -1
         ]
         /// Update the `checkmarkedRow` of each section in the state and present the state.
         state.tableViewSections = zip(checkmarkedRows, state.tableViewSections).map { checkmarkedRow, section in

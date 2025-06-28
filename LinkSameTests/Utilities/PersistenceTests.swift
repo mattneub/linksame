@@ -60,7 +60,7 @@ struct PersistenceTests {
         // nil
         defaults.string = nil
         let result2 = subject.loadString(forKey: .gameEnded)
-        #expect(result2 == "")
+        #expect(result2 == nil)
     }
 
     @Test("loadData: calls dataForKey, returns data value")

@@ -35,12 +35,11 @@ struct BoardProcessorTests {
 
     @Test("createAndDealDeck: creates the deck based on persistence and grid size, sends .insert effect for each piece")
     func createAndDealDeck() async throws {
-        persistence.string = ["Snacks"]
+        persistence.valuePairs = [(.style, "Snacks")]
         let subject = BoardProcessor(gridSize: (2, 18), scoreKeeper: scoreKeeper) // tee-hee
         subject.presenter = presenter
         try await subject.createAndDealDeck()
-        #expect(persistence.methodsCalled == ["loadString(forKey:)"])
-        #expect(persistence.loadKeys == [.style])
+        #expect(persistence.loads[0] == ("loadString(forKey:)", .style))
         let deck = subject.state.deckAtStartOfStage
         #expect(deck.count == 36)
         #expect(Set(deck).count == 9) // 9 basic images
@@ -71,12 +70,11 @@ struct BoardProcessorTests {
 
     @Test("createAndDealDeck: creates the deck based on persistence and grid size, sends .insert effect for each piece")
     func createAndDealDeck2() async throws {
-        persistence.string = ["Animals"]
+        persistence.valuePairs = [(.style, "Animals")]
         let subject = BoardProcessor(gridSize: (4, 11), scoreKeeper: scoreKeeper)
         subject.presenter = presenter
         try await subject.createAndDealDeck()
-        #expect(persistence.methodsCalled == ["loadString(forKey:)"])
-        #expect(persistence.loadKeys == [.style])
+        #expect(persistence.loads[0] == ("loadString(forKey:)", .style))
         let deck = subject.state.deckAtStartOfStage
         #expect(deck.count == 44)
         #expect(Set(deck).count == 11) // 9 basic images plus two additional
@@ -305,7 +303,7 @@ struct BoardProcessorTests {
         let expectedPath = [Slot(1, 0), Slot(1, 2)]
         #expect(presenter.thingsReceived.contains(.illuminate(path: expectedPath)))
         #expect(presenter.thingsReceived.contains(.unilluminate))
-        #expect(delegate.methodsCalled == ["stageEnded()"])
+        #expect(delegate.methodsCalled == ["stageEnded()"]) // *
         // and we told the scorekeeper about it
         #expect(scoreKeeper.methodsCalled == ["userMadeLegalMove()", "stopTimer()"])
     }

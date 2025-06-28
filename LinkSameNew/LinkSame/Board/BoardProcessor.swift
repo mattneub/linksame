@@ -99,7 +99,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
         case .tapped(let piece):
             await userTapped(piece: piece)
         case .tappedPathView:
-            delegate?.userTappedPathView()
+            await delegate?.userTappedPathView()
         }
     }
 
@@ -108,7 +108,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
     /// deal it into the grid, and make every piece appear in the interface.
     func createAndDealDeck() async throws {
         // determine which pieces to use
-        let (start1, start2) = Styles.pieces(services.persistence.loadString(forKey: .style))
+        let (start1, start2) = Styles.pieces(services.persistence.loadString(forKey: .style) ?? Styles.snacks)
         // base set of pictures, always used in its entirety
         var deck = [String]()
         // four copies of each picture
@@ -401,7 +401,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
                 // stage is over! tell the delegate, we're out of here
                 await presenter?.receive(.userInteraction(true))
                 await scoreKeeper.stopTimer()
-                delegate?.stageEnded()
+                await delegate?.stageEnded()
                 return
             }
             // perform any gravity moves
@@ -553,8 +553,8 @@ final class BoardProcessor: BoardProcessorType, Processor {
 
 @MainActor
 protocol BoardDelegate: AnyObject {
-    func stageEnded()
-    func userTappedPathView()
+    func stageEnded() async
+    func userTappedPathView() async
 }
 
 /// Reducer that carries pertinent BoardProcessor data into and out of persistence.

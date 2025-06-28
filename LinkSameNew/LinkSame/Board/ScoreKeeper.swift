@@ -81,13 +81,7 @@ final class ScoreKeeper: ScoreKeeperType {
         Task {
             await delegate?.scoreChanged(Score(score: score, direction: .up))
         }
-        // TODO: restore scores dictionary management, high score display
-//        if let scoresDict: [String: Int] = services.persistence.loadDictionary(forKey: .scores),
-//            let prev = scoresDict[self.lsvc.scoresKey] {
-//            self.lsvc.prevLabel?.text = "High score: \(prev)"
-//        } else {
-//            self.lsvc.prevLabel?.text = ""
-//        }
+
         // TODO: lifetime events do affect the score, so work out a new mechanism for this
         /*
         // application lifetime events affect our timer

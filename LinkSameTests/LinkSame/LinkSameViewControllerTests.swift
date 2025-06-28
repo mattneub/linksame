@@ -128,6 +128,14 @@ struct LinkSameViewControllerTests {
         #expect(subject.scoreLabel.textColor == .red)
     }
 
+    @Test("present: highScore configures prev label")
+    func presentHighScore() async {
+        subject.loadViewIfNeeded()
+        subject.prevLabel.text = "hello"
+        await(subject.present(LinkSameState(highScore: "howdy")))
+        #expect(subject.prevLabel.text == "howdy")
+    }
+
     @Test("present: hintButtonTitle configures hint button")
     func presentHintButtonTitle() async {
         screen.traitCollection = .init(userInterfaceIdiom: .pad)

@@ -8,7 +8,7 @@ final class MockRootCoordinator: RootCoordinatorType {
     var sourceItem: (any UIPopoverPresentationControllerSourceItem)?
     var dismissalDelegate: (any NewGamePopoverDismissalButtonDelegate)?
     var popoverPresentationDelegate: (any UIPopoverPresentationControllerDelegate)?
-    var gridSize: (Int, Int)?
+    var gridSize: (Int, Int) = (-1, -1)
     var options = [String]()
     var score: Int?
 

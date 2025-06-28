@@ -161,6 +161,9 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
             stageLabel.sizeToFit()
         }
 
+        // high score label
+        prevLabel.text = state.highScore
+
         // score label
         scoreLabel.text = String(state.score.score)
         scoreLabel.textColor = state.score.direction == .up ? .black : .red
@@ -241,7 +244,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         type(of: services.application).userInteraction(false)
 
         // determine layout dimensions
-        var (w,h) = Sizes.boardSize(services.persistence.loadString(forKey: .size))
+        var (w,h) = Sizes.boardSize(services.persistence.loadString(forKey: .size) ?? Sizes.easy)
         if onPhone {
             (w,h) = Sizes.boardSize(Sizes.easy)
         }

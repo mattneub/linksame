@@ -20,20 +20,20 @@ struct NewGameProcessorTests {
 
     @Test("receive initialInterfaceIsReady: fetches last stage from persistence, sends .selectPickerRow")
     func initialInterfaceIsReady() async {
-        persistence.int = 5
+        persistence.valuePairs = [(.lastStage, 5)]
         await subject.receive(.initialInterfaceIsReady)
         #expect(persistence.methodsCalled.first == "loadInt(forKey:)")
-        #expect(persistence.loadKeys.first == .lastStage)
+        #expect(persistence.loads.first?.1 == .lastStage)
         #expect(presenter.thingsReceived.first == .selectPickerRow(5))
     }
 
     @Test("receive initialInterfaceIsReady: updates checkmark rows in state, presents state")
     func initialInterfaceIsReadyCheckmarks() async throws {
-        persistence.string = ["Animals", "Hard"]
+        persistence.valuePairs = [(.lastStage, 5), (.style, "Animals"), (.size, "Hard")]
         subject.state.tableViewSections = [.init(title: "hey", rows: []), .init(title: "ho", rows: [])]
         await subject.receive(.initialInterfaceIsReady)
-        #expect(persistence.methodsCalled.suffix(2) == ["loadString(forKey:)", "loadString(forKey:)"])
-        #expect(persistence.loadKeys.suffix(2) == [.style, .size])
+        #expect(persistence.loads[1] == ("loadString(forKey:)", .style))
+        #expect(persistence.loads[2] == ("loadString(forKey:)", .size))
         let state = try #require(presenter.statesPresented.last)
         #expect(state.tableViewSections[0].checkmarkedRow == 0)
         #expect(state.tableViewSections[1].checkmarkedRow == 2)
@@ -41,11 +41,11 @@ struct NewGameProcessorTests {
 
     @Test("receive initialInterfaceIsReady: updates checkmark row if there is just one section")
     func initialInterfaceIsReadyCheckmarksOneRow() async throws {
-        persistence.string = ["Animals", "Hard"]
+        persistence.valuePairs = [(.lastStage, 5), (.style, "Animals"), (.size, "Hard")]
         subject.state.tableViewSections = [.init(title: "hey", rows: [])]
         await subject.receive(.initialInterfaceIsReady)
-        #expect(persistence.methodsCalled.suffix(2) == ["loadString(forKey:)", "loadString(forKey:)"])
-        #expect(persistence.loadKeys.suffix(2) == [.style, .size])
+        #expect(persistence.loads[1] == ("loadString(forKey:)", .style))
+        #expect(persistence.loads[2] == ("loadString(forKey:)", .size))
         let state = try #require(presenter.statesPresented.last)
         #expect(state.tableViewSections[0].checkmarkedRow == 0)
     }
@@ -54,9 +54,8 @@ struct NewGameProcessorTests {
     func userSelectedPickerRow() async throws {
         await subject.receive(.userSelectedPickerRow(5))
         #expect(persistence.methodsCalled.first == "save(_:forKey:)")
-        let value = try #require(persistence.values.last as? Int)
-        #expect(value == 5)
         #expect(persistence.saveKeys.first == .lastStage)
+        #expect(persistence.savedValues.first as? Int == 5)
     }
 
     @Test("receive userSelectedTableRow: saves correct value into persistence under correct key")
@@ -64,55 +63,50 @@ struct NewGameProcessorTests {
         do {
             await subject.receive(.userSelectedTableRow(.init(row: 0, section: 0)))
             #expect(persistence.methodsCalled.first == "save(_:forKey:)")
-            let value = try #require(persistence.values.last as? String)
-            #expect(value == "Animals")
-            #expect(persistence.loadKeys.first == .style)
+            #expect(persistence.savedValues.first as? String == "Animals")
+            #expect(persistence.saveKeys.first == .style)
         }
-        persistence.values = []
-        persistence.loadKeys = []
+        persistence.savedValues = []
+        persistence.saveKeys = []
         do {
             await subject.receive(.userSelectedTableRow(.init(row: 1, section: 0)))
             #expect(persistence.methodsCalled.first == "save(_:forKey:)")
-            let value = try #require(persistence.values.last as? String)
-            #expect(value == "Snacks")
-            #expect(persistence.loadKeys.first == .style)
+            #expect(persistence.savedValues.first as? String == "Snacks")
+            #expect(persistence.saveKeys.first == .style)
         }
-        persistence.values = []
+        persistence.savedValues = []
         persistence.saveKeys = []
         do {
             await subject.receive(.userSelectedTableRow(.init(row: 0, section: 1)))
             #expect(persistence.methodsCalled.first == "save(_:forKey:)")
-            let value = try #require(persistence.values.last as? String)
-            #expect(value == "Easy")
+            #expect(persistence.savedValues.first as? String == "Easy")
             #expect(persistence.saveKeys.first == .size)
         }
-        persistence.values = []
+        persistence.savedValues = []
         persistence.saveKeys = []
         do {
             await subject.receive(.userSelectedTableRow(.init(row: 1, section: 1)))
             #expect(persistence.methodsCalled.first == "save(_:forKey:)")
-            let value = try #require(persistence.values.last as? String)
-            #expect(value == "Normal")
+            #expect(persistence.savedValues.first as? String == "Normal")
             #expect(persistence.saveKeys.first == .size)
         }
-        persistence.values = []
+        persistence.savedValues = []
         persistence.saveKeys = []
         do {
             await subject.receive(.userSelectedTableRow(.init(row: 2, section: 1)))
             #expect(persistence.methodsCalled.first == "save(_:forKey:)")
-            let value = try #require(persistence.values.last as? String)
-            #expect(value == "Hard")
+            #expect(persistence.savedValues.first as? String == "Hard")
             #expect(persistence.saveKeys.first == .size)
         }
     }
 
     @Test("receive userSelectedTableRow: updates checkmarks in state, presents state")
     func userSelectedTableRowCheckmarks() async throws {
-        persistence.string = ["Animals", "Hard"]
+        persistence.valuePairs = [(.lastStage, 5), (.style, "Animals"), (.size, "Hard")]
         subject.state.tableViewSections = [.init(title: "hey", rows: []), .init(title: "ho", rows: [])]
         await subject.receive(.userSelectedTableRow(.init(row: 0, section: 0)))
-        #expect(persistence.methodsCalled.suffix(2) == ["loadString(forKey:)", "loadString(forKey:)"])
-        #expect(persistence.loadKeys.suffix(2) == [.style, .size])
+        #expect(persistence.loads[0] == ("loadString(forKey:)", .style))
+        #expect(persistence.loads[1] == ("loadString(forKey:)", .size))
         let state = try #require(presenter.statesPresented.last)
         #expect(state.tableViewSections[0].checkmarkedRow == 0)
         #expect(state.tableViewSections[1].checkmarkedRow == 2)
