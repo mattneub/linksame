@@ -49,7 +49,6 @@ struct LinkSameProcessorTests {
     enum AwakeningType: CaseIterable {
         case didInitialLayout // receive .didInitialLayout, i.e. launching cold
         case startNewGame // receive .startNewGame, i.e. user tapped Done in New Game popover
-        case didBecomeActiveGameOver // didBecomeActive is called, and there is a .gameOver true default
         case didBecomeActiveComingBack // didBecomeActive is called, and state comingBack is true (i.e. we were backgrounded)
     }
 
@@ -67,9 +66,6 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
-        case .didBecomeActiveGameOver:
-            persistence.values = [.gameEnded: true]
-            await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
@@ -93,9 +89,6 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
-        case .didBecomeActiveGameOver:
-            persistence.values = [.gameEnded: true]
-            await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
@@ -119,9 +112,6 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
-        case .didBecomeActiveGameOver:
-            persistence.values = [.gameEnded: true, .size: "Hard"]
-            await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
@@ -144,8 +134,6 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             return () // this test is not applicable
-        case .didBecomeActiveGameOver:
-            return () // this test is not applicable
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
@@ -167,9 +155,6 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
-        case .didBecomeActiveGameOver:
-            persistence.values = [.gameEnded: true, .lastStage: 4]
-            await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
@@ -191,8 +176,6 @@ struct LinkSameProcessorTests {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
         case .startNewGame:
-            return () // this test is not applicable
-        case .didBecomeActiveGameOver:
             return () // this test is not applicable
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
@@ -219,9 +202,6 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
-        case .didBecomeActiveGameOver:
-            persistence.values = [.gameEnded: true, .size: "Hard"]
-            await subject.didBecomeActive()
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
@@ -259,8 +239,6 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             return () // this test is not applicable
-        case .didBecomeActiveGameOver:
-            return () // this test is not applicable
         case .didBecomeActiveComingBack:
             subject.state.comingBackFromBackground = true
             await subject.didBecomeActive()
@@ -290,8 +268,6 @@ struct LinkSameProcessorTests {
                 await subject.receive(.didInitialLayout)
             case .startNewGame:
                 await subject.receive(.startNewGame)
-            case .didBecomeActiveGameOver:
-                return () // this test is not applicable
             case .didBecomeActiveComingBack:
                 return () // this test is not applicable
             }
@@ -306,8 +282,6 @@ struct LinkSameProcessorTests {
                 await subject.receive(.didInitialLayout)
             case .startNewGame:
                 await subject.receive(.startNewGame)
-            case .didBecomeActiveGameOver:
-                return () // this test is not applicable
             case .didBecomeActiveComingBack:
                 return () // this test is not applicable
             }
@@ -323,8 +297,6 @@ struct LinkSameProcessorTests {
                 await subject.receive(.didInitialLayout)
             case .startNewGame:
                 await subject.receive(.startNewGame)
-            case .didBecomeActiveGameOver:
-                return () // this test is not applicable
             case .didBecomeActiveComingBack:
                 return () // this test is not applicable
             }
@@ -555,7 +527,6 @@ struct LinkSameProcessorTests {
         services.lifetime.didBecomeActivePublisher.send()
         await #while(subject.state.comingBackFromBackground == true)
         #expect(subject.state.comingBackFromBackground == false)
-        #expect(!persistence.saveKeys.contains(.gameEnded))
     }
 
     @Test("after .viewDidLoad, lifetime didBecomeActive does nothing if application is inactive")
@@ -567,20 +538,6 @@ struct LinkSameProcessorTests {
         services.lifetime.didBecomeActivePublisher.send()
         try? await Task.sleep(for: .seconds(0.1))
         #expect(subject.state.comingBackFromBackground == true)
-        #expect(!persistence.saveKeys.contains(.gameEnded))
-    }
-
-    @Test("after .viewDidLoad, lifetime didBecomeActive checks persistence gameEnded, and if so, sets it to false")
-    func didBecomeActiveGameEnded() async throws {
-        persistence.values = [.gameEnded: true]
-        await subject.receive(.viewDidLoad)
-        try? await Task.sleep(for: .seconds(0.1))
-        services.lifetime.didBecomeActivePublisher.send()
-        await #while(!persistence.methodsCalled.contains("loadBool(forKey:)"))
-        #expect(persistence.methodsCalled.contains("loadBool(forKey:)"))
-        #expect(persistence.loads[0] == ("loadBool(forKey:)", .gameEnded))
-        #expect(persistence.saveKeys.contains(.gameEnded))
-        #expect(persistence.savedValues.first as? Bool == false)
     }
 
     @Test("after .viewDidLoad, lifetime didBecomeActive, if not coming back from background, calls scoreKeeper didBecomeActive")

@@ -234,14 +234,6 @@ final class LinkSameProcessor: Processor {
         let comingBack = state.comingBackFromBackground
         state.comingBackFromBackground = false
 
-        // Take care of corner case where user saw Game Over alert but didn't dismiss it
-        // (and so it was automatically dismissed when we deactivated).
-        if services.persistence.loadBool(forKey: .gameEnded) {
-            services.persistence.save(false, forKey: .gameEnded)
-            await setUpGameFromScratch()
-            return
-        }
-
         if comingBack { // we were backgrounded
             // Well, this situation is exactly as if we had just launched: either there is saved
             // data or there isn't, and either way we want to set up the game based on that.

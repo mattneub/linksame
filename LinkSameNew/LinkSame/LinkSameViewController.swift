@@ -64,83 +64,13 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         fatalError("NSCoding not supported")
     }
     
-    fileprivate var scoresKey : String { // fileprivate so ScoreKeeper can see it
-        let size = services.persistence.loadString(forKey: .size)
-        let stages = services.persistence.loadInt(forKey: .lastStage)
-        let key = "\(size)\(stages)"
-        return key
-    }
-    
     private var didSetUpInitialLayout = false
-    private var didObserveActivate = false
-    private var comingBackFromBackground = false
     override func viewDidLayoutSubviews() {
         guard !self.didSetUpInitialLayout else { return }
         self.didSetUpInitialLayout = true
         Task {
             await processor?.receive(.didInitialLayout)
         }
-//        return () // uncomment for launch image screen shot
-//
-//        self.restoreGameFromSavedDataOrStartNewGame()
-
-        // responses to game events and application lifetime events
-
-        // sent long-distance by board
-//        nc.addObserver(forName: BoardProcessor.gameOver, object: nil, queue: .main) { notification in
-//            let notificationStage = notification.userInfo?["stage"] as? Int
-//            MainActor.assumeIsolated {
-//                self.prepareNewStage(notificationStage)
-//            }
-//        }
-//        nc.addObserver(forName: BoardProcessor.userTappedPath, object: nil, queue: .main) { _ in
-            // remove hint
-//            MainActor.assumeIsolated {
-//                if self.board.showingHint {
-//                    self.toggleHint(nil)
-//                }
-//            }
-//        }
-//        nc.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
-//            MainActor.assumeIsolated {
-                // remove hint
-//                if self.board.showingHint {
-//                    self.toggleHint(nil)
-//                }
-                // dismiss popover if any; counts as cancelling, so restore defaults if needed
-//                Task {
-//                    await self.processor?.receive(.cancelNewGame)
-//                }
-//                self.dismiss(animated: false)
-//                if let defs = self.oldDefs {
-//                    services.persistence.saveIndividually(defs)
-//                    self.oldDefs = nil
-//                }
-//                if !self.didObserveActivate {
-//                    self.didObserveActivate = true
-//                    // register for activate notification only after have deactivated for the first time
-//                    nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: nil) { _ in
-//                        // okay, we've got a huge problem: if the user pulls down the notification center...
-//                        // we will get a spurious didBecomeActive just before we get a spurious second willResign
-//                        // to work around this and not do all this work at the wrong moment,
-//                        // we "debounce"
-//                        Task { @MainActor in
-//                            try? await Task.sleep(for: .seconds(0.05))
-//                            if UIApplication.shared.applicationState == .inactive {
-//                                return // debounce, this is a spurious notification
-//                            }
-//                            // if we get here, it's for real
-//                            self.didBecomeActive()
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        nc.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { _ in
-//            MainActor.assumeIsolated {
-//                self.comingBackFromBackground = true
-//            }
-//        }
     }
 
     func present(_ state: LinkSameState) async {
@@ -183,32 +113,6 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         }
     }
 
-    /*
-    // this is what we do when we become active, NOT on launch, NOT spurious
-    private func didBecomeActive() { // notification
-        // show the board view, just in case it was hidden on suspension
-        self.boardView?.isHidden = false
-        
-        // distinguish return from suspension from mere reactivation from deactivation
-        let comingBack = self.comingBackFromBackground
-        self.comingBackFromBackground = false
-        
-        // take care of corner case where user saw game over alert but didn't dismiss it
-        // (and so it was automatically dismissed when we deactivated)
-        if services.persistence.loadBool(forKey: .gameEnded) {
-            services.persistence.save(false, forKey: .gameEnded)
-            self.startNewGame()
-            return
-        }
-        
-        if comingBack { // we were backgrounded
-            self.restoreGameFromSavedDataOrStartNewGame()
-        }
-        // and if merely reactivating from deactive and not between stages,
-        // do nothing and let ScoreKeeper restart timer
-    }
-     */
-
     private func animateBoardTransition(_ transition: BoardTransition) async {
         guard let boardView = self.boardView else { return }
         // In the case of a fade, esp. during restart stage where we fade from one board full of
@@ -235,122 +139,9 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         await transitionProvider.performTransition(transition: t, layer: boardView.layer)
         snapshot.removeFromSuperview()
     }
-    
-    // called from startNewGame (n is nil), which itself is called by Done button and at launch
-    // called when we get Board.gameOver (n is Notification, passed along)
-    // in latter case, might mean go on to next stage or might mean entire game is over
-    private func prepareNewStage (_ notificationStage: Int?) {
-        return ()
-        type(of: services.application).userInteraction(false)
 
-        // determine layout dimensions
-        var (w,h) = Sizes.boardSize(services.persistence.loadString(forKey: .size) ?? Sizes.easy)
-        if onPhone {
-            (w,h) = Sizes.boardSize(Sizes.easy)
-        }
-        
-        // create new board object and configure it
-        // self.board = Board(boardFrame:self.backgroundView.bounds, gridSize:(w,h))
-        // put its `view` into the interface, replacing the one that may be there already
-//        self.boardView?.removeFromSuperview()
-//        self.boardView = self.board.view
-//        self.backgroundView.addSubview(self.boardView!)
-//        self.boardView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
-//        self.board.stageNumber = 0 // default, we might change this in a moment
-        // self.board.stage = 8 // testing, comment out!
-        
-        // there are three possibilities:
-        // * startup, or user asked for new game
-        // * notification, on to next stage
-        // * notification, game is over
-        // in all three cases, we will deal out a new board and show it with a transition
-        // the "game is over" actually subdivides into two cases: we were playing timed or playing practice
-        
-        enum WhatToDo {
-            case onToNextStage(Int) // next stage number
-            case gameOver
-            case startFromScratch
-        }
-        let howWeGotHere : WhatToDo = {
-            () -> WhatToDo in
-            if let notificationStage {
-                if notificationStage < services.persistence.loadInt(forKey: .lastStage) {
-                    return .onToNextStage(notificationStage + 1)
-                } else {
-                    return .gameOver
-                }
-            }
-            return .startFromScratch
-        }()
-        
-        // no matter what, this is what we will do at the end:
-        func newBoard(newGame:Bool) {
-            /*
-            if newGame {
-                self.scoreKeeper = ScoreKeeper(lsvc: self)
-                // TODO: need to restore this somehow
-                // self.interfaceMode = .timed // every new game is a timed game
-            } else {
-                self.scoreKeeper = ScoreKeeper(lsvc: self, score: self.stage!.score) // score carries over
-            }
-            let boardTransition : BoardTransition = newGame ? .fade : .slide
-            Task {
-                self.board.createAndDealDeck()
-                await self.animateBoardTransition(boardTransition)
-                await processor?.receive(.saveBoardState)
-            }
-             */
-        }
-        
-        // okay, how we proceed depends upon how we got here!
-        switch howWeGotHere {
-        case .startFromScratch:
-            newBoard(newGame:true)
-        case .onToNextStage(let nextStage):
-//            self.board.stageNumber = nextStage
-            newBoard(newGame:false)
-        case .gameOver:
-//            if self.interfaceMode == .practice {
-//                // every new game is a timed game, so just start a new game
-//                newBoard(newGame:true)
-//                break
-//            }
-            // okay, if we get here, a timed game just ended completely
-            let key = self.scoresKey
-            var newHigh = false
-            // get dict from defaults, or an empty dict
-            var scoresDict = [String:Int]()
-            if let d: [String: Int] = services.persistence.loadDictionary(forKey: .scores) {
-                scoresDict = d
-            }
-            // score is new high score if it is higher than corresponding previous dict entry...
-            // ...or if there was no corresponding previous dict entry
-            let prev = scoresDict[key]
-            if prev == nil || prev! < self.stage!.score {
-                newHigh = true
-                scoresDict[key] = self.stage!.score
-                services.persistence.save(scoresDict, forKey: .scores)
-            }
-            // notify user
-            let alert = UIAlertController(
-                title: "Congratulations!",
-                message: "You have finished the game with a score of \(self.stage!.score)." +
-                    (newHigh ? " That is a new high score for this level!" : ""),
-                preferredStyle: .alert)
-            alert.addAction(UIAlertAction(
-                title: "Cool!", style: .cancel, handler:  { _ in
-                    services.persistence.save(false, forKey: .gameEnded)
-                    newBoard(newGame:true)
-            }))
-            self.present(alert, animated: true)
-            services.persistence.save(true, forKey: .gameEnded)
-        }
-        type(of: services.application).userInteraction(true)
-    }
-    
-    
     // ============================ toolbar buttons =================================
-    
+
     @IBAction func toggleHint(_: Any?) { // hintButton
         Task {
             await processor?.receive(.hint)

@@ -8,7 +8,6 @@ enum DefaultKey: String {
     case lastStage = "Stages"
     case scores = "Scoresv2"
     case boardData = "boardDatav2"
-    case gameEnded = "gameEnded"
     // exists only in case `.init(rawValue:)` cannot return any real value
     case badKey = "this should never happen!"
 }
