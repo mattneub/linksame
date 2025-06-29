@@ -82,7 +82,10 @@ final class ScoreKeeper: ScoreKeeperType {
             await delegate?.scoreChanged(Score(score: score, direction: .up))
         }
 
-        // TODO: lifetime events do affect the score, so work out a new mechanism for this
+        // TODO: lifetime events do affect the timer, so work out a new mechanism for this
+        // we need to stop/pause the timer when we leave active, and start/resume it when we return
+        // some sort of decision needs to be made here: we don't want to start/resume unless we
+        // _were_ timing when we left active
         /*
         // application lifetime events affect our timer
         nc.addObserver(self, selector: #selector(resigningActive),

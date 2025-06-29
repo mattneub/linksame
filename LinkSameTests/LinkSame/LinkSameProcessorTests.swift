@@ -572,8 +572,22 @@ struct LinkSameProcessorTests {
         board.score = 10
         persistence.values = [.size: "Easy", .lastStage: 5]
         await subject.stageEnded()
+        #expect(persistence.saveKeys.contains(.scores))
         #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 10])
         #expect(presenter.statesPresented.last?.highScore == "High score: 10")
+    }
+
+    @Test("stageEnded: if game ended with no previous high score, practice mode, does nothing")
+    func stageEndedGameEndedNoPreviousHighScorePractice() async {
+        subject.state.interfaceMode = .practice
+        subject.state.highScore = "howdy"
+        board._stageNumber = 5
+        board.score = 10
+        persistence.values = [.size: "Easy", .lastStage: 5]
+        await subject.stageEnded()
+        #expect(!persistence.saveKeys.contains(.scores))
+        #expect(persistence.values[.scores] as? [String: Int] == nil)
+        #expect(presenter.statesPresented.last?.highScore == "")
     }
 
     @Test("stageEnded: if game ended with lower previous high score, saves into scores, displays new high score")
@@ -583,8 +597,22 @@ struct LinkSameProcessorTests {
         board.score = 10
         persistence.values = [.size: "Easy", .lastStage: 5, .scores: ["Easy5": 9]] // lower
         await subject.stageEnded()
+        #expect(persistence.saveKeys.contains(.scores))
         #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 10])
         #expect(presenter.statesPresented.last?.highScore == "High score: 10")
+    }
+
+    @Test("stageEnded: if game ended with lower previous high score, practice mode, does nothing")
+    func stageEndedGameEndedLowerPreviousHighScorePractice() async {
+        subject.state.interfaceMode = .practice
+        subject.state.highScore = "howdy"
+        board._stageNumber = 5
+        board.score = 10
+        persistence.values = [.size: "Easy", .lastStage: 5, .scores: ["Easy5": 9]] // lower
+        await subject.stageEnded()
+        #expect(!persistence.saveKeys.contains(.scores))
+        #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 9]) // unchanged
+        #expect(presenter.statesPresented.last?.highScore == "High score: 9") // user won't see this
     }
 
     @Test("stageEnded: if game ended with higher previous high score, no save of scores")
