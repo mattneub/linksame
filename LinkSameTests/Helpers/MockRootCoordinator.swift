@@ -11,6 +11,7 @@ final class MockRootCoordinator: RootCoordinatorType {
     var gridSize: (Int, Int) = (-1, -1)
     var options = [String]()
     var score: Int?
+    var gameOverState: GameOverState?
 
     func createInitialInterface(window: UIWindow) {
         methodsCalled.append(#function)
@@ -57,5 +58,9 @@ final class MockRootCoordinator: RootCoordinatorType {
         return options.first
     }
 
+    func showGameOver(state: GameOverState) {
+        methodsCalled.append(#function)
+        self.gameOverState = state
+    }
 
 }

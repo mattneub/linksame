@@ -357,22 +357,30 @@ final class LinkSameProcessor: Processor {
     /// the entire game. If the score is a new high score for this level, record and display it.
     /// Then start the game from scratch exactly as from the New Game popover Done button.
     func gameEnded(lastStage: Int, score: Int) async {
+        var newHigh = false
         if state.interfaceMode == .timed { // is this a new high score? only matters if timed mode
             let size = services.persistence.loadString(forKey: .size) ?? Sizes.easy
             let scoresKey = "\(size)\(lastStage)"
             var scores: [String: Int] = services.persistence.loadDictionary(forKey: .scores) ?? [:]
             let oldScore = scores[scoresKey] ?? Int.min
             if score > oldScore { // this is a new high score!
+                newHigh = true
                 scores[scoresKey] = score
                 services.persistence.save(scores, forKey: .scores)
                 state.highScore = "High score: \(score)"
                 await presenter?.present(state)
             }
         }
-        let interfaceMode = state.interfaceMode // we will need to know this in a moment
-        await receive(.startNewGame) // new approach: start game and _then_ show user message
-        // TODO: tell user (1) game over & score, and (2) is it new high score for this level
-        // but do not do that if the game was just played was in practice mode
+        let interfaceMode = state.interfaceMode
+        if interfaceMode == .timed {
+            coordinator?.showGameOver(state: GameOverState(newHigh: newHigh, score: score))
+        }
+        // new approach: start game without waiting for alert dismissal
+        // this is just like `.startNewGame`, basically
+        state.interfaceMode = .timed // all new games start as timed
+        await presenter?.present(state)
+        await setUpGameFromScratch()
+        await showHighScore()
     }
 }
 

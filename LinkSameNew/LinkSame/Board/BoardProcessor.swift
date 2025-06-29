@@ -420,25 +420,6 @@ final class BoardProcessor: BoardProcessorType, Processor {
         await presenter?.receive(.userInteraction(true))
     }
 
-    // TODO: restore eventually, this is game over check
-    // type(of: services.application).userInteraction(false)
-    // notify (so score can be incremented)
-    // nc.post(name: BoardProcessor.userMoved, object: self)
-    // actually remove the pieces (we happen to know there must be exactly two)
-    //        for piece in state.hilitedPieces {
-    //            await self.removePiece(piece)
-    //        }
-    //        state.hilitedPieces.removeAll()
-    // game over? if so, notify along with current stage and we're out of here!
-    //        if self.gameOver() {
-    //            Task { @MainActor in
-    //                try? await Task.sleep(for: .seconds(0.1)) // nicer with a little delay
-    //                type(of: services.application).userInteraction(true)
-    //                // nc.post(name: BoardProcessor.gameOver, object: self, userInfo: ["stage":self.stageNumber])
-    //            }
-    //            return
-    //        }
-
     /// The user has tapped the given piece. If already highlighted, remove it from the highlighted
     /// list and unhighlight it; otherwise, add it to the highlighted list and highlight it. If there
     /// are now two highlighted pieces, evaluate for a legal path.

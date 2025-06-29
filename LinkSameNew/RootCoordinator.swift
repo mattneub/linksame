@@ -22,6 +22,8 @@ protocol RootCoordinatorType: AnyObject {
     func hideBoardView()
 
     func showActionSheet(title: String?, options: [String]) async -> String?
+
+    func showGameOver(state: GameOverState)
 }
 
 @MainActor
@@ -29,6 +31,7 @@ final class RootCoordinator: RootCoordinatorType {
     var linkSameProcessor: (any Processor<LinkSameAction, LinkSameState, LinkSameEffect>)?
     var newGameProcessor: (any Processor<NewGameAction, NewGameState, NewGameEffect>)?
     var helpProcessor: (any Processor<HelpAction, HelpState, Void>)?
+    var gameOverProcessor: (any Processor<GameOverAction, GameOverState, Void>)?
 
     /// Reference to the root view controller of the app.
     weak var rootViewController: UIViewController?
@@ -164,6 +167,22 @@ final class RootCoordinator: RootCoordinatorType {
                 continuation.resume(returning: nil)
             }))
             rootViewController?.present(alert, animated: unlessTesting(true))
+        }
+    }
+
+    func showGameOver(state: GameOverState) {
+        let processor = GameOverProcessor()
+        let viewController = GameOverViewController()
+        processor.state = state
+        processor.presenter = viewController
+        processor.coordinator = self
+        viewController.processor = processor
+        self.gameOverProcessor = processor
+        viewController.transitioningDelegate = viewController
+        viewController.modalPresentationStyle = .custom
+        rootViewController?.present(viewController, animated: unlessTesting(true))
+        if let presentationController = viewController.presentationController as? GameOverPresentationController {
+            presentationController.coordinator = self
         }
     }
 }

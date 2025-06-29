@@ -217,4 +217,23 @@ struct RootCoordinatorTests {
         #expect(result == "hey")
         #expect(subject.actionSheetContinuation == nil)
     }
+
+    @Test("showGameOver: configures module, presents view controller")
+    func showGameOver() async throws {
+        let rootViewController = UIViewController()
+        makeWindow(viewController: rootViewController)
+        subject.rootViewController = rootViewController
+        subject.showGameOver(state: .init(newHigh: true, score: 30))
+        let processor = try #require(subject.gameOverProcessor as? GameOverProcessor)
+        #expect(processor.coordinator === subject)
+        #expect(processor.state == .init(newHigh: true, score: 30))
+        let viewController = try #require(processor.presenter as? GameOverViewController)
+        #expect(viewController.processor === processor)
+        let delegate = try #require(viewController.transitioningDelegate as? UIViewController)
+        #expect(delegate === viewController)
+        #expect(viewController.modalPresentationStyle == .custom)
+        await #while(rootViewController.presentedViewController == nil)
+        #expect(rootViewController.presentedViewController === viewController)
+        #expect(viewController.presentationController is GameOverPresentationController)
+    }
 }
