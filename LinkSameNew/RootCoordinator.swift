@@ -68,6 +68,10 @@ final class RootCoordinator: RootCoordinatorType {
         navigationBar.scrollEdgeAppearance = navigationBar.standardAppearance
         navigationBar.compactScrollEdgeAppearance = navigationBar.compactAppearance
         navigationController.modalPresentationStyle = .popover
+        if onPhone {
+            navigationController.transitioningDelegate = viewController
+            navigationController.modalPresentationStyle = .custom
+        }
         if let presentationController = navigationController.popoverPresentationController {
             presentationController.delegate = viewController.popoverPresentationDelegate
         }

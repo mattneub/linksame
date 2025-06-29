@@ -23,8 +23,12 @@ struct RootCoordinatorTests {
         #expect(window.backgroundColor == .white)
     }
 
-    @Test("showNewGame: sets up module, shows view controller as popover")
-    func showNewGameController() throws {
+    @Test("showNewGame: sets up module, shows view controller as popover on iPad")
+    func showNewGameControllerPad() throws {
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .pad
+            traits.displayScale = 2
+        }
         let rootViewController = UIViewController()
         makeWindow(viewController: rootViewController)
         subject.rootViewController = rootViewController
@@ -50,6 +54,35 @@ struct RootCoordinatorTests {
         let presentationDelegate = try #require(presentationController.delegate)
         #expect(presentationDelegate === popoverDelegate)
         #expect(viewController.popoverPresentationDelegate === popoverDelegate)
+        #expect(processor.dismissalDelegate === dismissalDelegate)
+    }
+
+    @Test("showNewGame: sets up module, shows view controller as custom on iPhone")
+    func showNewGameControllerPhone() throws {
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .phone
+            traits.displayScale = 2
+        }
+        let rootViewController = UIViewController()
+        makeWindow(viewController: rootViewController)
+        subject.rootViewController = rootViewController
+        let view = UIView()
+        let dismissalDelegate = MockDismissalDelegate()
+        let popoverDelegate = MockPopoverPresentationDelegate()
+        subject.showNewGame(
+            sourceItem: view,
+            popoverPresentationDelegate: popoverDelegate,
+            dismissalDelegate: dismissalDelegate
+        )
+        let processor = try #require(subject.newGameProcessor as? NewGameProcessor)
+        let navigationController = try #require(rootViewController.presentedViewController as? UINavigationController)
+        let viewController = try #require(navigationController.children.first as? NewGameViewController)
+        #expect(viewController.processor === processor)
+        #expect(processor.presenter === viewController)
+        #expect(navigationController.isModalInPresentation)
+        #expect(navigationController.modalPresentationStyle == .custom)
+        #expect(navigationController.transitioningDelegate === viewController)
+        #expect(navigationController.presentationController is NewGamePresentationController)
         #expect(processor.dismissalDelegate === dismissalDelegate)
     }
 

@@ -195,6 +195,3 @@ extension LinkSameViewController { // hamburger button on phone
         }
     }
 }
-
-
-

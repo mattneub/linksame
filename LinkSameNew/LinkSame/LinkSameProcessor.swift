@@ -369,8 +369,10 @@ final class LinkSameProcessor: Processor {
                 await presenter?.present(state)
             }
         }
+        let interfaceMode = state.interfaceMode // we will need to know this in a moment
         await receive(.startNewGame) // new approach: start game and _then_ show user message
         // TODO: tell user (1) game over & score, and (2) is it new high score for this level
+        // but do not do that if the game was just played was in practice mode
     }
 }
 

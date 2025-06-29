@@ -142,6 +142,16 @@ final class NewGameViewController: UIViewController, ReceiverPresenter {
     }
 }
 
+extension NewGameViewController: UIViewControllerTransitioningDelegate {
+    func presentationController(
+        forPresented presented: UIViewController,
+        presenting: UIViewController?,
+        source: UIViewController
+    ) -> UIPresentationController? {
+        NewGamePresentationController(presentedViewController: presented, presenting: presenting)
+    }
+}
+
 /// Protocol describing a delegate to whom we can report that the user has tapped a bar button
 /// item and wants to start a new game or simply cancel. Both are ways of dismissing us.
 @MainActor
