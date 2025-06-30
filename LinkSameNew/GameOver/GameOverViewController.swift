@@ -71,8 +71,12 @@ final class GameOverViewController: UIViewController, ReceiverPresenter {
     }
 
     func present(_ state: GameOverState) async {
-        scoreLabel.text = "You have finished the game with a score of \(state.score)."
-        if state.newHigh {
+        scoreLabel.text = if !state.practice {
+            "You have finished the game with a score of \(state.score)."
+        } else {
+            "End of practice game."
+        }
+        if state.newHigh && !state.practice {
             newHighLabel.isHidden = false
             newHighLabelTop?.constant = 40
             newHighLabelBottom?.constant = -40

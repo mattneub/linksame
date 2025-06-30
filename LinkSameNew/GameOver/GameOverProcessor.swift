@@ -9,8 +9,8 @@ final class GameOverProcessor: Processor {
     /// Reference to the coordinator, set by coordinator on creation.
     weak var coordinator: (any RootCoordinatorType)?
 
-    /// State to be presented by the presenter.
-    var state = GameOverState()
+    /// State to be presented by the presenter. Initial value will be replaced by coordinator.
+    var state = GameOverState(newHigh: false, score: 0, practice: false)
 
     func receive(_ action: GameOverAction) async {
         switch action {

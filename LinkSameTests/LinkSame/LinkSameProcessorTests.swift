@@ -576,10 +576,10 @@ struct LinkSameProcessorTests {
         #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 10])
         #expect(presenter.statesPresented.last?.highScore == "High score: 10")
         #expect(coordinator.methodsCalled.contains("showGameOver(state:)"))
-        #expect(coordinator.gameOverState == .init(newHigh: true, score: 10))
+        #expect(coordinator.gameOverState == GameOverState(newHigh: true, score: 10, practice: false))
     }
 
-    @Test("stageEnded: if game ended with no previous high score, practice mode, does nothing")
+    @Test("stageEnded: if game ended with no previous high score, practice mode, no saving, calls `showGameOver`")
     func stageEndedGameEndedNoPreviousHighScorePractice() async {
         subject.state.interfaceMode = .practice
         subject.state.highScore = "howdy"
@@ -590,7 +590,8 @@ struct LinkSameProcessorTests {
         #expect(!persistence.saveKeys.contains(.scores))
         #expect(persistence.values[.scores] as? [String: Int] == nil)
         #expect(presenter.statesPresented.last?.highScore == "")
-        #expect(!coordinator.methodsCalled.contains("showGameOver(state:)"))
+        #expect(coordinator.methodsCalled.contains("showGameOver(state:)"))
+        #expect(coordinator.gameOverState == GameOverState(newHigh: false, score: 10, practice: true))
     }
 
     @Test("stageEnded: if game ended with lower previous high score, saves into scores, displays new high score, calls `showGameOver`")
@@ -604,10 +605,10 @@ struct LinkSameProcessorTests {
         #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 10])
         #expect(presenter.statesPresented.last?.highScore == "High score: 10")
         #expect(coordinator.methodsCalled.contains("showGameOver(state:)"))
-        #expect(coordinator.gameOverState == .init(newHigh: true, score: 10))
+        #expect(coordinator.gameOverState == GameOverState(newHigh: true, score: 10, practice: false))
     }
 
-    @Test("stageEnded: if game ended with lower previous high score, practice mode, does nothing")
+    @Test("stageEnded: if game ended with lower previous high score, practice mode, no saving, calls `showGameOver`")
     func stageEndedGameEndedLowerPreviousHighScorePractice() async {
         subject.state.interfaceMode = .practice
         subject.state.highScore = "howdy"
@@ -618,7 +619,8 @@ struct LinkSameProcessorTests {
         #expect(!persistence.saveKeys.contains(.scores))
         #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 9]) // unchanged
         #expect(presenter.statesPresented.last?.highScore == "High score: 9") // user won't see this
-        #expect(!coordinator.methodsCalled.contains("showGameOver(state:)"))
+        #expect(coordinator.methodsCalled.contains("showGameOver(state:)"))
+        #expect(coordinator.gameOverState == GameOverState(newHigh: false, score: 10, practice: true))
     }
 
     @Test("stageEnded: if game ended with higher previous high score, no save of scores, calls `showGameOver`")
@@ -632,10 +634,10 @@ struct LinkSameProcessorTests {
         #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 11])
         #expect(presenter.statesPresented.last?.highScore == "High score: 11")
         #expect(coordinator.methodsCalled.contains("showGameOver(state:)"))
-        #expect(coordinator.gameOverState == .init(newHigh: false, score: 10)) // *
+        #expect(coordinator.gameOverState == GameOverState(newHigh: false, score: 10, practice: false)) // *
     }
 
-    @Test("stageEnded: if game ended with higher previous high score, practice mode, does nothing")
+    @Test("stageEnded: if game ended with higher previous high score, practice mode, no saving, calls `showGameOver`")
     func stageEndedGameEndedHigherPreviousHighScorePractice() async {
         subject.state.interfaceMode = .practice
         subject.state.highScore = "howdy"
@@ -646,7 +648,8 @@ struct LinkSameProcessorTests {
         #expect(!persistence.saveKeys.contains(.scores))
         #expect(persistence.values[.scores] as? [String: Int] == ["Easy5": 11])
         #expect(presenter.statesPresented.last?.highScore == "High score: 11")
-        #expect(!coordinator.methodsCalled.contains("showGameOver(state:)"))
+        #expect(coordinator.methodsCalled.contains("showGameOver(state:)"))
+        #expect(coordinator.gameOverState == GameOverState(newHigh: false, score: 10, practice: true))
     }
 
     @Test("stageEnded: if game ended, continues by starting a new game")
@@ -680,8 +683,12 @@ struct LinkSameProcessorTests {
         #expect(presenter.statesPresented.last?.interfaceMode == .timed)
     }
 
-    @Test("stageEnded: if game didn't end yet, calls coordinator makeBoardProcessor with incremented stage")
-    func stageEndedGameNotEnded() async throws {
+    @Test(
+        "stageEnded: if game didn't end yet, calls coordinator makeBoardProcessor with incremented stage, interface mode carries forward",
+        arguments: [false, true]
+    )
+    func stageEndedGameNotEnded(practice: Bool) async throws {
+        subject.state.interfaceMode = practice ? .practice : .timed
         board._stageNumber = 5
         persistence.values = [.lastStage: 6]
         board.grid = Grid(columns: 3, rows: 4)
@@ -710,7 +717,7 @@ struct LinkSameProcessorTests {
         #expect(persistentState == .init(
             board: .init(stageNumber: 6, grid: Grid(columns: 3, rows: 4), deckAtStartOfStage: ["brand new deck"]),
             score: 10,
-            timed: true
+            timed: practice ? false : true
         ))
     }
 

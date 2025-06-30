@@ -52,21 +52,27 @@ struct GameOverViewControllerTests {
 
     @Test("present: behaves as expected")
     func present() async {
-        var state = GameOverState(newHigh: false, score: 30)
+        var state = GameOverState(newHigh: false, score: 30, practice: false)
         await(subject.present(state))
         #expect(subject.scoreLabel.text == "You have finished the game with a score of 30.")
         #expect(subject.newHighLabel.isHidden == true)
-        state = GameOverState(newHigh: true, score: 30)
+        //
+        state.newHigh = true
         await(subject.present(state))
         #expect(subject.scoreLabel.text == "You have finished the game with a score of 30.")
         #expect(subject.newHighLabel.isHidden == false)
+        //
+        state.practice = true
+        await(subject.present(state))
+        #expect(subject.scoreLabel.text == "End of practice game.")
+        #expect(subject.newHighLabel.isHidden == true)
     }
 
     @Test("view looks correct, not new high")
     func snapshotNotNewHigh() async {
         let window = makeWindow(viewController: subject)
         window.layoutIfNeeded()
-        let state = GameOverState(newHigh: false, score: 30)
+        let state = GameOverState(newHigh: false, score: 30, practice: false)
         await(subject.present(state))
         assertSnapshot(of: subject.view, as: .image)
     }
@@ -75,7 +81,16 @@ struct GameOverViewControllerTests {
     func snapshotNewHigh() async {
         let window = makeWindow(viewController: subject)
         window.layoutIfNeeded()
-        let state = GameOverState(newHigh: true, score: 30)
+        let state = GameOverState(newHigh: true, score: 30, practice: false)
+        await(subject.present(state))
+        assertSnapshot(of: subject.view, as: .image)
+    }
+
+    @Test("view looks correct, practice")
+    func snapshotPractice() async {
+        let window = makeWindow(viewController: subject)
+        window.layoutIfNeeded()
+        let state = GameOverState(newHigh: true, score: 30, practice: true)
         await(subject.present(state))
         assertSnapshot(of: subject.view, as: .image)
     }

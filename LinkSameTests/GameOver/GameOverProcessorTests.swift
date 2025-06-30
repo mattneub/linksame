@@ -21,9 +21,9 @@ struct GameOverProcessorTests {
 
     @Test("receive viewDidLoad: presents state")
     func viewDidLoad() async {
-        subject.state = GameOverState(newHigh: true, score: 30)
+        subject.state = GameOverState(newHigh: true, score: 30, practice: false)
         #expect(presenter.statesPresented == [])
         await subject.receive(.viewDidLoad)
-        #expect(presenter.statesPresented.first == GameOverState(newHigh: true, score: 30))
+        #expect(presenter.statesPresented.first == GameOverState(newHigh: true, score: 30, practice: false))
     }
 }

@@ -40,13 +40,13 @@ final class LinkSameProcessor: Processor {
             // persistent board data as I revise the app. The worst that can happen is we don't
             // match the structure of what got saved previously, in which case the game just
             // launches from scratch and no harm done!
+            await showHighScore()
             if let savedStateData = services.persistence.loadData(forKey: .boardData),
                let savedState = try? PropertyListDecoder().decode(PersistentState.self, from: savedStateData) {
                 await setUpGameFromSavedState(savedState)
             } else {
                 await setUpGameFromScratch()
             }
-            await showHighScore()
         case .hint:
             // This is a _toggle_, based on the state. The called methods
             // _also_ check the state, so they can be called directly elsewhere.
@@ -86,10 +86,8 @@ final class LinkSameProcessor: Processor {
         case .startNewGame: // comes from the new game popover
             coordinator?.dismiss()
             state.defaultsBeforeShowingNewGamePopover = nil // crucial or we'll fall one behind
-            state.interfaceMode = .timed // TODO: Currently we presume that all new games start as timed
-            await presenter?.present(state)
-            await setUpGameFromScratch()
             await showHighScore()
+            await setUpGameFromScratch()
         case .timedPractice(let segment):
             await hideHintAndUnhilite()
             state.interfaceMode = .init(rawValue: segment)!
@@ -137,7 +135,7 @@ final class LinkSameProcessor: Processor {
     func setUpGameFromScratch() async {
         let (boardColumns, boardRows) = Sizes.boardSize(services.persistence.loadString(forKey: .size) ?? Sizes.easy)
         coordinator?.makeBoardProcessor(gridSize: (boardColumns, boardRows), score: 0)
-
+        state.interfaceMode = .timed // all new games are timed games
         await setUpNewStage(stageNumber: 0)
     }
 
@@ -162,7 +160,6 @@ final class LinkSameProcessor: Processor {
         await presenter?.receive(.animateBoardTransition(boardTransition))
 
         // show stage label
-        state.interfaceMode = .timed // TODO: assuming every new game is a timed game
         state.stageLabelText = stageLabelText
         await presenter?.present(state)
         await presenter?.receive(.animateStageLabel)
@@ -238,8 +235,6 @@ final class LinkSameProcessor: Processor {
             // Well, this situation is exactly as if we had just launched: either there is saved
             // data or there isn't, and either way we want to set up the game based on that.
             // So we just repeat the `receive` code for `.didInitialLayout`.
-            // TODO: But I am not convinced that we should not be _calling_ `.didInitialLayout`.
-            // Reason: there might be other tasks to perform?
             if let savedStateData = services.persistence.loadData(forKey: .boardData),
                let savedState = try? PropertyListDecoder().decode(PersistentState.self, from: savedStateData) {
                 await setUpGameFromSavedState(savedState)
@@ -266,7 +261,6 @@ final class LinkSameProcessor: Processor {
         // In case we are showing hint, stop showing it.
         await hideHintAndUnhilite()
         // In case we are showing any presented stuff, dismiss it.
-        // TODO: If what we were showing was a game over alert (new high or not), this needs special treatment
         coordinator?.dismiss()
         // And in case what was showing was the New Game popover, that counts as cancellation
         // so restore the defaults.
@@ -363,24 +357,23 @@ final class LinkSameProcessor: Processor {
             let scoresKey = "\(size)\(lastStage)"
             var scores: [String: Int] = services.persistence.loadDictionary(forKey: .scores) ?? [:]
             let oldScore = scores[scoresKey] ?? Int.min
-            if score > oldScore { // this is a new high score!
+            if score > oldScore { // this is a new high score! take note, save it into persistence
                 newHigh = true
                 scores[scoresKey] = score
                 services.persistence.save(scores, forKey: .scores)
-                state.highScore = "High score: \(score)"
-                await presenter?.present(state)
             }
         }
-        let interfaceMode = state.interfaceMode
-        if interfaceMode == .timed {
-            coordinator?.showGameOver(state: GameOverState(newHigh: newHigh, score: score))
-        }
+        coordinator?.showGameOver(
+            state: GameOverState(
+                newHigh: newHigh,
+                score: score,
+                practice: state.interfaceMode == .practice
+            )
+        )
         // new approach: start game without waiting for alert dismissal
         // this is just like `.startNewGame`, basically
-        state.interfaceMode = .timed // all new games start as timed
-        await presenter?.present(state)
-        await setUpGameFromScratch()
         await showHighScore()
+        await setUpGameFromScratch()
     }
 }
 

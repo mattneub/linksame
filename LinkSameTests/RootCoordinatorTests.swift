@@ -223,10 +223,10 @@ struct RootCoordinatorTests {
         let rootViewController = UIViewController()
         makeWindow(viewController: rootViewController)
         subject.rootViewController = rootViewController
-        subject.showGameOver(state: .init(newHigh: true, score: 30))
+        subject.showGameOver(state: GameOverState(newHigh: true, score: 30, practice: false))
         let processor = try #require(subject.gameOverProcessor as? GameOverProcessor)
         #expect(processor.coordinator === subject)
-        #expect(processor.state == .init(newHigh: true, score: 30))
+        #expect(processor.state == GameOverState(newHigh: true, score: 30, practice: false))
         let viewController = try #require(processor.presenter as? GameOverViewController)
         #expect(viewController.processor === processor)
         let delegate = try #require(viewController.transitioningDelegate as? UIViewController)
