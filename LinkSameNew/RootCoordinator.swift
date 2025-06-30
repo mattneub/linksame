@@ -120,6 +120,7 @@ final class RootCoordinator: RootCoordinatorType {
         (linkSameProcessor as? LinkSameProcessor)?.boardProcessor = boardProcessor
         let boardView = BoardView(columns: gridSize.0, rows: gridSize.1)
         boardProcessor.presenter = boardView
+        boardView.layer.opacity = 0 // NB The board view is born invisible! See `animateBoardTransition`
         boardProcessor.delegate = linkSameProcessor as? any BoardDelegate
         boardView.processor = boardProcessor
         if let viewController = rootViewController as? LinkSameViewController {
@@ -140,7 +141,7 @@ final class RootCoordinator: RootCoordinatorType {
     func hideBoardView() {
         // TODO: I am not dealing with the rule that says only to do this if interface mode is timed
         // and indeed I might not even bother
-        rootViewController?.view.subviews(ofType: BoardView.self).first?.isHidden = true
+        rootViewController?.view.subviews(ofType: BoardView.self).first?.layer.opacity = 0
     }
 
     func showGameOver(state: GameOverState) {

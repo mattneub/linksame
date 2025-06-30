@@ -65,6 +65,7 @@ struct LinkSameViewControllerTests {
         screen.traitCollection = .init(userInterfaceIdiom: .phone)
         subject.loadViewIfNeeded()
         #expect(subject.hamburgerButton?.actions(forTarget: subject, forControlEvent: .menuActionTriggered)?.first == "doHamburgerButton:")
+        #expect(subject.hamburgerButton?.preferredMenuElementOrder == .fixed)
     }
 
     @Test("viewDidLoad: sends viewDidLoad")
@@ -83,18 +84,6 @@ struct LinkSameViewControllerTests {
         subject.viewDidLayoutSubviews()
         try? await Task.sleep(for: .seconds(0.5))
         #expect(processor.thingsReceived.isEmpty)
-    }
-
-    @Test("present: boardViewHidden governs visibility of boardView")
-    func presentBoardViewHidden() async {
-        subject.loadViewIfNeeded()
-        let boardView = MockBoardView(columns: 1, rows: 1)
-        subject.backgroundView.addSubview(boardView)
-        boardView.isHidden = false
-        await subject.present(LinkSameState(boardViewHidden: true))
-        #expect(boardView.isHidden == true)
-        await subject.present(LinkSameState(boardViewHidden: false))
-        #expect(boardView.isHidden == false)
     }
 
     @Test("present: interfaceMode configures interface")
@@ -160,9 +149,9 @@ struct LinkSameViewControllerTests {
         let view = MockBoardView(columns: 1, rows: 1)
         view.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
         subject.backgroundView.addSubview(view)
-        view.isHidden = true
+        view.layer.opacity = 0
         await subject.receive(.animateBoardTransition(.fade))
-        #expect(view.isHidden == false)
+        #expect(view.layer.opacity == 1)
         let transitionProvider = transitionProviderMaker.mockTransitionProvider
         #expect(transitionProvider.methodsCalled == ["performTransition(transition:layer:)"])
         #expect(transitionProvider.layer == view.layer)

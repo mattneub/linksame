@@ -40,8 +40,7 @@ final class HamburgerRouter: HamburgerRouterType {
     }
     func makeMenu(processor: any Processor<LinkSameAction, LinkSameState, LinkSameEffect>) async -> UIMenu {
         var actions = [UIAction]()
-        // Apparently a button at the bottom of the interface displays its actions in reverse order!
-        for option in options.reversed() {
+        for option in options {
             let action = UIAction(title: option) { [weak self, weak processor] action in
                 Task {
                     if let processor {

@@ -52,19 +52,19 @@ struct HamburgerRouterTests {
         let processor = MockProcessor<LinkSameAction, LinkSameState, LinkSameEffect>()
         let menu = await subject.makeMenu(processor: processor)
         let titles = menu.children.map { $0.title }
-        #expect(titles == ["Help", "Practice Mode", "Restart Stage", "Shuffle", "Show Hint", "New Game"])
+        #expect(titles == ["New Game", "Show Hint", "Shuffle", "Restart Stage", "Practice Mode", "Help"])
         let actions = menu.children.map { $0 as! UIAction }
         for action in actions {
             action.performWithSender(nil, target: nil)
         }
         await #while(processor.thingsReceived.count < 6)
         #expect(processor.thingsReceived == [
-            .showHelp(sender: nil),
-            .timedPractice(1),
-            .restartStage,
-            .shuffle,
-            .hint,
             .showNewGame(sender: nil),
+            .hint,
+            .shuffle,
+            .restartStage,
+            .timedPractice(1),
+            .showHelp(sender: nil),
         ])
     }
 }

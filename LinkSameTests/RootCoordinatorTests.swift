@@ -140,6 +140,7 @@ struct RootCoordinatorTests {
         subject.makeBoardProcessor(gridSize: (3, 2), score: 42)
         let boardProcessor = try #require(linkSameProcessor.boardProcessor as? BoardProcessor)
         let boardView = try #require(boardProcessor.presenter as? BoardView)
+        #expect(boardView.layer.opacity == 0)
         #expect(boardView.processor === boardProcessor)
         let boardProcessorDelegate = try #require(boardProcessor.delegate)
         #expect(boardProcessorDelegate === linkSameProcessor)
@@ -174,9 +175,9 @@ struct RootCoordinatorTests {
         subject.makeBoardProcessor(gridSize: (3, 2), score: 42)
         let boardProcessor = try #require(linkSameProcessor.boardProcessor as? BoardProcessor)
         let boardView = try #require(boardProcessor.presenter as? BoardView)
-        #expect(boardView.isHidden == false)
+        boardView.layer.opacity = 1
         subject.hideBoardView()
-        #expect(boardView.isHidden == true)
+        #expect(boardView.layer.opacity == 0)
     }
 
     @Test("showGameOver: configures module, presents view controller")

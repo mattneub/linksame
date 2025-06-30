@@ -23,7 +23,7 @@ final class TransitionProvider: NSObject, @preconcurrency CAAnimationDelegate {
         await withCheckedContinuation { continuation in
             self.continuation = continuation
             transition.delegate = self
-            layer.add(transition, forKey: nil)
+            layer.add(transition, forKey: "transition")
         }
     }
 

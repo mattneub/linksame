@@ -12,7 +12,7 @@ struct TransitionProviderTests {
         await subject.performTransition(transition: transition, layer: layer)
         // and the fact that we get here at all proves that we resumed the continuation
         #expect(layer.animation === transition)
-        #expect(layer.key == nil)
+        #expect(layer.key == "transition")
     }
 }
 

@@ -185,7 +185,6 @@ struct LinkSameProcessorTests {
         let state = try #require(presenter.statesPresented.last)
         #expect(state.interfaceMode == .practice)
         #expect(state.stageLabelText == "Stage 6 of 5")
-        #expect(state.boardViewHidden == false)
     }
 
     @Test("awakening with no saved data sends .userInteraction, .putBoard, .animatedBoardTransition, sets stageNumber, makes scoreKeeper, tells board create deck",

@@ -25,7 +25,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
     @IBOutlet weak var hamburgerButton: UIButton?
 
     /// Reference to the boardView; we need this because we are responsible for showing and hiding it and for transitioning it with animation.
-    var boardView: UIView? { backgroundView.subviews.first as? BoardView }
+    var boardView: BoardView? { backgroundView.subviews.first as? BoardView }
 
     /// Reference to the processor, set by the coordinator at module creation time.
     weak var processor: (any Processor<LinkSameAction, LinkSameState, LinkSameEffect>)?
@@ -54,6 +54,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
 
         // have to configure this in code, there is no storyboard analogue
         hamburgerButton?.addTarget(self, action: #selector(doHamburgerButton), for: .menuActionTriggered)
+        hamburgerButton?.preferredMenuElementOrder = .fixed
 
         Task {
             await processor?.receive(.viewDidLoad)
@@ -80,9 +81,6 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
     }
 
     func present(_ state: LinkSameState) async {
-        // adjust visibility of board view
-        boardView?.isHidden = state.boardViewHidden
-
         // adjust interface for interface mode (timed or practice)
         let timed: Bool = state.interfaceMode == .timed
         scoreLabel.isHidden = !timed
@@ -121,30 +119,33 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         }
     }
 
-    private func animateBoardTransition(_ transition: BoardTransition) async {
+    /// Show the board view, using the specified transition type.
+    /// **This is the only legal way to show the board view.**
+    /// - Parameter transitionType: Type of transition to use.
+    private func animateBoardTransition(_ transitionType: BoardTransition) async {
         guard let boardView = self.boardView else { return }
         // In the case of a fade, esp. during restart stage where we fade from one board full of
         // pieces to another, it looks much better if the old board remains visible as a sort of
         // ground behind the new one that fades in. Hence this snapshot.
         let snapshot = boardView.snapshotView(afterScreenUpdates: false) ?? UIView()
-        if transition == .fade {
+        if transitionType == .fade {
             backgroundView.insertSubview(snapshot, belowSubview: boardView)
         }
         // Okay, here we go!
-        boardView.layer.isHidden = true
+        boardView.layer.opacity = 0
         CATransaction.flush() // crucial! interface must settle before transition
-        let t = CATransition()
-        if transition == .slide { // default is .fade, fade in
-            t.type = .moveIn
-            t.subtype = .fromLeft
+        let transition = CATransition()
+        if transitionType == .slide { // default is .fade, fade in
+            transition.type = .moveIn
+            transition.subtype = .fromLeft
         }
-        t.duration = 0.7
-        t.beginTime = CACurrentMediaTime() + 0.15
-        t.fillMode = .backwards
-        t.timingFunction = CAMediaTimingFunction(name:.linear)
+        transition.duration = 0.7
+        transition.beginTime = CACurrentMediaTime() + 0.15
+        transition.fillMode = .backwards
+        transition.timingFunction = CAMediaTimingFunction(name:.linear)
         let transitionProvider = services.transitionProviderMaker.makeTransitionProvider()
-        boardView.layer.isHidden = false
-        await transitionProvider.performTransition(transition: t, layer: boardView.layer)
+        boardView.layer.opacity = 1
+        await transitionProvider.performTransition(transition: transition, layer: boardView.layer)
         snapshot.removeFromSuperview()
     }
 

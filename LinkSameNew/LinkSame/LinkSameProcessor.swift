@@ -189,7 +189,6 @@ final class LinkSameProcessor: Processor {
 
         state.interfaceMode = savedState.timed ? .timed : .practice
         state.stageLabelText = stageLabelText
-        state.boardViewHidden = false
         await presenter?.present(state)
         await presenter?.receive(.animateStageLabel)
 
@@ -198,21 +197,10 @@ final class LinkSameProcessor: Processor {
 
     /// The app is entering the background; respond.
     func didEnterBackground() async {
-        switch state.interfaceMode {
-        case .timed: break
-            // In a timed game, we do not save the board state; a half-played game is thrown away.
-            // Rather, the board state was saved when the stage started, and so when we come back
-            // to the front, we will resume the stage from the beginning.
-            // However, we do hide the board view so it doesn't appear in the app switcher snapshot.
-            // But we can't do that in an `async` context; it's too late for the snapshot.
-            // So we do it in our BoardHider protocol.
-            // state.boardViewHidden = true
-            // await presenter?.present(state)
-        case .practice:
-            // In a practice game, we do save the board state, and we allow it to appear in the
-            // app switcher snapshot.
+        if state.interfaceMode == .practice {
             saveBoardState()
         }
+        // In a timed game, we do not save the board state.
     }
 
     /// The app is becoming active; respond. Not received at launch time, only subsequently.

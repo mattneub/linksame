@@ -1,8 +1,6 @@
 /// State to be presented by the processor to the presenter for visible representation in the interface.
 /// Also contains state being maintained by the processor which may be meaningless to the presenter.
 struct LinkSameState: Equatable {
-    /// Whether the board view should be hidden or displayed.
-    var boardViewHidden = false
     /// Temporary notation so that in `didBecomeActive` we know whether we went all the way into the
     /// background previously or not.
     var comingBackFromBackground = false
