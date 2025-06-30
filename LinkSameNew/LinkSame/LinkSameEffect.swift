@@ -6,6 +6,8 @@ enum LinkSameEffect: Equatable {
     case animateBoardTransition(BoardTransition)
     /// Animate the stage label.
     case animateStageLabel
+    /// Set the hamburger button's menu; called exactly once, at launch.
+    case setHamburgerMenu(UIMenu)
     /// Turn user interaction off or on.
     case userInteraction(Bool)
 }

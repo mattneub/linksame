@@ -36,10 +36,7 @@ final class LinkSameProcessor: Processor {
             coordinator?.dismiss()
             restorePopoverDefaults()
         case .didInitialLayout: // sent only once, so this means we are launching
-            // Nice thing about this approach is that it frees me up to change the contents of the
-            // persistent board data as I revise the app. The worst that can happen is we don't
-            // match the structure of what got saved previously, in which case the game just
-            // launches from scratch and no harm done!
+            await presenter?.receive(.setHamburgerMenu(hamburgerRouter.makeMenu(processor: self)))
             await showHighScore()
             if let savedStateData = services.persistence.loadData(forKey: .boardData),
                let savedState = try? PropertyListDecoder().decode(PersistentState.self, from: savedStateData) {
@@ -59,8 +56,6 @@ final class LinkSameProcessor: Processor {
             }
         case .hamburger:
             await hideHintAndUnhilite()
-            let choice = await coordinator?.showActionSheet(title: nil, options: hamburgerRouter.options)
-            await hamburgerRouter.doChoice(choice, processor: self)
         case .restartStage:
             await hideHintAndUnhilite()
             await restartStage()

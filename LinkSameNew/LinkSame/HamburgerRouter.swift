@@ -1,10 +1,10 @@
-import Foundation
+import UIKit
 
 /// Protocol describing our hamburger router, so we can mock it for testing.
 @MainActor
 protocol HamburgerRouterType {
     var options: [String] { get }
-    func doChoice(_ choice: String?, processor: any Processor<LinkSameAction, LinkSameState, LinkSameEffect>) async
+    func makeMenu(processor: any Processor<LinkSameAction, LinkSameState, LinkSameEffect>) async -> UIMenu
 }
 
 /// Router for the hamburger button.
@@ -12,10 +12,11 @@ protocol HamburgerRouterType {
 final class HamburgerRouter: HamburgerRouterType {
     /// Choices for the hamburger button's action sheet.
     enum HamburgerChoices: String, CaseIterable {
-        case game = "Game"
-        case hint = "Hint"
+        case game = "New Game"
+        case hint = "Show Hint"
         case shuffle = "Shuffle"
         case restart = "Restart Stage"
+        case practice = "Practice Mode"
         case help = "Help"
     }
     var options: [String] {
@@ -33,7 +34,24 @@ final class HamburgerRouter: HamburgerRouterType {
         case .help: await processor.receive(.showHelp(sender: nil))
         case .hint: await processor.receive(.hint)
         case .restart: await processor.receive(.restartStage)
+        case .practice: await processor.receive(.timedPractice(1))
         case .shuffle: await processor.receive(.shuffle)
         }
+    }
+    func makeMenu(processor: any Processor<LinkSameAction, LinkSameState, LinkSameEffect>) async -> UIMenu {
+        var actions = [UIAction]()
+        // Apparently a button at the bottom of the interface displays its actions in reverse order!
+        for option in options.reversed() {
+            let action = UIAction(title: option) { [weak self, weak processor] action in
+                Task {
+                    if let processor {
+                        await self?.doChoice(action.title, processor: processor)
+                    }
+                }
+            }
+            actions.append(action)
+        }
+        let menu = UIMenu(title: "", image: nil, identifier: nil, options: [], children: actions)
+        return menu
     }
 }

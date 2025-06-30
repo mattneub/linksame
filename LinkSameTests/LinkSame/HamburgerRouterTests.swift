@@ -1,4 +1,4 @@
-import Foundation
+import UIKit
 @testable import LinkSame
 import Testing
 import WaitWhile
@@ -10,19 +10,19 @@ struct HamburgerRouterTests {
     @Test("options: gives the expected list")
     func options() {
         let options = subject.options
-        #expect(options == ["Game", "Hint", "Shuffle", "Restart Stage", "Help"])
+        #expect(options == ["New Game", "Show Hint", "Shuffle", "Restart Stage", "Practice Mode", "Help"])
     }
 
     @Test("doChoice: sends the correct message to the processor")
     func doChoice() async {
         let processor = MockProcessor<LinkSameAction, LinkSameState, LinkSameEffect>()
         do {
-            await subject.doChoice("Game", processor: processor)
+            await subject.doChoice("New Game", processor: processor)
             #expect(processor.thingsReceived.first == .showNewGame(sender: nil))
         }
         processor.thingsReceived = []
         do {
-            await subject.doChoice("Hint", processor: processor)
+            await subject.doChoice("Show Hint", processor: processor)
             #expect(processor.thingsReceived.first == .hint)
         }
         processor.thingsReceived = []
@@ -37,8 +37,34 @@ struct HamburgerRouterTests {
         }
         processor.thingsReceived = []
         do {
+            await subject.doChoice("Practice Mode", processor: processor)
+            #expect(processor.thingsReceived.first == .timedPractice(1))
+        }
+        processor.thingsReceived = []
+        do {
             await subject.doChoice("Help", processor: processor)
             #expect(processor.thingsReceived.first == .showHelp(sender: nil))
         }
+    }
+
+    @Test("makeMenu: constructs the menu correctly")
+    func makeMenu() async throws {
+        let processor = MockProcessor<LinkSameAction, LinkSameState, LinkSameEffect>()
+        let menu = await subject.makeMenu(processor: processor)
+        let titles = menu.children.map { $0.title }
+        #expect(titles == ["Help", "Practice Mode", "Restart Stage", "Shuffle", "Show Hint", "New Game"])
+        let actions = menu.children.map { $0 as! UIAction }
+        for action in actions {
+            action.performWithSender(nil, target: nil)
+        }
+        await #while(processor.thingsReceived.count < 6)
+        #expect(processor.thingsReceived == [
+            .showHelp(sender: nil),
+            .timedPractice(1),
+            .restartStage,
+            .shuffle,
+            .hint,
+            .showNewGame(sender: nil),
+        ])
     }
 }

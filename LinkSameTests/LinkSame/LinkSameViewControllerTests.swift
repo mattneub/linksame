@@ -60,6 +60,13 @@ struct LinkSameViewControllerTests {
         #expect(subject.hintButton?.width == 110)
     }
 
+    @Test("viewDidLoad: configures hamburger button")
+    func viewDidLoadHamburger() {
+        screen.traitCollection = .init(userInterfaceIdiom: .phone)
+        subject.loadViewIfNeeded()
+        #expect(subject.hamburgerButton?.actions(forTarget: subject, forControlEvent: .menuActionTriggered)?.first == "doHamburgerButton:")
+    }
+
     @Test("viewDidLoad: sends viewDidLoad")
     func viewDidLoad() async {
         subject.loadViewIfNeeded()
@@ -174,6 +181,15 @@ struct LinkSameViewControllerTests {
         subject.loadViewIfNeeded()
         await subject.receive(.animateStageLabel)
         #expect(MockUIView.methodsCalled.first == "transitionAsync(with:duration:options:)")
+    }
+
+    @Test("receive setHamburgerButton: sets hamburger button menu")
+    func setHamburgerButton() async {
+        screen.traitCollection = .init(userInterfaceIdiom: .phone)
+        subject.loadViewIfNeeded()
+        #expect(subject.hamburgerButton?.menu == nil)
+        await subject.receive(.setHamburgerMenu(UIMenu()))
+        #expect(subject.hamburgerButton?.menu != nil)
     }
 
     @Test("receive userInteraction: calls application userInteraction")

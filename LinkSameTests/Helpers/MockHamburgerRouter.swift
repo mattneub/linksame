@@ -1,15 +1,15 @@
 @testable import LinkSame
-import Foundation
+import UIKit
 
 @MainActor
 final class MockHamburgerRouter: HamburgerRouterType {
+
     var options = [String]()
     var methodsCalled = [String]()
-    var choice: String?
 
-    func doChoice(_ choice: String?, processor: any LinkSame.Processor<LinkSame.LinkSameAction, LinkSame.LinkSameState, LinkSame.LinkSameEffect>) async {
+    func makeMenu(processor: any LinkSame.Processor<LinkSame.LinkSameAction, LinkSame.LinkSameState, LinkSame.LinkSameEffect>) async -> UIMenu {
         methodsCalled.append(#function)
-        self.choice = choice
+        return UIMenu()
     }
 }
 

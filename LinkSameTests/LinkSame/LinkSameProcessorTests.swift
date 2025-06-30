@@ -201,6 +201,10 @@ struct LinkSameProcessorTests {
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
+            let action = presenter.thingsReceived.removeFirst()
+            guard case .setHamburgerMenu = action else {
+                throw NSError(domain: "oops", code: 1)
+            }
         case .startNewGame:
             await subject.receive(.startNewGame)
         case .didBecomeActiveComingBack:
@@ -238,6 +242,10 @@ struct LinkSameProcessorTests {
         switch awakeningType {
         case .didInitialLayout:
             await subject.receive(.didInitialLayout)
+            let action = presenter.thingsReceived.removeFirst()
+            guard case .setHamburgerMenu = action else {
+                throw NSError(domain: "oops", code: 1)
+            }
         case .startNewGame:
             return () // this test is not applicable
         case .didBecomeActiveComingBack:
@@ -306,7 +314,7 @@ struct LinkSameProcessorTests {
         }
     }
 
-    @Test("receive hamburger: hides hint, calls coordinator showActionSheet")
+    @Test("receive hamburger: hides hint")
     func hamburger() async {
         subject.state.hintShowing = true
         subject.state.hintButtonTitle = .hide
@@ -318,10 +326,6 @@ struct LinkSameProcessorTests {
         #expect(presenter.statesPresented.last?.hintButtonTitle == .show)
         #expect(board.methodsCalled == ["unhilite()", "showHint(_:)"])
         #expect(board.show == false)
-        #expect(coordinator.methodsCalled == ["showActionSheet(title:options:)"])
-        #expect(coordinator.options == ["Heyho"])
-        #expect(router.methodsCalled == ["doChoice(_:processor:)"])
-        #expect(router.choice == "Heyho")
     }
 
     @Test("receive hint: if no hint is showing, configures and presents state, tells board processor to show hint")

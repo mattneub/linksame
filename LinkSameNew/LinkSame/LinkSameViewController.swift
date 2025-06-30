@@ -21,6 +21,9 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
     @IBOutlet weak var restartStageButton: UIBarButtonItem?
     @IBOutlet weak var toolbar: UIToolbar? // TODO: unused?
 
+    /// This one exists only on the iPhone, not on iPad.
+    @IBOutlet weak var hamburgerButton: UIButton?
+
     /// Reference to the boardView; we need this because we are responsible for showing and hiding it and for transitioning it with animation.
     var boardView: UIView? { backgroundView.subviews.first as? BoardView }
 
@@ -48,6 +51,9 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
 //        self.hintButton?.possibleTitles = [HintButtonTitle.show, HintButtonTitle.hide] // not working
         self.hintButton?.title = LinkSameState.HintButtonTitle.show.rawValue
         self.hintButton?.width = 110 // forced to take a wild guess
+
+        // have to configure this in code, there is no storyboard analogue
+        hamburgerButton?.addTarget(self, action: #selector(doHamburgerButton), for: .menuActionTriggered)
 
         Task {
             await processor?.receive(.viewDidLoad)
@@ -108,6 +114,8 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
             await animateBoardTransition(transition)
         case .animateStageLabel:
             await services.view.transitionAsync(with: self.stageLabel, duration: 0.4, options: .transitionFlipFromLeft)
+        case .setHamburgerMenu(let menu):
+            hamburgerButton?.menu = menu
         case .userInteraction(let onOff):
             type(of: services.application).userInteraction(onOff)
         }
