@@ -87,6 +87,3 @@ struct Movendum: Equatable {
     let piece: PieceReducer
     let newSlot: Slot
 }
-
-// TODO: The remaining question is whether I should be passing the grid in the state
-// instead of using effects to add and remove pieces from the interface.

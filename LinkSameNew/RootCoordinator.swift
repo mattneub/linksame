@@ -2,25 +2,43 @@ import UIKit
 
 @MainActor
 protocol RootCoordinatorType: AnyObject {
+    
+    /// Set up the initial module for the entire app, putting the interface into the window.
+    /// - Parameter window: The window.
     func createInitialInterface(window: UIWindow)
-
+    
+    /// Display the New Game popover, configuring its module and delegates..
+    /// - Parameters:
+    ///   - sourceItem: Source item for the popover on iPad.
+    ///   - popoverPresentationDelegate: Delegate for modifying / adapting the popover presentation.
+    ///   - dismissalDelegate: Delegate to be called back when the user dismisses the popover.
     func showNewGame(
         sourceItem: (any UIPopoverPresentationControllerSourceItem)?,
         popoverPresentationDelegate: (any UIPopoverPresentationControllerDelegate)?,
         dismissalDelegate: (any NewGamePopoverDismissalButtonDelegate)?
     )
-
+    
+    /// Display the Help popover, configuring its module and delegate.
+    /// - Parameters:
+    ///   - sourceItem: Source item for the popover on iPad.
+    ///   - popoverPresentationDelegate: Delegate for modifying / adapting the popover presentation.
     func showHelp (
         sourceItem: (any UIPopoverPresentationControllerSourceItem)?,
         popoverPresentationDelegate: (any UIPopoverPresentationControllerDelegate)?
     )
 
+    /// Dismiss all presented view controllers.
     func dismiss()
 
+    /// Create the board module and puts its view into the interface.
     func makeBoardProcessor(gridSize: (Int, Int), score: Int)
 
+    /// Hide the board view, reaching right into the interface. We need this because we have no
+    /// time to lose once we know we are going into the background.
     func hideBoardView()
 
+    /// Display the Game Over view, configuring its module.
+    /// - Parameter state: State to set in the module's processor.
     func showGameOver(state: GameOverState)
 }
 

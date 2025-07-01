@@ -31,6 +31,8 @@ enum LinkSameAction: Equatable {
 extension LinkSameAction {
     // It seems we have to implement equality manually to make our enum Equatable,
     // because UIPopoverPresentationControllerSourceItem is not Equatable.
+    // This is a pain in the butt, but I have a test that will catch us if we fail to
+    // implement a case.
     static func ==(lhs: LinkSameAction, rhs: LinkSameAction) -> Bool {
         switch (lhs, rhs) {
         case (.cancelNewGame, .cancelNewGame): return true

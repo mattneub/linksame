@@ -66,7 +66,7 @@ final class GameOverViewController: UIViewController, ReceiverPresenter {
             newHighLabel.widthAnchor.constraint(equalToConstant: 300),
             newHighLabel.centerXAnchor.constraint(equalTo: backgroundView.centerXAnchor),
         ])
-        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(userTapped))
+        let tapGestureRecognizer = MyTapGestureRecognizer(target: self, action: #selector(userTapped))
         view.addGestureRecognizer(tapGestureRecognizer)
     }
 

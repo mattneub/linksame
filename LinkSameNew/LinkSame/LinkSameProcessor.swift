@@ -137,6 +137,7 @@ final class LinkSameProcessor: Processor {
     /// Follow-on from `setUpGameFromScratch`, factored out so `stageEnded` can call it too,
     /// with different stage number. As the name says, set up the new stage: make a deck and
     /// deal it out, transition the board appropriately, show the stage label, save the board state.
+    /// - Parameter stageNumber: The number of the new stage.
     func setUpNewStage(stageNumber: Int) async {
         await presenter?.receive(.userInteraction(false))
 
@@ -167,22 +168,13 @@ final class LinkSameProcessor: Processor {
     /// Set up the entire game from persistent state that was found in user defaults.
     /// The board's grid, the pieces, the stage, the score all come from this.
     func setUpGameFromSavedState(_ savedState: PersistentState) async {
-        // structure is: -------
-        // let board: BoardSaveableData
-        // let score: Int
-        // let timed: Bool
-        // where BoardSaveableData is: -------
-        // let stage: Int
-        // let frame: CGRect [but I think this can be cut]
-        // let grid: Grid
-        // let deckAtStartOfStage: [PieceReducer]
         let boardData = savedState.board
         let grid = boardData.grid
         coordinator?.makeBoardProcessor(gridSize: (grid.columns, grid.rows), score: savedState.score)
 
         await presenter?.receive(.userInteraction(false))
 
-        boardProcessor?.setStageNumber(boardData.stageNumber) // TODO: Is this right?
+        boardProcessor?.setStageNumber(boardData.stageNumber)
         await boardProcessor?.populateFrom(oldGrid: grid, deckAtStartOfStage: boardData.deckAtStartOfStage)
 
         await presenter?.receive(.animateBoardTransition(.fade))
@@ -205,42 +197,33 @@ final class LinkSameProcessor: Processor {
 
     /// The app is becoming active; respond. Not received at launch time, only subsequently.
     func didBecomeActive() async {
-        // eliminate spurious call when user pulls down the notification center
-        try? await Task.sleep(for: .seconds(0.05))
-        if services.application.applicationState == .inactive {
-            return
-        }
-        // Distinguish return from suspension from mere reactivation from deactivation.
-        let comingBack = state.comingBackFromBackground
-        state.comingBackFromBackground = false
-
-        if comingBack { // we were backgrounded
-            // Well, this situation is exactly as if we had just launched: either there is saved
-            // data or there isn't, and either way we want to set up the game based on that.
-            // So we just repeat the `receive` code for `.didInitialLayout`.
-            if let savedStateData = services.persistence.loadData(forKey: .boardData),
-               let savedState = try? PropertyListDecoder().decode(PersistentState.self, from: savedStateData) {
-                await setUpGameFromSavedState(savedState)
-            } else {
-                await setUpGameFromScratch()
-            }
-        } else {
-            // TODO: deal with this
-            // boardProcessor?.scoreKeeper?.didBecomeActive()
-        }
+        await boardProcessor?.restartTimerIfPaused()
     }
 
     /// The app is about to enter the foreground; respond.
     func willEnterForeground() async {
-        // Tricky situation here: we are going to get `didBecomeActive` immediately after this.
-        // Well, we don't want to do the same set of stuff twice in a row.
-        // So merely note down that we are coming back from the background,
-        // and let `didBecomeActive` handle the whole thing.
-        state.comingBackFromBackground = true
+        // Well, this situation is exactly as if we had just launched: either there is saved
+        // data or there isn't, and either way we want to set up the game based on that.
+        // So we just repeat the `receive` code for `.didInitialLayout`.
+        await showHighScore()
+        if let savedStateData = services.persistence.loadData(forKey: .boardData),
+           let savedState = try? PropertyListDecoder().decode(PersistentState.self, from: savedStateData) {
+            await setUpGameFromSavedState(savedState)
+        } else {
+            await setUpGameFromScratch()
+        }
     }
 
     /// The app is about to become inactive; respond.
+    ///
+    /// **NOTE:** If the user pulls down the notification center, we will get _two_ `willResignActive`
+    /// calls. But that's okay, because everything we are doing here is lightweight; there is no
+    /// harm in doing it twice. The only thing that is "reversible" is pausing the timer, and it
+    /// is balanced by restarting the timer in `didBecomeActive` — so the worst that can happen
+    /// is we will just pause, resume, and pause again.
     func willResignActive() async {
+        // Pause the timer!
+        await boardProcessor?.pauseTimer()
         // In case we are showing hint, stop showing it.
         await hideHintAndUnhilite()
         // In case we are showing any presented stuff, dismiss it.
@@ -266,9 +249,14 @@ final class LinkSameProcessor: Processor {
         }
     }
 
+    /// Gather state information and store it into persistence.
     func saveBoardState() {
         guard let board = boardProcessor else { return }
-        let boardData = BoardSaveableData(stageNumber: board.stageNumber(), grid: board.grid, deckAtStartOfStage: board.deckAtStartOfStage)
+        let boardData = BoardSaveableData(
+            stageNumber: board.stageNumber(),
+            grid: board.grid,
+            deckAtStartOfStage: board.deckAtStartOfStage
+        )
         let state = PersistentState(
             board: boardData,
             score: board.score,
@@ -279,6 +267,7 @@ final class LinkSameProcessor: Processor {
         }
     }
 
+    /// Hide the hint (and incidentally remove any piece highlighting).
     func hideHintAndUnhilite() async {
         await boardProcessor?.unhilite()
         if state.hintShowing {
@@ -289,6 +278,7 @@ final class LinkSameProcessor: Processor {
         }
     }
 
+    /// Show a hint (and incidentally remove any piece highlighting).
     func showHintAndUnhilite() async {
         await boardProcessor?.unhilite()
         if !state.hintShowing {
@@ -296,18 +286,16 @@ final class LinkSameProcessor: Processor {
             state.hintButtonTitle = .hide
             await presenter?.present(state)
             await boardProcessor?.showHint(true)
-            // TODO: tell the scoreKeeper so we can penalize the user's score
-            //            self.scoreKeeper?.userAskedForHint()
         }
     }
 
+    /// Restart the current stage.
     func restartStage() async {
         do {
             await presenter?.receive(.userInteraction(false))
             try await boardProcessor?.restartStage()
             await presenter?.receive(.animateBoardTransition(.fade))
             await presenter?.receive(.animateStageLabel)
-            // TODO: deal with score, here or in board, including displaying it
             saveBoardState()
             await presenter?.receive(.userInteraction(true))
         } catch {
@@ -333,6 +321,9 @@ final class LinkSameProcessor: Processor {
     /// Utility called only by `stageEnded` when it has determined that the user has finished
     /// the entire game. If the score is a new high score for this level, record and display it.
     /// Then start the game from scratch exactly as from the New Game popover Done button.
+    /// - Parameters:
+    ///   - lastStage: The number of the final stage of this game.
+    ///   - score: The score at the end of the game.
     func gameEnded(lastStage: Int, score: Int) async {
         var newHigh = false
         if state.interfaceMode == .timed { // is this a new high score? only matters if timed mode
@@ -353,7 +344,7 @@ final class LinkSameProcessor: Processor {
                 practice: state.interfaceMode == .practice
             )
         )
-        // new approach: start game without waiting for alert dismissal
+        // new approach: start next game without waiting for alert dismissal
         // this is just like `.startNewGame`, basically
         await showHighScore()
         await setUpGameFromScratch()
@@ -392,10 +383,12 @@ extension LinkSameProcessor: BoardDelegate {
 
 /// Messages from the NewGameProcessor.
 extension LinkSameProcessor: NewGamePopoverDismissalButtonDelegate {
+    /// The user has asked to start a new game.
     func startNewGame() async {
         await receive(.startNewGame)
     }
 
+    /// The user has cancelled the popover.
     func cancelNewGame() async {
         await receive(.cancelNewGame)
     }

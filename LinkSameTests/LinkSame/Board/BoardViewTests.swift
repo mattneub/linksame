@@ -94,6 +94,15 @@ struct BoardViewTests {
         }
     }
 
+    @Test("pathView: generates path view")
+    func pathViewTest() throws {
+        let pathView = subject.pathView
+        #expect(pathView.isUserInteractionEnabled == false)
+        let tap = try #require(pathView.gestureRecognizers?.first as? MyTapGestureRecognizer)
+        #expect(tap.target === subject)
+        #expect(tap.action == #selector(subject.tappedPathView))
+    }
+
     @Test("Initializer sets up the view's subview.")
     func initializer() async throws {
         let subject = BoardView(columns: 1, rows: 1)

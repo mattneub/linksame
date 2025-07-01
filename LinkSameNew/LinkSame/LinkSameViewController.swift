@@ -2,6 +2,7 @@ import UIKit
 import Swift
 import WebKit
 
+/// Types of transition we can perform when showing the board.
 enum BoardTransition {
     case slide
     case fade
@@ -24,7 +25,8 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
     /// This one exists only on the iPhone, not on iPad.
     @IBOutlet weak var hamburgerButton: UIButton?
 
-    /// Reference to the boardView; we need this because we are responsible for showing and hiding it and for transitioning it with animation.
+    /// Reference to the boardView; we need this because we are responsible for showing it by
+    /// transitioning it with animation.
     var boardView: BoardView? { backgroundView.subviews.first as? BoardView }
 
     /// Reference to the processor, set by the coordinator at module creation time.
@@ -48,7 +50,12 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         }
 
         // fix width of hint button to accomodate new labels Show Hint and Hide Hint
-//        self.hintButton?.possibleTitles = [HintButtonTitle.show, HintButtonTitle.hide] // not working
+        /*
+        self.hintButton?.possibleTitles = [
+            LinkSameState.HintButtonTitle.show.rawValue,
+            LinkSameState.HintButtonTitle.hide.rawValue,
+        ] // not working
+         */
         self.hintButton?.title = LinkSameState.HintButtonTitle.show.rawValue
         self.hintButton?.width = 110 // forced to take a wild guess
 
@@ -61,8 +68,6 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         }
     }
 
-    var stage: ScoreKeeper?
-    
     init() {
         super.init(nibName: nil, bundle: nil)
     }
@@ -169,9 +174,6 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
             await processor?.receive(.restartStage)
         }
     }
-}
-
-extension LinkSameViewController { // buttons in hamburger button alert on iPhone, toolbar on iPad
 
     @IBAction func doNew(_ sender: (any UIPopoverPresentationControllerSourceItem)?) {
         Task {

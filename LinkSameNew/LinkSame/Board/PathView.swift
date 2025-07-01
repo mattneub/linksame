@@ -1,5 +1,7 @@
 import UIKit
 
+/// View that sits in front of the board view, waiting to portray a path connecting a sequence
+/// of points (which will, in fact, be the centers of pieces, showing how they form a legal pair).
 class PathView: UIView {
     /// Points along the path to be drawn.
     var points = [CGPoint]() {

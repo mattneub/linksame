@@ -33,4 +33,11 @@ final class MockScoreKeeper: ScoreKeeperType {
         methodsCalled.append(#function)
     }
 
+    func pauseTimer() async {
+        methodsCalled.append(#function)
+    }
+
+    func restartTimerIfPaused() async {
+        methodsCalled.append(#function)
+    }
 }

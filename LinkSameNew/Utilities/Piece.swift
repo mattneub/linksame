@@ -34,7 +34,7 @@ final class Piece: UIView {
     }
 
     override var description: String {
-        MainActor.assumeIsolated {
+        MainActor.assumeIsolated { // lunacy
             return "picname: \(picName); column: \(column); row: \(row)"
         }
     }

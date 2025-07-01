@@ -44,12 +44,15 @@ protocol ScoreKeeperType: AnyObject {
     func userAskedForHint() async
     func userRestartedStage() async
     func stopTimer() async
+    func pauseTimer() async
+    func restartTimerIfPaused() async
 }
 
 /// The ScoreKeeper object maintains and controls the timer, and keeps the score.
 /// The idea is to make a new ScoreKeeper object every time a new timed stage begins,
-/// and then communicate with it only in terms of game-related events, telling it
-/// (for example) what the user did.
+/// and then communicate with it mostly in terms of game-related events, telling it
+/// (for example) what the user did; a few messages do tell the ScoreKeeper to start
+/// or stop the timer, but no message ever tells the ScoreKeeper how to keep the score!
 ///
 @MainActor
 final class ScoreKeeper: ScoreKeeperType {
@@ -62,6 +65,8 @@ final class ScoreKeeper: ScoreKeeperType {
     /// (2) it times out. A timer does _not_ exist when we are created, as the user has not
     /// yet made a move.
     var timer: (any CancelableTimerType)?
+    /// Whether the timer was running when we were told to pause it.
+    var timerWasRunning = false
     /// When the user last moved. This is used to calculate bonus points for speed in moving.
     private var lastTime: Date = Date.distantPast
 
@@ -81,21 +86,6 @@ final class ScoreKeeper: ScoreKeeperType {
         Task {
             await delegate?.scoreChanged(Score(score: score, direction: .up))
         }
-
-        // TODO: lifetime events do affect the timer, so work out a new mechanism for this
-        // we need to stop/pause the timer when we leave active, and start/resume it when we return
-        // some sort of decision needs to be made here: we don't want to start/resume unless we
-        // _were_ timing when we left active
-        /*
-        // application lifetime events affect our timer
-        nc.addObserver(self, selector: #selector(resigningActive),
-                       name: UIApplication.willResignActiveNotification, object: nil)
-        // long-distance communication from the board object
-        nc.addObserver(self, selector: #selector(userMadeLegalMove),
-                       name: Board.userMoved, object: nil)
-        nc.addObserver(self, selector: #selector(gameEnded),
-                       name: Board.gameOver, object: nil)
-         */
     }
 
     /// Utility: start the timer counting down from 10, and if it times out, have it call our
@@ -115,29 +105,42 @@ final class ScoreKeeper: ScoreKeeperType {
         restartTimer()
     }
 
-    /// Called by the processor to let us know that we have become active after becoming inactive
-    /// (i.e. not backgrounded, which is a whole different affair). This is regarded as a temporary
-    /// interruption in the game, so carry on timing.
-    func didBecomeActive() {
-        self.restartTimer()
+    /// Pause the timer, recording whether it was running so we can resume if it was.
+    func pauseTimer() async {
+        if let timer {
+            timerWasRunning = await timer.isRunning
+            print("timer pausing; was running?", timerWasRunning)
+            await timer.cancel()
+        }
     }
 
+    /// Start the timer, but only if it was running when we paused.
+    func restartTimerIfPaused() async {
+        if timerWasRunning {
+            restartTimer()
+        }
+    }
+
+    /// Stop the timer.
     func stopTimer() async {
         await self.timer?.cancel()
     }
 
+    /// The user asked for a hint. Lose ten points.
     func userAskedForHint() async {
         self.restartTimer()
         self.score -= 10
         await delegate?.scoreChanged(Score(score: score, direction: .down))
     }
 
+    /// The user asked for a shuffle. Lose twenty points.
     func userAskedForShuffle() async {
         self.restartTimer()
         self.score -= 20
         await delegate?.scoreChanged(Score(score: score, direction: .down))
     }
 
+    /// The user made a legal move. Awaord one point, plus a bonus for speed.
     func userMadeLegalMove() async {
         self.restartTimer()
         // calculate time between moves, award points
@@ -152,6 +155,7 @@ final class ScoreKeeper: ScoreKeeperType {
         await delegate?.scoreChanged(Score(score: self.score, direction: .up))
     }
 
+    /// The user restarted the stage. Restore the score from when the stage originally started.
     func userRestartedStage() async {
         await self.timer?.cancel()
         self.score = self.scoreAtStartOfStage
@@ -159,11 +163,15 @@ final class ScoreKeeper: ScoreKeeperType {
     }
 }
 
+/// Protocol for reporting changes in the score. All changes in the score must be reported; the
+/// delegate needs to know both the new score and whether this represents an up or down movements
+/// of the score value.
 @MainActor
 protocol ScoreKeeperDelegate: AnyObject {
     func scoreChanged(_: Score) async
 }
 
+/// Struct expressing the score value together with the direction of change.
 struct Score: Equatable {
     let score: Int
     let direction: ScoreDirection

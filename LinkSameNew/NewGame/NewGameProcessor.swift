@@ -16,21 +16,16 @@ final class NewGameProcessor: Processor {
 
     func receive(_ action: NewGameAction) async {
         switch action {
-
         case .cancelNewGame:
             await dismissalDelegate?.cancelNewGame()
-
         case .initialInterfaceIsReady:
             let numberOfStages = services.persistence.loadInt(forKey: .lastStage)
             await presenter?.receive(.selectPickerRow(numberOfStages))
             await updateCheckmarks()
-
         case .startNewGame:
             await dismissalDelegate?.startNewGame()
-
         case .userSelectedPickerRow(let row):
             services.persistence.save(row, forKey: .lastStage)
-
         case .userSelectedTableRow(let indexPath):
             let (key, value): (DefaultKey, String) = switch indexPath.section {
             case 0: (.style, Styles.stylesInOrder[indexPath.row])
@@ -39,7 +34,6 @@ final class NewGameProcessor: Processor {
             }
             services.persistence.save(value, forKey: key)
             await updateCheckmarks()
-
         case .viewDidLoad:
             state.tableViewSections = [
                 .init(title: DefaultKey.style.rawValue, rows: Styles.stylesInOrder),

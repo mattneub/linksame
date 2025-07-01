@@ -330,6 +330,12 @@ struct BoardProcessorTests {
         #expect(delegate.methodsCalled == ["userTappedPathView()"])
     }
 
+    @Test("pauseTimer: calls scoreKeeper pauseTimer")
+    func pauseTimer() async {
+        await subject.pauseTimer()
+        #expect(scoreKeeper.methodsCalled == ["pauseTimer()"])
+    }
+
     @Test("restartStage: replaces the grid with deckAtStartOfStage, tells presenter to remove old pieces and insert new ones, tells scorekeeper")
     func restartStage() async throws {
         var deck = [String]()
@@ -356,6 +362,12 @@ struct BoardProcessorTests {
         }
         #expect(presenter.thingsReceived == expected)
         #expect(scoreKeeper.methodsCalled == ["userRestartedStage()"])
+    }
+
+    @Test("restartTimerIfPaused: calls scoreKeeper restartTimerIfPaused")
+    func restartTimerIfPaused() async {
+        await subject.restartTimerIfPaused()
+        #expect(scoreKeeper.methodsCalled == ["restartTimerIfPaused()"])
     }
 
     @Test("showHint(false): removes hilite, sets path view tappable to false, unilluminates presenter")

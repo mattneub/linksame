@@ -17,9 +17,11 @@ protocol BoardProcessorType: AnyObject {
     func showHint(_: Bool) async
     func shuffle() async
     func unhilite() async
+    func pauseTimer() async
+    func restartTimerIfPaused() async
 }
 
-/// Extension implementing some trivial state getters and setters from the protocol.
+/// Extension implementing some trivial accessors from the protocol.
 extension BoardProcessorType where Self: BoardProcessor {
     var deckAtStartOfStage: [String] {
         state.deckAtStartOfStage
@@ -36,6 +38,14 @@ extension BoardProcessorType where Self: BoardProcessor {
     func setStageNumber(_ stageNumber: Int) {
         state.stageNumber = stageNumber
     }
+
+    func pauseTimer() async {
+        await scoreKeeper.pauseTimer()
+    }
+
+    func restartTimerIfPaused() async {
+        await scoreKeeper.restartTimerIfPaused()
+    }
 }
 
 /// The BoardProcessor serves the LinkSameProcessor. It doesn't know how the whole game works,
@@ -45,10 +55,6 @@ extension BoardProcessorType where Self: BoardProcessor {
 /// Its presenter is the view where the pieces are actually drawn.
 @MainActor
 final class BoardProcessor: BoardProcessorType, Processor {
-
-//    static let gameOver = Notification.Name("gameOver")
-//    static let userMoved = Notification.Name("userMoved")
-//    static let userTappedPath = Notification.Name("userTappedPath")
 
     /// Reference to the presenter; set by the coordinator on creation.
     weak var presenter: (any ReceiverPresenter<BoardEffect, BoardState>)?
@@ -440,19 +446,11 @@ final class BoardProcessor: BoardProcessorType, Processor {
             await checkHilitedPair()
         }
     }
-    
-    // tap gesture on pathView
 
-//    @objc private func tappedPathView(_ : UIGestureRecognizer) {
-//        nc.post(name: BoardProcessor.userTappedPath, object: self)
-//    }
-    
-    // utility to run thru the entire grid and make sure there is at least one legal path somewhere
-    // if the path exists, we return array representing path that joins them; otherwise nil
-    // that way, the caller can *show* the legal path if desired
-    // but caller can test result as condition as well
-    // the path is simply the path returned from checkPair
-    
+    /// Utility to run thru the entire grid and make sure there is at least one legal path somewhere.
+    /// If the path exists, we return an array representing it; otherwise `nil`.
+    /// The path is simply the path returned from checkPair (for every pair, until we find one).
+    /// - Returns: The path, or `nil` is none was found.
     private func legalPath () -> Path? {
         for x in 0..<self.columns {
             for y in 0..<self.rows {
@@ -489,6 +487,10 @@ final class BoardProcessor: BoardProcessorType, Processor {
         return nil
     }
 
+    /// Show or hide a legal path in the path view. At the same time, make the path view tappable
+    /// or untappable, respectively: if a hint is showing, the user can tap to dismiss it and
+    /// that's all.
+    /// - Parameter show: Whether to show (`true`) or hide (`false`) the hint.
     func showHint(_ show: Bool) async {
         state.hilitedPieces = []
         if show {
@@ -496,7 +498,7 @@ final class BoardProcessor: BoardProcessorType, Processor {
             if let path = state.hintPath {
                 await presenter?.receive(.illuminate(path: path))
                 await scoreKeeper.userAskedForHint()
-            } else { // this part shouldn't happen, but just in case, waste time after all
+            } else { // this part shouldn't happen, but just in case, fine, waste time after all
                 state.hintPath = self.legalPath()
                 if state.hintPath != nil {
                     await self.showHint(true) // try again, and this time we'll succeed

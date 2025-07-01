@@ -32,6 +32,14 @@ final class MockBoardProcessor: BoardProcessorType {
         self._deckAtStartOfStage = deckAtStartOfStage
     }
 
+    func pauseTimer() async {
+        methodsCalled.append(#function)
+    }
+
+    func restartTimerIfPaused() async {
+        methodsCalled.append(#function)
+    }
+
     func restartStage() async throws {
         methodsCalled.append(#function)
     }

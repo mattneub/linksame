@@ -10,7 +10,7 @@ protocol HamburgerRouterType {
 /// Router for the hamburger button.
 @MainActor
 final class HamburgerRouter: HamburgerRouterType {
-    /// Choices for the hamburger button's action sheet.
+    /// Choices for the hamburger button's menu.
     enum HamburgerChoices: String, CaseIterable {
         case game = "New Game"
         case hint = "Show Hint"
@@ -19,10 +19,20 @@ final class HamburgerRouter: HamburgerRouterType {
         case practice = "Practice Mode"
         case help = "Help"
     }
+
+    /// Texts of the choices, to be displayed in the interface.
     var options: [String] {
         HamburgerChoices.allCases.map { $0.rawValue }
     }
-    func doChoice(_ choice: String?, processor: any Processor<LinkSameAction, LinkSameState, LinkSameEffect>) async {
+
+    /// Given an actual choice made by the user, perform its corresponding action.
+    /// - Parameters:
+    ///   - choice: The text (raw value) of the choice.
+    ///   - processor: The processor to whom we will send an action.
+    func doChoice(
+        _ choice: String?,
+        processor: any Processor<LinkSameAction, LinkSameState, LinkSameEffect>
+    ) async {
         guard let choice else {
             return
         }
@@ -38,7 +48,13 @@ final class HamburgerRouter: HamburgerRouterType {
         case .shuffle: await processor.receive(.shuffle)
         }
     }
-    func makeMenu(processor: any Processor<LinkSameAction, LinkSameState, LinkSameEffect>) async -> UIMenu {
+
+    /// Create the hamburger button's menu and return it.
+    /// - Parameter processor: The processor to whom we will send messages when the user taps a menu item.
+    /// - Returns: The menu.
+    func makeMenu(
+        processor: any Processor<LinkSameAction, LinkSameState, LinkSameEffect>
+    ) async -> UIMenu {
         var actions = [UIAction]()
         for option in options {
             let action = UIAction(title: option) { [weak self, weak processor] action in

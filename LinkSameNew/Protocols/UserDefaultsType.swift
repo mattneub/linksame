@@ -1,7 +1,7 @@
 import Foundation
 
 /// Protocol listing the UserDefaults methods used by the Persistence struct.
-/// Exists so that UserDefaults can be mocked.
+/// Exists so that UserDefaults can be mocked for testing.
 protocol UserDefaultsType {
     func register(defaults: [String: Any])
 

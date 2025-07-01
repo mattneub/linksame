@@ -25,4 +25,25 @@ final class CancelableTimerTests {
         await subject?.cancel()
         #expect(await subject?.timerTask?.isCancelled == true)
     }
+
+    @Test("isRunning: reports correctly")
+    func isRunning() async {
+        do { // timer exists and is running
+            subject = CancelableTimer(interval: 10, timeOutHandler: {})
+            try? await Task.sleep(for: .seconds(0.3))
+            #expect(await subject?.isRunning == true)
+        }
+        do { // timer exists and is cancelled
+            subject = CancelableTimer(interval: 10, timeOutHandler: {})
+            try? await Task.sleep(for: .seconds(0.3))
+            await subject?.cancel()
+            #expect(await subject?.isRunning == false)
+        }
+        do { // timer doesn't exist
+            subject = CancelableTimer(interval: 10, timeOutHandler: {})
+            try? await Task.sleep(for: .seconds(0.3))
+            await subject?.nilify()
+            #expect(await subject?.isRunning == false)
+        }
+    }
 }

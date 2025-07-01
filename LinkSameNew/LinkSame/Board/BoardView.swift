@@ -37,13 +37,11 @@ class BoardView: UIView, ReceiverPresenter {
 
     /// View that holds the path drawing. It goes in front of all pieces.
     /// It is tappable, but user interaction is generally disabled, so taps fall thru to the pieces.
-    lazy var pathView: PathView = {
-        let pathView = PathView(frame: .zero)
-        pathView.isUserInteractionEnabled = false // clicks just fall right thru
-        let tap = UITapGestureRecognizer(target: self, action: #selector(tappedPathView))
-        addGestureRecognizer(tap)
-        return pathView
-    }()
+    lazy var pathView = PathView(frame: .zero).applying {
+        $0.isUserInteractionEnabled = false // clicks just fall right thru
+        let tap = MyTapGestureRecognizer(target: self, action: #selector(tappedPathView))
+        $0.addGestureRecognizer(tap)
+    }
 
     /// Currently displayed pieces.
     var pieces: [Piece] {
@@ -176,13 +174,12 @@ class BoardView: UIView, ReceiverPresenter {
         }
     }
 
-    // TODO: Should probably come up with a better name for this.
     /// Utility: Given a piece's slot in the grid, where should it be physically drawn on the view?
     /// - Parameters:
     ///   - column: The column address of the piece's slot.
-    ///   - row: The row address of the piece's slot
-    /// - Returns: The top-left origin point of the piece. Together with `pieceSize`, this defines
-    ///   the piece's frame.
+    ///   - row: The row address of the piece's slot.
+    /// - Returns: The top-left origin point of the piece, if there were a piece at this slot.
+    ///  Together with `pieceSize`, this defines the piece's frame.
     func originOf(column: Int, row: Int) -> CGPoint {
         assert(column >= -1 && column <= self.columns, "Position requested out of bounds (column)")
         assert(row >= -1 && row <= self.rows, "Position requested out of bounds (row)")
@@ -209,6 +206,8 @@ class BoardView: UIView, ReceiverPresenter {
     func centerOf(column: Int, row: Int) -> CGPoint {
         CGRect(origin: originOf(column: column, row: row), size: pieceSize).center
     }
+
+    // Methods called by gesture recognizers.
 
     @objc func tappedPathView() {
         Task {

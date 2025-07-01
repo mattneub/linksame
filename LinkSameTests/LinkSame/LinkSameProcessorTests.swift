@@ -13,6 +13,7 @@ struct LinkSameProcessorTests {
     let application = MockApplication()
     let board = MockBoardProcessor()
     let router = MockHamburgerRouter()
+    let lifetime = MockLifetime()
 
     init() {
         subject.presenter = presenter
@@ -22,6 +23,7 @@ struct LinkSameProcessorTests {
         services.persistence = persistence
         services.screen = screen
         services.application = application
+        services.lifetime = lifetime
     }
 
     @Test("stageLabelText: returns expected value")
@@ -49,7 +51,7 @@ struct LinkSameProcessorTests {
     enum AwakeningType: CaseIterable {
         case didInitialLayout // receive .didInitialLayout, i.e. launching cold
         case startNewGame // receive .startNewGame, i.e. user tapped Done in New Game popover
-        case didBecomeActiveComingBack // didBecomeActive is called, and state comingBack is true (i.e. we were backgrounded)
+        case willEnterForeground // willEnterForeground is called
     }
 
     @Test("awakening with no saved data, gets board size from persistence, or Easy on phone; asks coordinator to make board processor",
@@ -66,9 +68,11 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
-        case .didBecomeActiveComingBack:
-            subject.state.comingBackFromBackground = true
-            await subject.didBecomeActive()
+        case .willEnterForeground:
+            await subject.receive(.viewDidLoad)
+            try? await Task.sleep(for: .seconds(0.1))
+            services.lifetime.willEnterForegroundPublisher.send()
+            await #while(coordinator.methodsCalled.isEmpty)
         }
         #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
         #expect(coordinator.gridSize == (10, 6)) // easy by default
@@ -89,9 +93,11 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
-        case .didBecomeActiveComingBack:
-            subject.state.comingBackFromBackground = true
-            await subject.didBecomeActive()
+        case .willEnterForeground:
+            await subject.receive(.viewDidLoad)
+            try? await Task.sleep(for: .seconds(0.1))
+            services.lifetime.willEnterForegroundPublisher.send()
+            await #while(coordinator.methodsCalled.isEmpty)
         }
         #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
         #expect(coordinator.gridSize == (12, 7)) // easy by default, but easy is bigger on 3x iPhone
@@ -112,9 +118,11 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
-        case .didBecomeActiveComingBack:
-            subject.state.comingBackFromBackground = true
-            await subject.didBecomeActive()
+        case .willEnterForeground:
+            await subject.receive(.viewDidLoad)
+            try? await Task.sleep(for: .seconds(0.1))
+            services.lifetime.willEnterForegroundPublisher.send()
+            await #while(coordinator.methodsCalled.isEmpty)
         }
         #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
         #expect(coordinator.gridSize == (16, 9)) // hard size
@@ -134,9 +142,11 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             return () // this test is not applicable
-        case .didBecomeActiveComingBack:
-            subject.state.comingBackFromBackground = true
-            await subject.didBecomeActive()
+        case .willEnterForeground:
+            await subject.receive(.viewDidLoad)
+            try? await Task.sleep(for: .seconds(0.1))
+            services.lifetime.willEnterForegroundPublisher.send()
+            await #while(coordinator.methodsCalled.isEmpty)
         }
         print(persistence.methodsCalled)
         #expect(persistence.methodsCalled.contains("loadData(forKey:)"))
@@ -156,9 +166,11 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             await subject.receive(.startNewGame)
-        case .didBecomeActiveComingBack:
-            subject.state.comingBackFromBackground = true
-            await subject.didBecomeActive()
+        case .willEnterForeground:
+            await subject.receive(.viewDidLoad)
+            try? await Task.sleep(for: .seconds(0.1))
+            services.lifetime.willEnterForegroundPublisher.send()
+            await #while(coordinator.methodsCalled.isEmpty)
         }
         let state = try #require(presenter.statesPresented.last)
         #expect(state.interfaceMode == .timed)
@@ -178,9 +190,11 @@ struct LinkSameProcessorTests {
             await subject.receive(.didInitialLayout)
         case .startNewGame:
             return () // this test is not applicable
-        case .didBecomeActiveComingBack:
-            subject.state.comingBackFromBackground = true
-            await subject.didBecomeActive()
+        case .willEnterForeground:
+            await subject.receive(.viewDidLoad)
+            try? await Task.sleep(for: .seconds(0.1))
+            services.lifetime.willEnterForegroundPublisher.send()
+            await #while(coordinator.methodsCalled.isEmpty)
         }
         let state = try #require(presenter.statesPresented.last)
         #expect(state.interfaceMode == .practice)
@@ -206,9 +220,11 @@ struct LinkSameProcessorTests {
             }
         case .startNewGame:
             await subject.receive(.startNewGame)
-        case .didBecomeActiveComingBack:
-            subject.state.comingBackFromBackground = true
-            await subject.didBecomeActive()
+        case .willEnterForeground:
+            await subject.receive(.viewDidLoad)
+            try? await Task.sleep(for: .seconds(0.1))
+            services.lifetime.willEnterForegroundPublisher.send()
+            await #while(coordinator.methodsCalled.isEmpty)
         }
         #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
         #expect(presenter.thingsReceived.count == 4)
@@ -247,9 +263,11 @@ struct LinkSameProcessorTests {
             }
         case .startNewGame:
             return () // this test is not applicable
-        case .didBecomeActiveComingBack:
-            subject.state.comingBackFromBackground = true
-            await subject.didBecomeActive()
+        case .willEnterForeground:
+            await subject.receive(.viewDidLoad)
+            try? await Task.sleep(for: .seconds(0.1))
+            services.lifetime.willEnterForegroundPublisher.send()
+            await #while(coordinator.methodsCalled.isEmpty)
         }
         #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:score:)"])
         #expect(coordinator.score == 42)
@@ -265,7 +283,7 @@ struct LinkSameProcessorTests {
     }
 
     @Test(
-        "awakening with initialData or startNewGame displays stored high score for current size and stage count",
+        "awakening displays stored high score for current size and stage count",
         arguments: AwakeningType.allCases
     )
     func awakeHighScore(awakeningType: AwakeningType) async throws {
@@ -276,8 +294,11 @@ struct LinkSameProcessorTests {
                 await subject.receive(.didInitialLayout)
             case .startNewGame:
                 await subject.receive(.startNewGame)
-            case .didBecomeActiveComingBack:
-                return () // this test is not applicable
+            case .willEnterForeground:
+                await subject.receive(.viewDidLoad)
+                try? await Task.sleep(for: .seconds(0.1))
+                services.lifetime.willEnterForegroundPublisher.send()
+                await #while(coordinator.methodsCalled.isEmpty)
             }
             #expect(subject.state.highScore == "High score: 42")
             #expect(presenter.statesPresented.last?.highScore == "High score: 42")
@@ -290,8 +311,11 @@ struct LinkSameProcessorTests {
                 await subject.receive(.didInitialLayout)
             case .startNewGame:
                 await subject.receive(.startNewGame)
-            case .didBecomeActiveComingBack:
-                return () // this test is not applicable
+            case .willEnterForeground:
+                await subject.receive(.viewDidLoad)
+                try? await Task.sleep(for: .seconds(0.1))
+                services.lifetime.willEnterForegroundPublisher.send()
+                await #while(coordinator.methodsCalled.isEmpty)
             }
             #expect(subject.state.highScore == "")
             #expect(presenter.statesPresented.last?.highScore == "")
@@ -305,8 +329,11 @@ struct LinkSameProcessorTests {
                 await subject.receive(.didInitialLayout)
             case .startNewGame:
                 await subject.receive(.startNewGame)
-            case .didBecomeActiveComingBack:
-                return () // this test is not applicable
+            case .willEnterForeground:
+                await subject.receive(.viewDidLoad)
+                try? await Task.sleep(for: .seconds(0.1))
+                services.lifetime.willEnterForegroundPublisher.send()
+                await #while(coordinator.methodsCalled.isEmpty)
             }
             #expect(subject.state.highScore == "")
             #expect(presenter.statesPresented.last?.highScore == "")
@@ -525,47 +552,33 @@ struct LinkSameProcessorTests {
         ))
     }
 
-    @Test("after .viewDidLoad, lifetime didBecomeActive sets state `comingBackFromBackground` to false")
-    func didBecomeActiveState() async throws {
-        subject.state.comingBackFromBackground = true
+    @Test("after .viewDidLoad, lifetime didBecomeActive calls board processor restartTimer")
+    func didBecomeActive() async throws {
         await subject.receive(.viewDidLoad)
         try? await Task.sleep(for: .seconds(0.1))
         services.lifetime.didBecomeActivePublisher.send()
-        await #while(subject.state.comingBackFromBackground == true)
-        #expect(subject.state.comingBackFromBackground == false)
+        await #while(board.methodsCalled.isEmpty)
+        #expect(board.methodsCalled == ["restartTimerIfPaused()"])
     }
 
-    @Test("after .viewDidLoad, lifetime didBecomeActive does nothing if application is inactive")
-    func didBecomeActiveInactive() async throws {
-        subject.state.comingBackFromBackground = true
-        application.applicationState = .inactive
+    @Test("after .viewDidLoad, lifetime willResignActive call board proc pauseTimer, hides hint, calls coordinator dismiss, restores popover defaults")
+    func willResignActive() async throws {
+        subject.state.defaultsBeforeShowingNewGamePopover = .init(lastStage: 1, size: "yoho", style: "teehee")
+        subject.state.hintShowing = true
         await subject.receive(.viewDidLoad)
         try? await Task.sleep(for: .seconds(0.1))
-        services.lifetime.didBecomeActivePublisher.send()
-        try? await Task.sleep(for: .seconds(0.1))
-        #expect(subject.state.comingBackFromBackground == true)
-    }
-
-    @Test("after .viewDidLoad, lifetime didBecomeActive, if not coming back from background, calls scoreKeeper didBecomeActive")
-    func didBecomeActiveNotComingBack() async throws {
-        subject.state.comingBackFromBackground = false
-        await subject.receive(.viewDidLoad)
-        try? await Task.sleep(for: .seconds(0.1))
-        services.lifetime.didBecomeActivePublisher.send()
-        // TODO: we are not doing this any more, so what _are_ we doing?
-//        let scoreKeeper = try #require(board.scoreKeeper as? MockScoreKeeper)
-//        await #while(scoreKeeper.methodsCalled.isEmpty)
-//        #expect(scoreKeeper.methodsCalled == ["didBecomeActive()"])
-    }
-
-    @Test("after .viewDidLoad, lifetime willEnterForeground sets state comingBack to true")
-    func willEnterForeground() async throws {
-        subject.state.comingBackFromBackground = false
-        await subject.receive(.viewDidLoad)
-        try? await Task.sleep(for: .seconds(0.1))
-        services.lifetime.willEnterForegroundPublisher.send()
-        await #while(subject.state.comingBackFromBackground == false)
-        #expect(subject.state.comingBackFromBackground == true)
+        services.lifetime.willResignActivePublisher.send()
+        await #while(board.methodsCalled.isEmpty)
+        #expect(board.methodsCalled.first == "pauseTimer()")
+        #expect(subject.state.hintShowing == false)
+        #expect(board.methodsCalled.last == "showHint(_:)")
+        #expect(board.show == false)
+        #expect(coordinator.methodsCalled.first == "dismiss()")
+        #expect(persistence.methodsCalled.first == "saveIndividually(_:)")
+        let dict = try #require(persistence.dict)
+        #expect(dict[.lastStage] as? Int == 1)
+        #expect(dict[.size] as? String == "yoho")
+        #expect(dict[.style] as? String == "teehee")
     }
 
     @Test("stageEnded: if game ended with no previous high score, saves into scores, displays new high score, calls `showGameOver`")

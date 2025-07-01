@@ -5,11 +5,14 @@ struct BoardState {
     /// in case we are asked to restart the stage. The "deck" consists of just a list of pictures,
     /// because we know where the corresponding pieces go: just fill the grid.
     var deckAtStartOfStage = [String]()
+    /// Pieces to be highlighted.
     var hilitedPieces = [PieceReducer]()
     /// Variable where we maintain a legal path after every change in the grid, so that we know
     /// the path without performing the calculation when we really need it.
     var hintPath: Path?
+    /// Whether the path view is to be tappable.
     var pathViewTappable = false
+    /// The current stage number.
     var stageNumber = 0
 
 }

@@ -120,6 +120,60 @@ struct ScoreKeeperTests {
         #expect(delegate.score?.score == subject.score)
         #expect(delegate.score?.direction == .up)
     }
+
+    @Test("pauseTimer: stops the timer and records whether it was running")
+    func pauseTimer() async {
+        do { // no timer
+            let subject = ScoreKeeper(score: 20, delegate: nil)
+            subject.timer = nil
+            await subject.pauseTimer()
+            #expect(subject.timer == nil)
+            #expect(subject.timerWasRunning == false)
+        }
+        do { // timer is not running
+            let subject = ScoreKeeper(score: 20, delegate: nil)
+            let timer = MockCancelableTimer(interval: 10, timeOutHandler: {})
+            subject.timer = timer
+            timer.isRunning = false
+            await subject.pauseTimer()
+            #expect(await timer.methodsCalled == ["cancel()"])
+            #expect(subject.timer === timer)
+            #expect(subject.timerWasRunning == false)
+        }
+        do { // timer is running
+            let subject = ScoreKeeper(score: 20, delegate: nil)
+            let timer = MockCancelableTimer(interval: 10, timeOutHandler: {})
+            subject.timer = timer
+            timer.isRunning = true
+            await subject.pauseTimer()
+            #expect(await timer.methodsCalled == ["cancel()"])
+            #expect(subject.timer === timer)
+            #expect(subject.timerWasRunning == true)
+        }
+    }
+
+    @Test("restartTimerIfPaused: restarts the timer, but only if it was running")
+    func restartTimerIfPaused() async throws {
+        do { // timer was not running
+            let oldTimer = MockCancelableTimer(interval: 1) {}
+            let subject = ScoreKeeper(score: 20, delegate: nil)
+            subject.timer = oldTimer
+            subject.timerWasRunning = false
+            await subject.restartTimerIfPaused()
+            #expect(subject.timer === oldTimer)
+            #expect(await oldTimer.methodsCalled.isEmpty)
+        }
+        do { // timer was running
+            let oldTimer = MockCancelableTimer(interval: 1) {}
+            let subject = ScoreKeeper(score: 20, delegate: nil)
+            subject.timer = oldTimer
+            subject.timerWasRunning = true
+            await subject.restartTimerIfPaused()
+            #expect(subject.timer !== oldTimer)
+            let newTimer = try #require(subject.timer as? MockCancelableTimer)
+            #expect(await newTimer.interval == 10)
+        }
+    }
 }
 
 final class MockScoreKeeperDelegate: ScoreKeeperDelegate {

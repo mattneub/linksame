@@ -50,6 +50,14 @@ struct GameOverViewControllerTests {
         #expect(subject.newHighLabel.isDescendant(of: subject.backgroundView))
     }
 
+    @Test("viewDidLoad: configures tap gesture recognizer")
+    func viewDidLoadTap() throws {
+        subject.loadViewIfNeeded()
+        let tap = try #require(subject.view.gestureRecognizers?.first as? MyTapGestureRecognizer)
+        #expect(tap.target === subject)
+        #expect(tap.action == #selector(subject.userTapped))
+    }
+
     @Test("present: behaves as expected")
     func present() async {
         var state = GameOverState(newHigh: false, score: 30, practice: false)

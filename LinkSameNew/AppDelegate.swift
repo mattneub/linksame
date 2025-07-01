@@ -1,11 +1,7 @@
 import UIKit
 
-// space savers
+// Shortcuts for determination of hardware environment.
 
-@MainActor
-let nc = NotificationCenter.default
-
-// determination of hardware environment
 @MainActor
 var onPhone : Bool {
     return services.screen.traitCollection.userInterfaceIdiom == .phone
@@ -16,7 +12,6 @@ var on3xScreen : Bool {
     return services.screen.traitCollection.displayScale > 2.5
 }
 
-// =========================================
 /// The sole global instance of the services.
 @MainActor
 var services: Services = Services.shared
