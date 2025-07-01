@@ -140,8 +140,9 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
             transition.subtype = .fromLeft
         }
         transition.duration = 0.7
-        transition.beginTime = CACurrentMediaTime() + 0.15
-        transition.fillMode = .backwards
+        try? await unlessTesting {
+            try? await Task.sleep(for: .seconds(0.15))
+        }
         transition.timingFunction = CAMediaTimingFunction(name:.linear)
         let transitionProvider = services.transitionProviderMaker.makeTransitionProvider()
         boardView.layer.opacity = 1

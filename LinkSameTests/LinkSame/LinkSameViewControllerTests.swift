@@ -158,7 +158,6 @@ struct LinkSameViewControllerTests {
         let transition = try #require(transitionProvider.transition)
         #expect(transition.type == .fade)
         #expect(transition.duration == 0.7)
-        #expect(transition.fillMode == .backwards)
         #expect(transition.timingFunction == CAMediaTimingFunction(name: .linear))
     }
 
