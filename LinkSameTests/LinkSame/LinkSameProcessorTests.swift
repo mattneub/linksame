@@ -287,6 +287,8 @@ struct LinkSameProcessorTests {
         arguments: AwakeningType.allCases
     )
     func awakeHighScore(awakeningType: AwakeningType) async throws {
+        subject.state.highScore = "junk"
+        presenter.statesPresented = []
         do {
             persistence.values = [.size: "Hard", .lastStage: 7, .scores: ["Hard7": 42]]
             switch awakeningType {
@@ -298,11 +300,13 @@ struct LinkSameProcessorTests {
                 await subject.receive(.viewDidLoad)
                 try? await Task.sleep(for: .seconds(0.1))
                 services.lifetime.willEnterForegroundPublisher.send()
-                await #while(coordinator.methodsCalled.isEmpty)
+                await #while(subject.state.highScore == "junk")
             }
             #expect(subject.state.highScore == "High score: 42")
             #expect(presenter.statesPresented.last?.highScore == "High score: 42")
         }
+        subject.state.highScore = "junk"
+        presenter.statesPresented = []
         do {
             // if the scores dictionary doesn't contain the key, empty string
             persistence.values = [.size: "Hard", .lastStage: 7, .scores: ["Hard8": 42]]
@@ -315,15 +319,16 @@ struct LinkSameProcessorTests {
                 await subject.receive(.viewDidLoad)
                 try? await Task.sleep(for: .seconds(0.1))
                 services.lifetime.willEnterForegroundPublisher.send()
-                await #while(coordinator.methodsCalled.isEmpty)
+                await #while(subject.state.highScore == "junk")
             }
             #expect(subject.state.highScore == "")
             #expect(presenter.statesPresented.last?.highScore == "")
         }
+        subject.state.highScore = "junk"
+        presenter.statesPresented = []
         do {
             // if the scores dictionary is absent, empty string
             persistence.values = [.size: "Hard", .lastStage: 7]
-            subject.state.highScore = "High score: 42"
             switch awakeningType {
             case .didInitialLayout:
                 await subject.receive(.didInitialLayout)
@@ -333,7 +338,7 @@ struct LinkSameProcessorTests {
                 await subject.receive(.viewDidLoad)
                 try? await Task.sleep(for: .seconds(0.1))
                 services.lifetime.willEnterForegroundPublisher.send()
-                await #while(coordinator.methodsCalled.isEmpty)
+                await #while(subject.state.highScore == "junk")
             }
             #expect(subject.state.highScore == "")
             #expect(presenter.statesPresented.last?.highScore == "")

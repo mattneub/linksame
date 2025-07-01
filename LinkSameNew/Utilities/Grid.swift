@@ -45,7 +45,7 @@ struct Grid: Equatable, Codable {
     /// that I can demote the getter here so I never have to deal directly with the ambiguity.
     @_disfavoredOverload subscript(column column: Int, row row: Int) -> String? {
         get {
-            grid[column][row]?.picName // TODO: what if we threw a fatal error here?
+            grid[column][row]?.picName
         }
         set(picName) {
             // it is illegal to set a value outside boundaries

@@ -38,7 +38,7 @@ func calcBonus(_ diff: Double) -> Int {
 @MainActor
 protocol ScoreKeeperType: AnyObject {
     var delegate: (any ScoreKeeperDelegate)? { get }
-    var score: Int { get set } // TODO: can I drop this?
+    var score: Int { get }
     func userMadeLegalMove() async
     func userAskedForShuffle() async
     func userAskedForHint() async

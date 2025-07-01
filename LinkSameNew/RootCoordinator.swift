@@ -157,8 +157,6 @@ final class RootCoordinator: RootCoordinatorType {
     }
 
     func hideBoardView() {
-        // TODO: I am not dealing with the rule that says only to do this if interface mode is timed
-        // and indeed I might not even bother
         rootViewController?.view.subviews(ofType: BoardView.self).first?.layer.opacity = 0
     }
 

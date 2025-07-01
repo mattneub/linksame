@@ -413,7 +413,7 @@ struct BoardProcessorTests {
 
     @Test("score: access scorekeeper's score")
     func score() {
-        subject.scoreKeeper.score = 42
+        scoreKeeper.score = 42
         #expect(subject.score == 42)
     }
 

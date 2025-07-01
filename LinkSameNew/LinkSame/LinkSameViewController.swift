@@ -20,7 +20,6 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
     @IBOutlet weak var hintButton: UIBarButtonItem?
     @IBOutlet weak var timedPractice: UISegmentedControl?
     @IBOutlet weak var restartStageButton: UIBarButtonItem?
-    @IBOutlet weak var toolbar: UIToolbar? // TODO: unused?
 
     /// This one exists only on the iPhone, not on iPad.
     @IBOutlet weak var hamburgerButton: UIButton?

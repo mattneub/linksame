@@ -65,13 +65,15 @@ final class LinkSameProcessor: Processor {
             await hideHintAndUnhilite()
             coordinator?.showHelp(
                 sourceItem: sender,
-                popoverPresentationDelegate: HelpPopoverDelegate() // TODO: might have to keep a reference of course
+                popoverPresentationDelegate: HelpPopoverDelegate()
+                // I'm surprised I don't have to keep a reference
             )
         case .showNewGame(sender: let sender):
             await hideHintAndUnhilite()
             coordinator?.showNewGame(
                 sourceItem: sender,
-                popoverPresentationDelegate: NewGamePopoverDelegate(), // TODO: might have to keep a reference of course
+                popoverPresentationDelegate: NewGamePopoverDelegate(),
+                // I'm surprised I don't have to keep a reference
                 dismissalDelegate: self
             )
             savePopoverDefaults()
@@ -97,7 +99,8 @@ final class LinkSameProcessor: Processor {
         }
     }
 
-    /// Set up "subscriptions" to the Lifetime "notifications". Called once, when `.viewDidLoad` is received.
+    /// Set up "subscriptions" to the Lifetime "notifications".
+    /// Called once, when `.viewDidLoad` is received.
     ///
     /// **NOTE:** This method never returns! Be careful how you call it.
     ///
@@ -145,11 +148,10 @@ final class LinkSameProcessor: Processor {
         // self.board.stage = 8 // testing game end behavior, comment out!
 
         // build and display board
-        // TODO: do better error handling here
         do {
             try await boardProcessor?.createAndDealDeck()
         } catch {
-            print(error)
+            print(error) // TODO: could use better error handling, perhaps
             return
         }
         let boardTransition: BoardTransition = stageNumber == 0 ? .fade : .slide

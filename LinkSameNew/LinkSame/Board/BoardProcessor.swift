@@ -151,13 +151,14 @@ final class BoardProcessor: BoardProcessorType, Processor {
     /// Given a grid and a deck, make our grid look like the old grid, making all the same
     /// pieces appear in the interface, and keep a copy of the deck in case we have to restart
     /// the stage.
+    ///
+    /// **NOTE:** It is assumed that the BoardView has no Pieces!
     func populateFrom(oldGrid: Grid, deckAtStartOfStage oldDeck: [String]) async {
         for column in 0 ..< oldGrid.columns {
             for row in 0 ..< oldGrid.rows {
                 if let oldPiece = oldGrid[column: column, row: row] {
                     await addPieceAt(Slot(column: column, row: row), withPicture: oldPiece.picName)
                 } // and otherwise it will just be nil
-                // TODO: seem to be just assuming that the physical layout is empty
             }
         }
         state.deckAtStartOfStage = oldDeck
