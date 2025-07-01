@@ -61,11 +61,13 @@ struct NewGameViewControllerTests {
         #expect(processor.thingsReceived.first == .viewDidLoad)
         processor.thingsReceived = []
         let cancelItem = try #require(subject.navigationItem.rightBarButtonItem as? MyBarButtonItem)
+        #expect(cancelItem.systemItem == .cancel)
         cancelItem.actionHandler?(UIAction { _ in })
         await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.last == .cancelNewGame)
         processor.thingsReceived = []
         let doneItem = try #require(subject.navigationItem.leftBarButtonItem as? MyBarButtonItem)
+        #expect(doneItem.systemItem == .done)
         doneItem.actionHandler?(UIAction { _ in })
         await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.last == .startNewGame)
