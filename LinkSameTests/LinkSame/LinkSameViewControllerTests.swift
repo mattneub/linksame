@@ -34,8 +34,37 @@ struct LinkSameViewControllerTests {
     }
 
     @Test("viewDidLoad: label font size depends on 3x")
-    func viewDidLoad2x() {
-        screen.traitCollection = .init(displayScale: 2)
+    func viewDidLoad2xPhone() {
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .phone
+            traits.displayScale = 2
+        }
+        subject.loadViewIfNeeded()
+        #expect(subject.scoreLabel.font.pointSize == 15)
+        #expect(subject.prevLabel.font.pointSize == 15)
+        #expect(subject.stageLabel.font.pointSize == 15)
+        #expect(subject.practiceLabel?.font.pointSize == 15)
+    }
+
+    @Test("viewDidLoad: label font size depends on 3x")
+    func viewDidLoad3xPhone() {
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .phone
+            traits.displayScale = 3
+        }
+        subject.loadViewIfNeeded()
+        #expect(subject.scoreLabel.font.pointSize == 17)
+        #expect(subject.prevLabel.font.pointSize == 17)
+        #expect(subject.stageLabel.font.pointSize == 17)
+        #expect(subject.practiceLabel?.font.pointSize == 17)
+    }
+
+    @Test("viewDidLoad: label font size depends on 3x")
+    func viewDidLoad2xPad() {
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .pad
+            traits.displayScale = 2
+        }
         subject.loadViewIfNeeded()
         #expect(subject.scoreLabel.font.pointSize == 24)
         #expect(subject.prevLabel.font.pointSize == 24)
@@ -43,8 +72,11 @@ struct LinkSameViewControllerTests {
     }
 
     @Test("viewDidLoad: label font size depends on 3x")
-    func viewDidLoad3x() {
-        screen.traitCollection = .init(displayScale: 3)
+    func viewDidLoad3xPad() {
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .pad
+            traits.displayScale = 3
+        }
         subject.loadViewIfNeeded()
         #expect(subject.scoreLabel.font.pointSize == 26)
         #expect(subject.prevLabel.font.pointSize == 26)
@@ -86,8 +118,8 @@ struct LinkSameViewControllerTests {
         #expect(processor.thingsReceived.isEmpty)
     }
 
-    @Test("present: interfaceMode configures interface")
-    func presentBoardViewInterfaceMode() async {
+    @Test("present: interfaceMode configures interface on iPad")
+    func presentBoardViewInterfaceModePad() async {
         screen.traitCollection = .init(userInterfaceIdiom: .pad)
         subject.loadViewIfNeeded()
         await subject.present(LinkSameState(interfaceMode: .practice))
@@ -95,13 +127,26 @@ struct LinkSameViewControllerTests {
         #expect(subject.prevLabel.isHidden == true)
         #expect(subject.timedPractice?.selectedSegmentIndex == 1)
         #expect(subject.timedPractice?.isEnabled == false)
-        #expect(subject.restartStageButton?.isEnabled == false)
         await subject.present(LinkSameState(interfaceMode: .timed))
         #expect(subject.scoreLabel.isHidden == false)
         #expect(subject.prevLabel.isHidden == false)
         #expect(subject.timedPractice?.selectedSegmentIndex == 0)
         #expect(subject.timedPractice?.isEnabled == true)
         #expect(subject.restartStageButton?.isEnabled == true)
+    }
+
+    @Test("present: interfaceMode configures interface on iPhone")
+    func presentBoardViewInterfaceModePhone() async {
+        screen.traitCollection = .init(userInterfaceIdiom: .phone)
+        subject.loadViewIfNeeded()
+        await subject.present(LinkSameState(interfaceMode: .practice))
+        #expect(subject.scoreLabel.isHidden == true)
+        #expect(subject.prevLabel.isHidden == true)
+        #expect(subject.practiceLabel?.isHidden == false)
+        await subject.present(LinkSameState(interfaceMode: .timed))
+        #expect(subject.scoreLabel.isHidden == false)
+        #expect(subject.prevLabel.isHidden == false)
+        #expect(subject.practiceLabel?.isHidden == true)
     }
 
     @Test("present: stageLabelText configures stageLabel")

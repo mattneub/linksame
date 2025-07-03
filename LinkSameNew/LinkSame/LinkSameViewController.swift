@@ -21,8 +21,9 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
     @IBOutlet weak var timedPractice: UISegmentedControl?
     @IBOutlet weak var restartStageButton: UIBarButtonItem?
 
-    /// This one exists only on the iPhone, not on iPad.
+    /// Even more outlets. These exist only on the iPhone, not on iPad.
     @IBOutlet weak var hamburgerButton: UIButton?
+    @IBOutlet weak var practiceLabel: UILabel?
 
     /// Reference to the boardView; we need this because we are responsible for showing it by
     /// transitioning it with animation.
@@ -41,7 +42,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         super.viewDidLoad()
         // increase font size on triple-resolution screen
         if on3xScreen {
-            for label in [self.scoreLabel, self.prevLabel, self.stageLabel] {
+            for label in [self.scoreLabel, self.prevLabel, self.stageLabel, self.practiceLabel] {
                 if let font = label?.font {
                     label?.font = font.withSize(font.pointSize + 2)
                 }
@@ -91,7 +92,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         prevLabel.isHidden = !timed
         timedPractice?.selectedSegmentIndex = state.interfaceMode.rawValue
         timedPractice?.isEnabled = timed
-        restartStageButton?.isEnabled = timed
+        practiceLabel?.isHidden = timed
 
         // stage label
         if state.stageLabelText != stageLabel.text {

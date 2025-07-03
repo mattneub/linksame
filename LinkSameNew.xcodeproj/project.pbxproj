@@ -39,11 +39,21 @@
 			);
 			target = 3F6B09172DDBC17E0053C85C /* LinkSameNew */;
 		};
+		3FE02F5B2E16D971000AA9F9 /* Exceptions for "LinkSameTests" folder in "LinkSameTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				zzzREADME.txt,
+			);
+			target = 3F2955BD2DDF7C7D0080F31B /* LinkSameTests */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3F2955BF2DDF7C7D0080F31B /* LinkSameTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3FE02F5B2E16D971000AA9F9 /* Exceptions for "LinkSameTests" folder in "LinkSameTests" target */,
+			);
 			path = LinkSameTests;
 			sourceTree = "<group>";
 		};
@@ -282,7 +292,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = W3LHX5RGV2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LinkSameNew/Info.plist;
@@ -298,7 +308,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.3.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.neuburg.matt.LinkSame;
 				PRODUCT_NAME = LinkSame;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -315,7 +325,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = W3LHX5RGV2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LinkSameNew/Info.plist;
@@ -331,7 +341,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.3.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.neuburg.matt.LinkSame;
 				PRODUCT_NAME = LinkSame;
 				SWIFT_EMIT_LOC_STRINGS = YES;
