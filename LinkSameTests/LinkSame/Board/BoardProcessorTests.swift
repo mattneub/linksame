@@ -417,12 +417,12 @@ struct BoardProcessorTests {
         #expect(subject.score == 42)
     }
 
-    @Test("stageNumber and setStageNumber: accesses the state stageNumber")
+    @Test("stageNumber accesses the state stageNumber")
     func stageNumber() {
         subject.state.stageNumber = 7
-        subject.setStageNumber(8)
+        subject.stageNumber = 8
         #expect(subject.state.stageNumber == 8)
-        #expect(subject.stageNumber() == 8)
+        #expect(subject.stageNumber == 8)
     }
 
     @Test("shuffle: unhilites and presents, unilluminates, turns user interaction off and on, rewrites grid, sends corresponding transition, tells scorekeeper")

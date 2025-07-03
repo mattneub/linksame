@@ -233,7 +233,7 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[2] == .animateStageLabel)
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board._stageNumber == 0)
-        #expect(board.methodsCalled == ["setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
+        #expect(board.methodsCalled == ["stageNumber.setter", "createAndDealDeck()", "stageNumber.getter", "stageNumber.getter", "deckAtStartOfStage"])
         // and we save board state
         #expect(persistence.methodsCalled.contains("save(_:forKey:)"))
         #expect(persistence.saveKeys.last == .boardData)
@@ -277,7 +277,7 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[2] == .animateStageLabel)
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board._stageNumber == 5)
-        #expect(board.methodsCalled == ["setStageNumber(_:)", "populateFrom(oldGrid:deckAtStartOfStage:)", "stageNumber()"])
+        #expect(board.methodsCalled == ["stageNumber.setter", "populateFrom(oldGrid:deckAtStartOfStage:)", "stageNumber.getter"])
         #expect(board.grid == Grid(columns: 3, rows: 2))
         #expect(board._deckAtStartOfStage == ["hello"])
     }
@@ -690,7 +690,7 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[2] == .animateStageLabel)
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board._stageNumber == 0) // new game
-        #expect(board.methodsCalled ==  ["stageNumber()", "setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
+        #expect(board.methodsCalled ==  ["stageNumber.getter", "stageNumber.setter", "createAndDealDeck()", "stageNumber.getter", "stageNumber.getter", "deckAtStartOfStage"])
         // and we save board state
         #expect(persistence.saveKeys.last == .boardData)
         let value = try #require(persistence.savedValues.last as? Data)
@@ -729,7 +729,7 @@ struct LinkSameProcessorTests {
         #expect(presenter.thingsReceived[2] == .animateStageLabel)
         #expect(presenter.thingsReceived[3] == .userInteraction(true))
         #expect(board._stageNumber == 6) // NB incrementing stage number
-        #expect(board.methodsCalled ==  ["stageNumber()", "setStageNumber(_:)", "createAndDealDeck()", "stageNumber()", "stageNumber()", "deckAtStartOfStage"])
+        #expect(board.methodsCalled ==  ["stageNumber.getter", "stageNumber.setter", "createAndDealDeck()", "stageNumber.getter", "stageNumber.getter", "deckAtStartOfStage"])
         // and we save board state
         #expect(persistence.methodsCalled.last == "save(_:forKey:)")
         #expect(persistence.saveKeys.last == .boardData)

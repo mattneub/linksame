@@ -16,6 +16,17 @@ final class MockBoardProcessor: BoardProcessorType {
         _view
     }
 
+    var stageNumber: Int {
+        get {
+            methodsCalled.append(#function + ".getter")
+            return _stageNumber
+        }
+        set (newValue){
+            methodsCalled.append(#function + ".setter")
+            _stageNumber = newValue
+        }
+    }
+
     var deckAtStartOfStage: [String] {
         methodsCalled.append(#function)
         return _deckAtStartOfStage
@@ -51,17 +62,6 @@ final class MockBoardProcessor: BoardProcessorType {
 
     func shuffle() {
         methodsCalled.append(#function)
-    }
-
-    func stageNumber() -> Int {
-        methodsCalled.append(#function)
-        return _stageNumber
-    }
-
-
-    func setStageNumber(_ stageNumber: Int) {
-        methodsCalled.append(#function)
-        self._stageNumber = stageNumber
     }
 
     func unhilite() async {

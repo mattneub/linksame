@@ -25,7 +25,7 @@ final class LinkSameProcessor: Processor {
 
     /// Utility for constructing the text displayed by the stage label.
     var stageLabelText: String {
-        let stageNumber = self.boardProcessor?.stageNumber() ?? 0
+        let stageNumber = self.boardProcessor?.stageNumber ?? 0
         let maxStages = services.persistence.loadInt(forKey: .lastStage)
         return "Stage \(stageNumber + 1) of \(maxStages + 1)"
     }
@@ -144,7 +144,7 @@ final class LinkSameProcessor: Processor {
     func setUpNewStage(stageNumber: Int) async {
         await presenter?.receive(.userInteraction(false))
 
-        boardProcessor?.setStageNumber(stageNumber)
+        boardProcessor?.stageNumber = stageNumber
         // self.board.stage = 8 // testing game end behavior, comment out!
 
         // build and display board
@@ -176,7 +176,7 @@ final class LinkSameProcessor: Processor {
 
         await presenter?.receive(.userInteraction(false))
 
-        boardProcessor?.setStageNumber(boardData.stageNumber)
+        boardProcessor?.stageNumber = boardData.stageNumber
         await boardProcessor?.populateFrom(oldGrid: grid, deckAtStartOfStage: boardData.deckAtStartOfStage)
 
         await presenter?.receive(.animateBoardTransition(.fade))
@@ -255,7 +255,7 @@ final class LinkSameProcessor: Processor {
     func saveBoardState() {
         guard let board = boardProcessor else { return }
         let boardData = BoardSaveableData(
-            stageNumber: board.stageNumber(),
+            stageNumber: board.stageNumber,
             grid: board.grid,
             deckAtStartOfStage: board.deckAtStartOfStage
         )
@@ -363,7 +363,7 @@ extension LinkSameProcessor: BoardDelegate {
         }
 
         // If game has just ended, start a whole new game and notify the user somehow.
-        let stageNumber = board.stageNumber()
+        let stageNumber = board.stageNumber
         let lastStage = services.persistence.loadInt(forKey: .lastStage)
         if stageNumber >= lastStage {
             await gameEnded(lastStage: lastStage, score: board.score)

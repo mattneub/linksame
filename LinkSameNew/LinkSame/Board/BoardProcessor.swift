@@ -7,8 +7,7 @@ import QuartzCore
 @MainActor
 protocol BoardProcessorType: AnyObject {
     var score: Int { get }
-    func stageNumber() -> Int
-    func setStageNumber(_: Int)
+    var stageNumber: Int { get set }
     var grid: Grid { get }
     var deckAtStartOfStage: [String] { get }
     func createAndDealDeck() async throws
@@ -31,12 +30,13 @@ extension BoardProcessorType where Self: BoardProcessor {
         scoreKeeper.score
     }
 
-    func stageNumber() -> Int {
-        state.stageNumber
-    }
-
-    func setStageNumber(_ stageNumber: Int) {
-        state.stageNumber = stageNumber
+    var stageNumber: Int {
+        get {
+            state.stageNumber
+        }
+        set (newValue) {
+            state.stageNumber = newValue
+        }
     }
 
     func pauseTimer() async {
