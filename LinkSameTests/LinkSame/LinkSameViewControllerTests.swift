@@ -23,14 +23,23 @@ struct LinkSameViewControllerTests {
     func loadNibPhone() {
         screen.traitCollection = .init(userInterfaceIdiom: .phone)
         subject.loadViewIfNeeded()
-        #expect(subject.hintButton == nil)
+        #expect(subject.hintButton == nil) // no need to check the others
+        #expect(subject.hamburgerButton != nil)
+        #expect(subject.practiceLabel != nil)
+        #expect(subject.practiceLabel?.isHidden == true)
+        #expect(subject.prevLabel.text == " ")
+        #expect(subject.scoreLabel.text == " ")
     }
 
     @Test("nib loaded to get view depends on phone/pad")
     func loadNibPad() {
         screen.traitCollection = .init(userInterfaceIdiom: .pad)
         subject.loadViewIfNeeded()
-        #expect(subject.hintButton != nil)
+        #expect(subject.hintButton != nil) // no need to check the others
+        #expect(subject.hamburgerButton == nil)
+        #expect(subject.practiceLabel == nil)
+        #expect(subject.prevLabel.text == " ")
+        #expect(subject.scoreLabel.text == " ")
     }
 
     @Test("viewDidLoad: label font size depends on 3x")
