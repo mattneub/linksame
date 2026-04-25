@@ -2,7 +2,6 @@ import Foundation
 @testable import LinkSame
 import Testing
 
-@MainActor
 struct HelpProcessorTests {
     let subject = HelpProcessor()
     let presenter = MockReceiverPresenter<Void, HelpState>()

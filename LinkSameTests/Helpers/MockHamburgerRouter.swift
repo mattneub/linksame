@@ -1,7 +1,6 @@
 @testable import LinkSame
 import UIKit
 
-@MainActor
 final class MockHamburgerRouter: HamburgerRouterType {
 
     var options = [String]()

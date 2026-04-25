@@ -1,7 +1,6 @@
 import Foundation
 
 /// Processor that contains the logic for the module.
-@MainActor
 final class HelpProcessor: Processor {
     /// Reference to the presenter, set by the coordinator on creation.
     weak var presenter: (any ReceiverPresenter<Void, HelpState>)?

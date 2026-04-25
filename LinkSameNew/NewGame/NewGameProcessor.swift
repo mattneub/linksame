@@ -1,7 +1,6 @@
 import Foundation
 
 /// Processor that contains the logic for the module.
-@MainActor
 final class NewGameProcessor: Processor {
 
     /// Reference to our chief presenter. Set by the coordinator on module creation.

@@ -2,7 +2,6 @@
 import Testing
 import Foundation
 
-@MainActor
 struct GravityTests {
     let subject = Gravity()
 

@@ -1,7 +1,6 @@
 import Foundation
 
 /// Protocol expressing the public face of the gravity object, so we can test.
-@MainActor
 protocol GravityType {
     func exerciseGravity(grid: inout Grid, stageNumber: Int) -> [Movendum]
 }
@@ -9,7 +8,6 @@ protocol GravityType {
 /// Auxiliary object, servant of the Board, that understands the concept and effects of gravity.
 /// This isolates the rather elaborate gravity function into a separate place, for neatness
 /// and testing.
-@MainActor
 final class Gravity: GravityType {
     
     /// Look for blank spaces, and move pieces into them in accordance with gravity rules for the

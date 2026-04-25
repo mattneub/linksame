@@ -3,7 +3,6 @@ import UIKit
 import Testing
 import WaitWhile
 
-@MainActor
 struct BoardProcessorTests {
     let persistence = MockPersistence()
     let presenter = MockReceiverPresenter<BoardEffect, BoardState>()

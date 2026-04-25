@@ -2,7 +2,6 @@
 import Testing
 import Foundation
 
-@MainActor
 struct PersistenceTests {
     let subject = Persistence()
     let defaults = MockUserDefaults()

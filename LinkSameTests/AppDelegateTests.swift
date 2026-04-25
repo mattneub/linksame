@@ -2,7 +2,6 @@
 import Testing
 import UIKit
 
-@MainActor
 struct AppDelegateTests {
     @Test("bootstrap: registers expected defaults")
     func bootstrap() throws {

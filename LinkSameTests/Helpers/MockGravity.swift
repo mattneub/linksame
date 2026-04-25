@@ -1,7 +1,6 @@
 import Foundation
 @testable import LinkSame
 
-@MainActor
 final class MockGravity: GravityType {
     var grid: Grid?
     var stageNumber: Int?

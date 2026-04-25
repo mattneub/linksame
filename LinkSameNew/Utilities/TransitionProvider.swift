@@ -8,7 +8,6 @@ import UIKit
 /// Note that an animation retains its delegate, so it is sufficient to create an instance of this
 /// class and tell it to `performTransition` all in one breath; the instance will be released after
 /// the animation ends, which is all the lifetime it needs.
-@MainActor
 final class TransitionProvider: NSObject, @preconcurrency CAAnimationDelegate {
     /// The continuation, unfolded from the call that starts the transition so that we can
     /// access it and resume when the transition ends.
@@ -38,7 +37,6 @@ final class TransitionProvider: NSObject, @preconcurrency CAAnimationDelegate {
 }
 
 /// Protocol that expresses the public face of our TransitionProvider, so we can mock it for testing.
-@MainActor
 protocol TransitionProviderType: NSObject {
     func performTransition(transition: CATransition, layer: CALayer) async
 }
@@ -49,8 +47,8 @@ extension TransitionProvider: TransitionProviderType {}
 /// This is so that in tests we can substitute an instance of a mock.
 /// (That is why this class is not `final`; the tests subclass it.)
 ///
-@MainActor
 class TransitionProviderMaker {
+    init() {}
     func makeTransitionProvider() -> any TransitionProviderType {
         return TransitionProvider()
     }

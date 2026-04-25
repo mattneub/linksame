@@ -1,7 +1,6 @@
 import UIKit
 
 /// Processor that contains the logic for the module. This is the primary processor of the app as a whole.
-@MainActor
 final class LinkSameProcessor: Processor {
     
     /// Reference to our chief presenter. Set by the coordinator on module creation.
@@ -407,7 +406,6 @@ extension LinkSameProcessor: ScoreKeeperDelegate {
 }
 
 /// Reducer representing a clump of saveable game state.
-@MainActor
 struct PersistentState: Equatable, Codable {
     let board: BoardSaveableData
     let score: Int

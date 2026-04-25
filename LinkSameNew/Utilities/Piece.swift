@@ -33,6 +33,7 @@ final class Piece: UIView {
         return self.hilite
     }
 
+    nonisolated
     override var description: String {
         MainActor.assumeIsolated { // lunacy
             return "picname: \(picName); column: \(column); row: \(row)"

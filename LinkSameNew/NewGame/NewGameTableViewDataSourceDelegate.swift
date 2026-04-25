@@ -1,7 +1,6 @@
 import UIKit
 
 /// Protocol that expresses the public face of our class, so we can mock it for testing.
-@MainActor
 protocol NewGameTableViewDataSourceDelegateType: NSObject, UITableViewDataSource, UITableViewDelegate {
     var processor: (any Processor<NewGameAction, NewGameState, NewGameEffect>)? { get set }
     func register(_ tableView: UITableView)
@@ -9,7 +8,6 @@ protocol NewGameTableViewDataSourceDelegateType: NSObject, UITableViewDataSource
 }
 
 /// Sub-presenter that populates the table view and responds to the user's action there.
-@MainActor
 final class NewGameTableViewDataSourceDelegate: NSObject, NewGameTableViewDataSourceDelegateType {
 
     /// Constants used for registering and dequeuing cells and headers.
@@ -97,7 +95,7 @@ final class NewGameTableViewDataSourceDelegate: NSObject, NewGameTableViewDataSo
     }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        Task {
+        Task.immediate {
             await processor?.receive(.userSelectedTableRow(indexPath))
         }
     }

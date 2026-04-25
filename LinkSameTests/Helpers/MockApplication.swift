@@ -1,7 +1,6 @@
 import UIKit
 @testable import LinkSame
 
-@MainActor
 final class MockApplication: ApplicationType {
     var applicationState: UIApplication.State = .active
     static var methodsCalled = [String]()

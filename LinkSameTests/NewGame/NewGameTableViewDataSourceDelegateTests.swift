@@ -3,7 +3,6 @@ import UIKit
 import Testing
 import WaitWhile
 
-@MainActor
 struct NewGameTableViewDataSourceDelegateTests {
     let subject = NewGameTableViewDataSourceDelegate()
     let processor = MockProcessor<NewGameAction, NewGameState, NewGameEffect>()
@@ -85,10 +84,9 @@ struct NewGameTableViewDataSourceDelegateTests {
     }
 
     @Test("selecting a cell sends the userSelectedTableRow action")
-    func select() async {
+    func select() {
         let tableView = UITableView()
         subject.tableView(tableView, didSelectRowAt: .init(row: 1, section: 0))
-        await #while(processor.thingsReceived.count == 0)
         #expect(processor.thingsReceived.last == .userSelectedTableRow(.init(row: 1, section: 0)))
     }
 }

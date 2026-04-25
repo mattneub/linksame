@@ -2,7 +2,6 @@
 import Testing
 import UIKit
 
-@MainActor
 struct UIViewTests {
     init() {
         MockUIView.duration = 0
@@ -41,7 +40,7 @@ struct UIViewTests {
         #expect(view.subviews(ofType: UISwitch.self, recursing: false).count == 0)
     }
 
-    @Test("animate(withDuration:): calls base animate(withDuration:)")
+    @Test("animateAsync(withDuration:): calls base animate(withDuration:)")
     func animate() async {
         let view = MockUIView()
         await MockUIView.animateAsync(withDuration: 0.1, delay: 0.2, options: .curveEaseOut, animations: { view.backgroundColor = .red })
@@ -52,7 +51,7 @@ struct UIViewTests {
         #expect(MockUIView.completion != nil) // because we inject `continuation(resume:)`
     }
 
-    @Test("transition(withView:): calls base transition(withView:)")
+    @Test("transitionAsync(withView:): calls base transition(withView:)")
     func transition() async {
         let view = UIView()
         await MockUIView.transitionAsync(with: view, duration: 0.1, options: .transitionCrossDissolve)

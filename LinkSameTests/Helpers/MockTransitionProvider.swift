@@ -1,7 +1,6 @@
 import UIKit
 @testable import LinkSame
 
-@MainActor
 final class MockTransitionProvider: NSObject, TransitionProviderType {
     var transition: CATransition?
     var layer: CALayer?
@@ -14,7 +13,6 @@ final class MockTransitionProvider: NSObject, TransitionProviderType {
     }
 }
 
-@MainActor
 final class MockTransitionProviderMaker: TransitionProviderMaker {
     var mockTransitionProvider = MockTransitionProvider()
 

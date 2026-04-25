@@ -1,10 +1,8 @@
 import UIKit
 @testable import LinkSame
 import Testing
-import WaitWhile
 import SnapshotTesting
 
-@MainActor
 struct GameOverViewControllerTests {
     let subject = GameOverViewController()
     let processor = MockProcessor<GameOverAction, GameOverState, Void>()
@@ -40,10 +38,9 @@ struct GameOverViewControllerTests {
     }
 
     @Test("viewDidLoad: sets background to clear, calls processor .viewDidLoad, configures subviews")
-    func viewDidLoad() async {
+    func viewDidLoad() {
         subject.loadViewIfNeeded()
         #expect(subject.view.backgroundColor == .clear)
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived == [.viewDidLoad])
         #expect(subject.backgroundView.isDescendant(of: subject.view))
         #expect(subject.scoreLabel.isDescendant(of: subject.backgroundView))
@@ -104,9 +101,8 @@ struct GameOverViewControllerTests {
     }
 
     @Test("userTapped: calls processor .tapped")
-    func userTapped() async {
+    func userTapped() {
         subject.userTapped()
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived == [.tapped])
     }
 }

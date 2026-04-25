@@ -1,9 +1,7 @@
 import UIKit
 @testable import LinkSame
 import Testing
-import WaitWhile
 
-@MainActor
 struct HamburgerRouterTests {
     let subject = HamburgerRouter()
 
@@ -57,7 +55,6 @@ struct HamburgerRouterTests {
         for action in actions {
             action.performWithSender(nil, target: nil)
         }
-        await #while(processor.thingsReceived.count < 6)
         #expect(processor.thingsReceived == [
             .showNewGame(sender: nil),
             .hint,

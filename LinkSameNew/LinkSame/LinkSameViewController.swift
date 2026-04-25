@@ -63,7 +63,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         hamburgerButton?.addTarget(self, action: #selector(doHamburgerButton), for: .menuActionTriggered)
         hamburgerButton?.preferredMenuElementOrder = .fixed
 
-        Task {
+        Task.immediate {
             await processor?.receive(.viewDidLoad)
         }
     }
@@ -80,7 +80,7 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
     override func viewDidLayoutSubviews() {
         guard !self.didSetUpInitialLayout else { return }
         self.didSetUpInitialLayout = true
-        Task {
+        Task.immediate {
             await processor?.receive(.didInitialLayout)
         }
     }
@@ -158,37 +158,37 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
     // ============================ toolbar buttons =================================
 
     @IBAction func toggleHint(_: Any?) { // hintButton
-        Task {
+        Task.immediate {
             await processor?.receive(.hint)
         }
     }
     
     @IBAction func doShuffle(_: Any?) {
-        Task {
+        Task.immediate {
             await processor?.receive(.shuffle)
         }
     }
     
     @IBAction func doRestartStage(_: Any?) {
-        Task {
+        Task.immediate {
             await processor?.receive(.restartStage)
         }
     }
 
     @IBAction func doNew(_ sender: (any UIPopoverPresentationControllerSourceItem)?) {
-        Task {
+        Task.immediate {
             await processor?.receive(.showNewGame(sender: sender))
         }
     }
 
     @IBAction func doTimedPractice(_ segmentedControl: UISegmentedControl) {
-        Task {
+        Task.immediate {
             await processor?.receive(.timedPractice(segmentedControl.selectedSegmentIndex))
         }
     }
     
     @IBAction func doHelp(_ sender: (any UIPopoverPresentationControllerSourceItem)?) {
-        Task {
+        Task.immediate {
             await processor?.receive(.showHelp(sender: sender))
         }
     }
@@ -202,7 +202,7 @@ extension LinkSameViewController : UIToolbarDelegate {
 
 extension LinkSameViewController { // hamburger button on phone
     @IBAction func doHamburgerButton(_ sender: Any?) {
-        Task {
+        Task.immediate {
             await processor?.receive(.hamburger) // phone only, so no need for a source view
         }
     }

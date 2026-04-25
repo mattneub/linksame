@@ -31,7 +31,6 @@ extension UIApplication {
 }
 
 /// Protocol describing the public interface to UIApplication, so we can mock it.
-@MainActor
 protocol ApplicationType {
     var applicationState: UIApplication.State { get }
     static func userInteraction(_ interactionOn: Bool)

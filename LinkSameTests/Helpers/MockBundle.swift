@@ -1,7 +1,6 @@
 import Foundation
 @testable import LinkSame
 
-@MainActor
 final class MockBundle: BundleType {
     var pathToReturn: String?
     var methodsCalled = [String]()

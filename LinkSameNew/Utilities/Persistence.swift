@@ -14,7 +14,6 @@ enum DefaultKey: String {
 
 /// Protocol expressing the public face of our Persistence struct. To the public, all keys are DefaultKey cases.
 /// Exists so that Persistence can be mocked.
-@MainActor
 protocol PersistenceType {
     /// Enter the given pairs into the registration domain, to be used in case no value exists for the key.
     func register(_ dictionary: [DefaultKey: Any])
@@ -47,7 +46,6 @@ protocol PersistenceType {
 }
 
 /// Gateway to persistent storage.
-@MainActor
 struct Persistence: PersistenceType {
     /// The UserDefaultsType object to talk to when fetching and storing. A mock can be injected here
     /// when testing.

@@ -3,7 +3,6 @@ import Testing
 import UIKit
 import WaitWhile
 
-@MainActor
 struct RootCoordinatorTests {
     let subject = RootCoordinator()
     let screen = MockScreen()

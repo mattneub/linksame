@@ -1,7 +1,6 @@
 import Foundation
 @testable import LinkSame
 
-@MainActor
 final class MockScoreKeeper: ScoreKeeperType {
 
     var delegate: (any LinkSame.ScoreKeeperDelegate)?

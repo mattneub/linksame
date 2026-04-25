@@ -2,7 +2,6 @@
 import Testing
 import UIKit
 
-@MainActor
 struct PieceTests {
     @Test("equality between two pieces")
     func equalityPiecePiece() {

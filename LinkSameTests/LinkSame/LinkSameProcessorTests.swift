@@ -3,7 +3,6 @@ import UIKit
 import Testing
 import WaitWhile
 
-@MainActor
 struct LinkSameProcessorTests {
     let subject = LinkSameProcessor()
     let presenter = MockReceiverPresenter<LinkSameEffect, LinkSameState>()

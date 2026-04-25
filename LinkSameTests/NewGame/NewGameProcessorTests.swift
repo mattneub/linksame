@@ -3,7 +3,6 @@ import Foundation
 import Testing
 import WaitWhile
 
-@MainActor
 struct NewGameProcessorTests {
     let subject = NewGameProcessor()
     let presenter = MockReceiverPresenter<NewGameEffect, NewGameState>()

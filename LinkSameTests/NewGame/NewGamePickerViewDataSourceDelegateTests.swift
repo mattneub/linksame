@@ -1,9 +1,7 @@
 import UIKit
 @testable import LinkSame
 import Testing
-import WaitWhile
 
-@MainActor
 struct NewGamePickerViewDataSourceDelegateTests {
     let subject = NewGamePickerViewDataSourceDelegate()
     let processor = MockProcessor<NewGameAction, NewGameState, NewGameEffect>()
@@ -38,10 +36,9 @@ struct NewGamePickerViewDataSourceDelegateTests {
     }
 
     @Test("didSelect: sends .userSelectedPickerRow")
-    func didSelect() async {
+    func didSelect() {
         let pickerView = UIPickerView()
         subject.pickerView(pickerView, didSelectRow: 5, inComponent: 0)
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.first == .userSelectedPickerRow(5))
     }
 

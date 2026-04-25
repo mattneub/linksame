@@ -4,7 +4,6 @@ import WebKit
 import Testing
 import WaitWhile
 
-@MainActor
 struct HelpViewControllerTests {
     let subject = HelpViewController()
     let processor = MockProcessor<HelpAction, HelpState, Void>()
@@ -16,16 +15,15 @@ struct HelpViewControllerTests {
     }
 
     @Test("view is a web view; loading view sends viewDidLoad to processor")
-    func loadView() async {
+    func loadView() {
         subject.loadViewIfNeeded()
         #expect(subject.view is WKWebView)
         #expect(subject.view.backgroundColor == .white)
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.last == .viewDidLoad)
     }
 
     @Test("viewIsAppearing: sets up navigation item, navigation controller's nav bar")
-    func viewIsAppearing() async throws {
+    func viewIsAppearing() throws {
         let navigationController = UINavigationController(rootViewController: subject)
         subject.viewIsAppearing(false)
         let navigationBar = navigationController.navigationBar
@@ -34,7 +32,6 @@ struct HelpViewControllerTests {
         let barButtonItem = try #require(subject.navigationItem.rightBarButtonItem as? MyBarButtonItem)
         #expect(barButtonItem.value(forKey: "systemItem") as? Int == 0)
         barButtonItem.actionHandler?(UIAction(title: "", handler: { _ in }))
-        await #while(processor.thingsReceived.last != .dismiss)
         #expect(processor.thingsReceived.last == .dismiss)
     }
 

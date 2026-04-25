@@ -61,21 +61,23 @@ final class NewGameViewController: UIViewController, ReceiverPresenter {
         view.backgroundColor = .systemBackground
 
         let cancelBarButtonItem = MyBarButtonItem(systemItem: .cancel) { [weak self] _ in
-            Task {
+            Task.immediate {
                 await self?.processor?.receive(.cancelNewGame)
             }
         }
         navigationItem.rightBarButtonItem = cancelBarButtonItem
         let doneBarButtonItem = MyBarButtonItem(systemItem: .done) { [weak self] _ in
-            Task {
+            Task.immediate {
                 await self?.processor?.receive(.startNewGame)
             }
         }
         navigationItem.leftBarButtonItem = doneBarButtonItem
 
-        Task {
+        Task.immediate {
             await processor?.receive(.viewDidLoad)
-            setUpInterface()
+        }
+        Task {
+            setUpInterface() // TODO: I don't like this double action-sending
         }
     }
 
@@ -95,7 +97,7 @@ final class NewGameViewController: UIViewController, ReceiverPresenter {
             tableView.bottomAnchor.constraint(equalTo: pickerView.topAnchor),
         ])
 
-        Task {
+        Task.immediate {
             await processor?.receive(.initialInterfaceIsReady)
         }
     }
@@ -154,7 +156,6 @@ extension NewGameViewController: UIViewControllerTransitioningDelegate {
 
 /// Protocol describing a delegate to whom we can report that the user has tapped a bar button
 /// item and wants to start a new game or simply cancel. Both are ways of dismissing us.
-@MainActor
 protocol NewGamePopoverDismissalButtonDelegate: AnyObject {
     func cancelNewGame() async
     func startNewGame() async

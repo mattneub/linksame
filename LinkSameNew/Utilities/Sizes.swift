@@ -2,7 +2,6 @@ import Foundation
 
 /// A size is a board grid size, i.e. how many tiles are displayed in each dimension.
 /// The user gets to determine the board's size, except on iPhone where there is just one size.
-@MainActor
 struct Sizes {
     /// Constants, with string values for display in the interface as well as for reference,
     /// as values in user defaults, etc.

@@ -2,7 +2,6 @@ import UIKit
 @testable import LinkSame
 import Testing
 
-@MainActor
 struct NewGamePopoverDelegateTests {
     let subject = NewGamePopoverDelegate()
 

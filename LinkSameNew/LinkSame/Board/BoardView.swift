@@ -210,7 +210,7 @@ class BoardView: UIView, ReceiverPresenter {
     // Methods called by gesture recognizers.
 
     @objc func tappedPathView() {
-        Task {
+        Task.immediate {
             await processor?.receive(.tappedPathView)
         }
     }
@@ -219,13 +219,13 @@ class BoardView: UIView, ReceiverPresenter {
         guard let piece = gestureRecognizer.view as? Piece else {
             return
         }
-        Task {
+        Task.immediate {
             await processor?.receive(.tapped(piece.toReducer))
         }
     }
 
     @objc func developerDoubleTappedPiece() {
-        Task {
+        Task.immediate {
             await processor?.receive(.doubleTappedPiece)
         }
     }

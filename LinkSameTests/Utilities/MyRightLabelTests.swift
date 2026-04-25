@@ -3,7 +3,6 @@ import Testing
 import UIKit
 import SnapshotTesting
 
-@MainActor
 struct MyRightLabelTests {
     @Test("MyRightLabel looks correct")
     func myRightLabel() {

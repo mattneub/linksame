@@ -1,7 +1,6 @@
 @testable import LinkSame
 import Combine
 
-@MainActor
 final class MockLifetime: LifetimeType {
 
     var willResignActivePublisher = PassthroughSubject<Void, Never>()

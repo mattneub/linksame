@@ -2,7 +2,6 @@ import Foundation
 @testable import LinkSame
 import Testing
 
-@MainActor
 struct GameOverProcessorTests {
     let subject = GameOverProcessor()
     let presenter = MockReceiverPresenter<Void, GameOverState>()

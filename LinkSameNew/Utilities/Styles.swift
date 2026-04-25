@@ -2,7 +2,6 @@ import Foundation
 
 /// A style is a named set of images. The user gets to pick which set should be used as the images
 /// on the visible pieces.
-@MainActor
 struct Styles {
     /// Constants, with string values for display in the interface as well as for reference,
     /// as values in user defaults, etc.

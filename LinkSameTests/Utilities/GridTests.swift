@@ -2,7 +2,6 @@
 import Testing
 import Foundation
 
-@MainActor
 struct GridTests {
     @Test("initializer: sets columns, rows, and empty (nil) two dimensional array of correct dimensions")
     func initializer() {

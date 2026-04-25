@@ -1,7 +1,6 @@
 import UIKit
 
 /// Protocol that expresses the public face of our class, so we can mock it for testing.
-@MainActor
 protocol NewGamePickerViewDataSourceDelegateType: NSObject, UIPickerViewDataSource, UIPickerViewDelegate {
     var processor: (any Processor<NewGameAction, NewGameState, NewGameEffect>)? { get set }
     func register(_ pickerView: UIPickerView)
@@ -9,7 +8,6 @@ protocol NewGamePickerViewDataSourceDelegateType: NSObject, UIPickerViewDataSour
 }
 
 /// Sub-presenter that populates the picker view and responds to the user's action there.
-@MainActor
 final class NewGamePickerViewDataSourceDelegate: NSObject, NewGamePickerViewDataSourceDelegateType {
     /// Reference to the processor, set by the view controller.
     weak var processor: (any Processor<NewGameAction, NewGameState, NewGameEffect>)?
@@ -56,7 +54,7 @@ final class NewGamePickerViewDataSourceDelegate: NSObject, NewGamePickerViewData
     }
 
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        Task {
+        Task.immediate {
             await processor?.receive(.userSelectedPickerRow(row))
         }
     }

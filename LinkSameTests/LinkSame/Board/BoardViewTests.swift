@@ -1,9 +1,7 @@
 import UIKit
 @testable import LinkSame
 import Testing
-import WaitWhile
 
-@MainActor
 struct BoardViewTests {
     let subject = BoardView(columns: 2, rows: 2)
     let screen = MockScreen()
@@ -104,7 +102,7 @@ struct BoardViewTests {
     }
 
     @Test("Initializer sets up the view's subview.")
-    func initializer() async throws {
+    func initializer() throws {
         let subject = BoardView(columns: 1, rows: 1)
         subject.frame = CGRect(origin: .zero, size: .init(width: 100, height: 100))
         subject.layoutIfNeeded()
@@ -305,15 +303,13 @@ struct BoardViewTests {
         await subject.receive(.insert(piece: piece))
         let gestureRecognizer = try #require(subject.pieces.first?.gestureRecognizers?.first as? MyTapGestureRecognizer)
         subject.perform(gestureRecognizer.action, with: gestureRecognizer) // whew!
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.first == .tapped(piece))
     }
 
     @Test("tappedPathView: send processor .tappedPathView")
-    func tappedPathView() async {
+    func tappedPathView() {
         subject.processor = processor
         subject.tappedPathView()
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.last == .tappedPathView)
     }
 }

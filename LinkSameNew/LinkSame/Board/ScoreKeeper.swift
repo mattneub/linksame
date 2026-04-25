@@ -35,7 +35,6 @@ func calcBonus(_ diff: Double) -> Int {
 }
 
 /// Protocol describing the public face of our ScoreKeeper object, so we can mock it for testing.
-@MainActor
 protocol ScoreKeeperType: AnyObject {
     var delegate: (any ScoreKeeperDelegate)? { get }
     var score: Int { get }
@@ -54,7 +53,6 @@ protocol ScoreKeeperType: AnyObject {
 /// (for example) what the user did; a few messages do tell the ScoreKeeper to start
 /// or stop the timer, but no message ever tells the ScoreKeeper how to keep the score!
 ///
-@MainActor
 final class ScoreKeeper: ScoreKeeperType {
     /// The current score.
     var score: Int
@@ -83,7 +81,7 @@ final class ScoreKeeper: ScoreKeeperType {
         self.scoreAtStartOfStage = score // might need this if we restart this stage later
         self.delegate = delegate
         // And immediately report the score, thus causing it to be displayed.
-        Task {
+        Task.immediate {
             await delegate?.scoreChanged(Score(score: score, direction: .up))
         }
     }
@@ -166,7 +164,6 @@ final class ScoreKeeper: ScoreKeeperType {
 /// Protocol for reporting changes in the score. All changes in the score must be reported; the
 /// delegate needs to know both the new score and whether this represents an up or down movements
 /// of the score value.
-@MainActor
 protocol ScoreKeeperDelegate: AnyObject {
     func scoreChanged(_: Score) async
 }

@@ -2,7 +2,6 @@ import Foundation
 @testable import LinkSame
 import Testing
 
-@MainActor
 struct PopoverDefaultsTests {
     @Test("PopoverDefaults struct round trips with popover defaults dictionary")
     func popoverDefaults() throws {

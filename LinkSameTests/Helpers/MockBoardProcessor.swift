@@ -1,7 +1,6 @@
 import Foundation
 @testable import LinkSame
 
-@MainActor
 final class MockBoardProcessor: BoardProcessorType {
 
     var methodsCalled = [String]()

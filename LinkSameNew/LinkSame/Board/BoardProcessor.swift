@@ -4,7 +4,6 @@ import QuartzCore
 
 /// Public face of the BoardProcessor, defining the messages
 /// that the LinkSameProcessor can send to the BoardProcessor.
-@MainActor
 protocol BoardProcessorType: AnyObject {
     var score: Int { get }
     var stageNumber: Int { get set }
@@ -53,7 +52,6 @@ extension BoardProcessorType where Self: BoardProcessor {
 /// (taps on pieces), and it understands the notion of a legal move and what happens in response.
 /// Most important, it maintains the Grid which is the source of truth for where the pieces are.
 /// Its presenter is the view where the pieces are actually drawn.
-@MainActor
 final class BoardProcessor: BoardProcessorType, Processor {
 
     /// Reference to the presenter; set by the coordinator on creation.
@@ -535,14 +533,12 @@ final class BoardProcessor: BoardProcessorType, Processor {
     }
 }
 
-@MainActor
 protocol BoardDelegate: AnyObject {
     func stageEnded() async
     func userTappedPathView() async
 }
 
 /// Reducer that carries pertinent BoardProcessor data into and out of persistence.
-nonisolated
 struct BoardSaveableData: Codable, Equatable {
     let stageNumber: Int
     let grid: Grid

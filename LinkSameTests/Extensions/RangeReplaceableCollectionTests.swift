@@ -2,7 +2,6 @@
 import Testing
 import UIKit
 
-@MainActor
 struct RangeReplaceableCollectionTests {
     @Test("remove(object:): removes the first equivalent object from itself")
     func remove() {

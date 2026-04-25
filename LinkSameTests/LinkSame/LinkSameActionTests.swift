@@ -2,7 +2,6 @@ import UIKit
 @testable import LinkSame
 import Testing
 
-@MainActor
 struct LinkSameActionTests {
     let sourceItem = UIView()
 

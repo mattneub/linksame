@@ -3,7 +3,6 @@ import Testing
 import Foundation
 import WaitWhile
 
-@MainActor
 final class CancelableTimerTests {
     var subject: CancelableTimer?
 

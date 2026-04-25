@@ -2,7 +2,6 @@
 import Testing
 import Foundation
 
-@MainActor
 struct RangeOperatorsTests {
     @Test(">>>: works")
     func rightTriple() {

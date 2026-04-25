@@ -1,7 +1,6 @@
 @testable import LinkSame
 import Foundation
 
-@MainActor
 final class MockPersistence: PersistenceType {
     var methodsCalled = [String]()
 

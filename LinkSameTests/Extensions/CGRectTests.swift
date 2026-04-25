@@ -2,7 +2,6 @@
 import Testing
 import Foundation
 
-@MainActor
 struct CGRectTests {
     @Test("center: returns center point")
     func center() {

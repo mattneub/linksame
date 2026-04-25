@@ -4,7 +4,6 @@ import Testing
 import WaitWhile
 import SnapshotTesting
 
-@MainActor
 struct PathViewTests {
     let subject = PathView()
 

@@ -2,7 +2,6 @@
 import Testing
 import UIKit
 
-@MainActor
 struct TransitionProviderTests {
     @Test("perform: adds the given transition to the given layer")
     func perform() async {
@@ -16,6 +15,7 @@ struct TransitionProviderTests {
     }
 }
 
+nonisolated
 private final class MyLayer: CALayer {
     var animation: CAAnimation?
     var key: String?

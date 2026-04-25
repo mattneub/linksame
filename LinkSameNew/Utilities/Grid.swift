@@ -7,7 +7,6 @@
 /// * where that same Piece is in the Board
 /// * where that same Piece thinks it is (its column and row)
 ///
-@MainActor
 struct Grid: Equatable, Codable {
     private(set) var grid: [[PieceReducer?]]
     let columns: Int

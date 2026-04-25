@@ -34,7 +34,7 @@ final class GameOverViewController: UIViewController, ReceiverPresenter {
         super.viewDidLoad()
         view.backgroundColor = .clear
         setUp()
-        Task {
+        Task.immediate {
             await processor?.receive(.viewDidLoad)
         }
     }
@@ -89,7 +89,7 @@ final class GameOverViewController: UIViewController, ReceiverPresenter {
 
     /// Action of the tap gesture recognizer.
     @objc func userTapped() {
-        Task {
+        Task.immediate {
             await processor?.receive(.tapped)
         }
     }

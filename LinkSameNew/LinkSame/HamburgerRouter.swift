@@ -1,14 +1,12 @@
 import UIKit
 
 /// Protocol describing our hamburger router, so we can mock it for testing.
-@MainActor
 protocol HamburgerRouterType {
     var options: [String] { get }
     func makeMenu(processor: any Processor<LinkSameAction, LinkSameState, LinkSameEffect>) async -> UIMenu
 }
 
 /// Router for the hamburger button.
-@MainActor
 final class HamburgerRouter: HamburgerRouterType {
     /// Choices for the hamburger button's menu.
     enum HamburgerChoices: String, CaseIterable {
@@ -58,7 +56,7 @@ final class HamburgerRouter: HamburgerRouterType {
         var actions = [UIAction]()
         for option in options {
             let action = UIAction(title: option) { [weak self, weak processor] action in
-                Task {
+                Task.immediate {
                     if let processor {
                         await self?.doChoice(action.title, processor: processor)
                     }

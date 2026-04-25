@@ -2,7 +2,6 @@
 import Testing
 import UIKit
 
-@MainActor
 struct UIApplicationTests {
     @Test("userInteraction: turns window user interaction off and on as expected")
     func userInteraction() {

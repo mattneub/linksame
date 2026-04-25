@@ -20,7 +20,7 @@ final class HelpViewController: UIViewController, ReceiverPresenter {
     override func loadView() {
         self.view = WKWebView()
         view.backgroundColor = .white
-        Task {
+        Task.immediate {
             await processor?.receive(.viewDidLoad)
         }
     }
@@ -28,7 +28,7 @@ final class HelpViewController: UIViewController, ReceiverPresenter {
     override func viewIsAppearing(_ animated: Bool) {
         super.viewIsAppearing(animated)
         navigationItem.rightBarButtonItem = MyBarButtonItem(systemItem: .done) { [weak self] _ in
-            Task {
+            Task.immediate {
                 await self?.processor?.receive(.dismiss)
             }
         }

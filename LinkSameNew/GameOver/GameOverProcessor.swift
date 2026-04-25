@@ -1,7 +1,6 @@
 import Foundation
 
 /// Processor for the game over module.
-@MainActor
 final class GameOverProcessor: Processor {
     /// Reference to the presenter, set by coordinator on creation.
     weak var presenter: (any ReceiverPresenter<Void, GameOverState>)?

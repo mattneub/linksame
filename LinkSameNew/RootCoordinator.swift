@@ -1,6 +1,5 @@
 import UIKit
 
-@MainActor
 protocol RootCoordinatorType: AnyObject {
     
     /// Set up the initial module for the entire app, putting the interface into the window.
@@ -42,7 +41,6 @@ protocol RootCoordinatorType: AnyObject {
     func showGameOver(state: GameOverState)
 }
 
-@MainActor
 final class RootCoordinator: RootCoordinatorType {
     var linkSameProcessor: (any Processor<LinkSameAction, LinkSameState, LinkSameEffect>)?
     var newGameProcessor: (any Processor<NewGameAction, NewGameState, NewGameEffect>)?

@@ -2,12 +2,10 @@ import UIKit
 
 // Shortcuts for determination of hardware environment.
 
-@MainActor
 var onPhone : Bool {
     return services.screen.traitCollection.userInterfaceIdiom == .phone
 }
 
-@MainActor
 var on3xScreen : Bool {
     return services.screen.traitCollection.displayScale > 2.5
 }

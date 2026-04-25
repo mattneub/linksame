@@ -1,9 +1,7 @@
 import UIKit
 @testable import LinkSame
 import Testing
-import WaitWhile
 
-@MainActor
 struct LinkSameViewControllerTests {
     let subject = LinkSameViewController()
     let screen = MockScreen()
@@ -110,20 +108,18 @@ struct LinkSameViewControllerTests {
     }
 
     @Test("viewDidLoad: sends viewDidLoad")
-    func viewDidLoad() async {
+    func viewDidLoad() {
         subject.loadViewIfNeeded()
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.first == .viewDidLoad)
     }
 
     @Test("viewDidLayoutSubviews: sends didInitialLayout the first time")
     func viewDidLayoutSubviews() async {
         subject.viewDidLayoutSubviews()
-        await #while(!processor.thingsReceived.contains(.didInitialLayout))
         #expect(processor.thingsReceived.filter({$0 == .didInitialLayout}).count == 1)
         processor.thingsReceived = []
         subject.viewDidLayoutSubviews()
-        try? await Task.sleep(for: .seconds(0.5))
+        try? await Task.sleep(for: .seconds(0.1))
         #expect(processor.thingsReceived.isEmpty)
     }
 
@@ -245,55 +241,48 @@ struct LinkSameViewControllerTests {
     }
 
     @Test("doRestartStage: sends restartStage to processor")
-    func doRestartStage() async throws {
+    func doRestartStage() throws {
         subject.doRestartStage(nil)
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.first == .restartStage)
     }
 
     @Test("doShuffle: sends shuffle to processor")
-    func doShuffle() async throws {
+    func doShuffle() throws {
         subject.doShuffle(nil)
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.first == .shuffle)
     }
 
     @Test("toggleHint: sends hint to processor")
-    func toggleHint() async throws {
+    func toggleHint() throws {
         subject.toggleHint(nil)
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.first == .hint)
     }
 
     @Test("doNew: sends showNewGame to processor")
-    func doNew() async {
+    func doNew() {
         let source = UIView()
         subject.doNew(source)
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.first == .showNewGame(sender: source))
     }
 
     @Test("doTimedPractice: sends timedPractice to processor")
-    func doTimedPractice() async {
+    func doTimedPractice() {
         let segmented = UISegmentedControl(items: ["Hey", "Ho"])
         segmented.selectedSegmentIndex = 1
         subject.doTimedPractice(segmented)
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.first == .timedPractice(1))
     }
 
     @Test("doHelp: sends showHelp to processor")
-    func doHelp() async {
+    func doHelp() {
         let source = UIView()
         subject.doHelp(source)
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.first == .showHelp(sender: source))
     }
 
     @Test("doHamburgerButton: sends hamburger to processor")
-    func doHamburgerButton() async {
+    func doHamburgerButton() {
         subject.doHamburgerButton(UIView())
-        await #while(processor.thingsReceived.isEmpty)
         #expect(processor.thingsReceived.first == .hamburger)
     }
 
