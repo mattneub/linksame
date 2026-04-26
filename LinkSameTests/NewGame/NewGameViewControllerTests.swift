@@ -110,28 +110,33 @@ struct NewGameViewControllerTests {
         #expect(processor.thingsReceived.last == .initialInterfaceIsReady)
     }
 
-    // TODO: What's up with this test?
-    /*
-    @Test("updateViewConstraints: if table view has sections, gives table view a height constraint")
-    func updateViewConstraints() async {
+    @Test("updateViewConstraints: if table view has sections with row heights, gives table view a height constraint")
+    func updateViewConstraints() async throws {
         makeWindow(viewController: subject)
         subject.loadViewIfNeeded()
         await #while(subject.view.subviews.count == 0)
+        subject.tableView.dataSource = mockTableDelegate
+        subject.tableView.delegate = mockTableDelegate
         subject.view.setNeedsUpdateConstraints()
+        try? await Task.sleep(for: .seconds(0.1))
         #expect(subject.tableView.constraints.count == 0)
         // ok, now let's construct the table view
         subject.tableView.reloadData()
         subject.view.setNeedsUpdateConstraints()
+        try? await Task.sleep(for: .seconds(0.1))
         #expect(subject.tableView.constraints.count == 0)
         // nope, still no sections; ok, watch _this_ little move
         mockTableDelegate.numberOfSections = 1
+        subject.tableView.rowHeight = 30
         subject.tableView.reloadData()
-        await #while(subject.tableView.constraints.count == 0)
-        #expect(subject.tableView.constraints.count == 1)
-        let height = NSLayoutConstraint.Attribute.height
-        #expect(subject.tableView.constraints.first?.firstAttribute == height)
+        subject.view.setNeedsUpdateConstraints()
+        try? await Task.sleep(for: .seconds(0.1))
+        let constraint = try #require(subject.tableView.constraints.first(where: {
+            $0.firstAttribute == .height
+        }))
+        #expect(constraint.constant == 90)
     }
-*/
+
     @Test("viewDidLayoutSubviews: sets preferred content size to sum of heights of table and picker")
     func viewDidLayoutSubviews() {
         subject.tableView.bounds = CGRect(x: 0, y: 0, width: 320, height: 500)
@@ -197,6 +202,7 @@ fileprivate final class MockTableDelegate: NSObject, NewGameTableViewDataSourceD
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        return UITableViewCell()
+        let cell = UITableViewCell()
+        return cell
     }
 }

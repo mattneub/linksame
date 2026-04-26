@@ -102,21 +102,23 @@ final class NewGameViewController: UIViewController, ReceiverPresenter {
         }
     }
 
-    /// One-time flag so that we only run our constraint update code once.
-    var didUpdateConstraints = false
+    /// One-time flag so that we only give the table view a height constraint once.
+    var didProvideTableViewHeightConstraint = false
 
     /// Determine the actual height of the table view, and set it. The timing here is rather tricky;
     /// we must wait until the table view has its content.
     override func updateViewConstraints() {
-        if !didUpdateConstraints && tableView.numberOfSections > 0 {
-            didUpdateConstraints = true
+        if !didProvideTableViewHeightConstraint && tableView.numberOfSections > 0 {
             var proposedHeight: CGFloat = 0
             for section in 0..<tableView.numberOfSections {
                 proposedHeight += tableView.rect(forSection: section).height
             }
-            NSLayoutConstraint.activate([
-                tableView.heightAnchor.constraint(equalToConstant: proposedHeight),
-            ])
+            if proposedHeight > 0 {
+                NSLayoutConstraint.activate([
+                    tableView.heightAnchor.constraint(equalToConstant: proposedHeight),
+                ])
+                didProvideTableViewHeightConstraint = true
+            }
         }
         super.updateViewConstraints()
     }
