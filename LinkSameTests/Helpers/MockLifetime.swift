@@ -1,12 +1,13 @@
 @testable import LinkSame
-import Combine
+import Observation
 
+@Observable
 final class MockLifetime: LifetimeType {
 
-    var willResignActivePublisher = PassthroughSubject<Void, Never>()
-    var didBecomeActivePublisher = PassthroughSubject<Void, Never>()
-    var didEnterBackgroundPublisher = PassthroughSubject<Void, Never>()
-    var willEnterForegroundPublisher = PassthroughSubject<Void, Never>()
+    var willResignActivePublisher: Void?
+    var didBecomeActivePublisher: Void?
+    var didEnterBackgroundPublisher: Void?
+    var willEnterForegroundPublisher: Void?
     var methodsCalled = [String]()
 
     func didBecomeActive() {

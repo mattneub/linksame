@@ -100,29 +100,49 @@ final class LinkSameProcessor: Processor {
 
     /// Set up "subscriptions" to the Lifetime "notifications".
     /// Called once, when `.viewDidLoad` is received.
-    ///
-    /// **NOTE:** This method never returns! Be careful how you call it.
-    ///
-    func setUpLifetimeSubscriptions() async {
-        await withTaskGroup(returning: Void.self) { group in
-            group.addTask { @Sendable @MainActor in
-                for await _ in services.lifetime.didEnterBackgroundPublisher.values {
-                    await self.didEnterBackground()
+    /// We say `dropFirst` for all our values received because we get a value on subscribing.
+    func setUpLifetimeSubscriptions() {
+        do {
+            let values = Observations {
+                services.lifetime.didBecomeActivePublisher
+            }
+            Task {
+                for await _ in values.dropFirst() {
+                    print("did become active")
+                    await didBecomeActive()
                 }
             }
-            group.addTask { @Sendable @MainActor in
-                for await _ in services.lifetime.didBecomeActivePublisher.values {
-                    await self.didBecomeActive()
+        }
+        do {
+            let values = Observations {
+                services.lifetime.didEnterBackgroundPublisher
+            }
+            Task {
+                for await _ in values.dropFirst() {
+                    print("did enter background")
+                    await didEnterBackground()
                 }
             }
-            group.addTask { @Sendable @MainActor in
-                for await _ in services.lifetime.willResignActivePublisher.values {
-                    await self.willResignActive()
+        }
+        do {
+            let values = Observations {
+                services.lifetime.willEnterForegroundPublisher
+            }
+            Task {
+                for await _ in values.dropFirst() {
+                    print("will enter foreground")
+                    await willEnterForeground()
                 }
             }
-            group.addTask { @Sendable @MainActor in
-                for await _ in services.lifetime.willEnterForegroundPublisher.values {
-                    await self.willEnterForeground()
+        }
+        do {
+            let values = Observations {
+                services.lifetime.willResignActivePublisher
+            }
+            Task {
+                for await _ in values.dropFirst() {
+                    print("will resign active")
+                    await willResignActive()
                 }
             }
         }

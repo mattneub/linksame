@@ -1,12 +1,12 @@
-import Combine
+import Observation
 
 /// Protocol describing the public face of our Lifetime object, so we can mock it for testing.
 protocol LifetimeType {
     // Publishers that anyone can subscribe to.
-    var didBecomeActivePublisher: PassthroughSubject<Void, Never> {get}
-    var didEnterBackgroundPublisher: PassthroughSubject<Void, Never> {get}
-    var willEnterForegroundPublisher: PassthroughSubject<Void, Never> {get}
-    var willResignActivePublisher: PassthroughSubject<Void, Never> {get}
+    var didBecomeActivePublisher: Void? { get }
+    var didEnterBackgroundPublisher: Void? { get }
+    var willEnterForegroundPublisher: Void? { get }
+    var willResignActivePublisher: Void? { get }
 
     // Methods that the scene delegate can call.
     func didBecomeActive()
@@ -18,26 +18,27 @@ protocol LifetimeType {
 /// Service that acts as a bridge between scene delegate lifetime events and publishers that anyone
 /// can subscribe to. In this way we avoid having to use the notification center to hear about
 /// lifetime events.
+@Observable
 final class Lifetime {
-    let didBecomeActivePublisher = PassthroughSubject<Void, Never>()
-    let didEnterBackgroundPublisher = PassthroughSubject<Void, Never>()
-    let willEnterForegroundPublisher = PassthroughSubject<Void, Never>()
-    let willResignActivePublisher = PassthroughSubject<Void, Never>()
+    var didBecomeActivePublisher: Void?
+    var didEnterBackgroundPublisher: Void?
+    var willEnterForegroundPublisher: Void?
+    var willResignActivePublisher: Void?
 
     func didBecomeActive() {
-        didBecomeActivePublisher.send()
+        didBecomeActivePublisher = ()
     }
 
     func didEnterBackground() {
-        didEnterBackgroundPublisher.send()
+        didEnterBackgroundPublisher = ()
     }
 
     func willEnterForeground() {
-        willEnterForegroundPublisher.send()
+        willEnterForegroundPublisher = ()
     }
 
     func willResignActive() {
-        willResignActivePublisher.send()
+        willResignActivePublisher = ()
     }
 }
 

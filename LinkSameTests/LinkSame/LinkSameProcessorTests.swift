@@ -70,7 +70,7 @@ struct LinkSameProcessorTests {
         case .willEnterForeground:
             await subject.receive(.viewDidLoad)
             try? await Task.sleep(for: .seconds(0.1))
-            services.lifetime.willEnterForegroundPublisher.send()
+            lifetime.willEnterForegroundPublisher = ()
             await #while(coordinator.methodsCalled.isEmpty)
         }
         #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
@@ -95,7 +95,7 @@ struct LinkSameProcessorTests {
         case .willEnterForeground:
             await subject.receive(.viewDidLoad)
             try? await Task.sleep(for: .seconds(0.1))
-            services.lifetime.willEnterForegroundPublisher.send()
+            lifetime.willEnterForegroundPublisher = ()
             await #while(coordinator.methodsCalled.isEmpty)
         }
         #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
@@ -120,7 +120,7 @@ struct LinkSameProcessorTests {
         case .willEnterForeground:
             await subject.receive(.viewDidLoad)
             try? await Task.sleep(for: .seconds(0.1))
-            services.lifetime.willEnterForegroundPublisher.send()
+            lifetime.willEnterForegroundPublisher = ()
             await #while(coordinator.methodsCalled.isEmpty)
         }
         #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
@@ -144,7 +144,7 @@ struct LinkSameProcessorTests {
         case .willEnterForeground:
             await subject.receive(.viewDidLoad)
             try? await Task.sleep(for: .seconds(0.1))
-            services.lifetime.willEnterForegroundPublisher.send()
+            lifetime.willEnterForegroundPublisher = ()
             await #while(coordinator.methodsCalled.isEmpty)
         }
         print(persistence.methodsCalled)
@@ -168,7 +168,7 @@ struct LinkSameProcessorTests {
         case .willEnterForeground:
             await subject.receive(.viewDidLoad)
             try? await Task.sleep(for: .seconds(0.1))
-            services.lifetime.willEnterForegroundPublisher.send()
+            lifetime.willEnterForegroundPublisher = ()
             await #while(coordinator.methodsCalled.isEmpty)
         }
         let state = try #require(presenter.statesPresented.last)
@@ -192,7 +192,7 @@ struct LinkSameProcessorTests {
         case .willEnterForeground:
             await subject.receive(.viewDidLoad)
             try? await Task.sleep(for: .seconds(0.1))
-            services.lifetime.willEnterForegroundPublisher.send()
+            lifetime.willEnterForegroundPublisher = ()
             await #while(coordinator.methodsCalled.isEmpty)
         }
         let state = try #require(presenter.statesPresented.last)
@@ -222,7 +222,7 @@ struct LinkSameProcessorTests {
         case .willEnterForeground:
             await subject.receive(.viewDidLoad)
             try? await Task.sleep(for: .seconds(0.1))
-            services.lifetime.willEnterForegroundPublisher.send()
+            lifetime.willEnterForegroundPublisher = ()
             await #while(coordinator.methodsCalled.isEmpty)
         }
         #expect(coordinator.methodsCalled.last == "makeBoardProcessor(gridSize:score:)")
@@ -265,7 +265,7 @@ struct LinkSameProcessorTests {
         case .willEnterForeground:
             await subject.receive(.viewDidLoad)
             try? await Task.sleep(for: .seconds(0.1))
-            services.lifetime.willEnterForegroundPublisher.send()
+            lifetime.willEnterForegroundPublisher = ()
             await #while(coordinator.methodsCalled.isEmpty)
         }
         #expect(coordinator.methodsCalled == ["makeBoardProcessor(gridSize:score:)"])
@@ -298,7 +298,7 @@ struct LinkSameProcessorTests {
             case .willEnterForeground:
                 await subject.receive(.viewDidLoad)
                 try? await Task.sleep(for: .seconds(0.1))
-                services.lifetime.willEnterForegroundPublisher.send()
+                lifetime.willEnterForegroundPublisher = ()
                 await #while(subject.state.highScore == "junk")
             }
             #expect(subject.state.highScore == "High score: 42")
@@ -317,7 +317,7 @@ struct LinkSameProcessorTests {
             case .willEnterForeground:
                 await subject.receive(.viewDidLoad)
                 try? await Task.sleep(for: .seconds(0.1))
-                services.lifetime.willEnterForegroundPublisher.send()
+                lifetime.willEnterForegroundPublisher = ()
                 await #while(subject.state.highScore == "junk")
             }
             #expect(subject.state.highScore == "")
@@ -336,7 +336,7 @@ struct LinkSameProcessorTests {
             case .willEnterForeground:
                 await subject.receive(.viewDidLoad)
                 try? await Task.sleep(for: .seconds(0.1))
-                services.lifetime.willEnterForegroundPublisher.send()
+                lifetime.willEnterForegroundPublisher = ()
                 await #while(subject.state.highScore == "junk")
             }
             #expect(subject.state.highScore == "")
@@ -543,7 +543,7 @@ struct LinkSameProcessorTests {
         board.grid = Grid(columns: 3, rows: 2)
         await subject.receive(.viewDidLoad)
         try? await Task.sleep(for: .seconds(0.1))
-        services.lifetime.didEnterBackgroundPublisher.send()
+        lifetime.didEnterBackgroundPublisher = ()
         await #while(persistence.methodsCalled.isEmpty)
         #expect(persistence.methodsCalled == ["save(_:forKey:)"])
         #expect(persistence.saveKeys == [.boardData])
@@ -560,7 +560,7 @@ struct LinkSameProcessorTests {
     func didBecomeActive() async throws {
         await subject.receive(.viewDidLoad)
         try? await Task.sleep(for: .seconds(0.1))
-        services.lifetime.didBecomeActivePublisher.send()
+        lifetime.didBecomeActivePublisher = ()
         await #while(board.methodsCalled.isEmpty)
         #expect(board.methodsCalled == ["restartTimerIfPaused()"])
     }
@@ -571,7 +571,7 @@ struct LinkSameProcessorTests {
         subject.state.hintShowing = true
         await subject.receive(.viewDidLoad)
         try? await Task.sleep(for: .seconds(0.1))
-        services.lifetime.willResignActivePublisher.send()
+        lifetime.willResignActivePublisher = ()
         await #while(board.methodsCalled.isEmpty)
         #expect(board.methodsCalled.first == "pauseTimer()")
         #expect(subject.state.hintShowing == false)
