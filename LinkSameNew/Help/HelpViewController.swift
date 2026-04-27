@@ -27,14 +27,11 @@ final class HelpViewController: UIViewController, ReceiverPresenter {
 
     override func viewIsAppearing(_ animated: Bool) {
         super.viewIsAppearing(animated)
+        (view as? WKWebView)?.isInspectable = true
         navigationItem.rightBarButtonItem = MyBarButtonItem(systemItem: .done) { [weak self] _ in
             Task.immediate {
                 await self?.processor?.receive(.dismiss)
             }
-        }
-        if let navigationBar = navigationController?.navigationBar {
-            navigationBar.scrollEdgeAppearance = navigationBar.standardAppearance
-            navigationBar.compactScrollEdgeAppearance = navigationBar.compactAppearance
         }
     }
 

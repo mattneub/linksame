@@ -45,7 +45,7 @@ struct HelpProcessorTests {
         #expect(mockBundle.methodsCalled.last == "path(forResource:ofType:)")
         #expect(mockBundle.name == "linkhelp")
         #expect(mockBundle.ext == "html")
-        #expect(presenter.statesPresented.last?.content == "one 5 two 12\n")
+        #expect(presenter.statesPresented.last?.content == "one 20 two 14\n")
     }
 }
 

@@ -28,6 +28,9 @@ final class NewGameViewController: UIViewController, ReceiverPresenter {
         $0.layer.borderWidth = 1
         $0.layer.borderColor = UIColor.lightGray.cgColor
         $0.sectionHeaderTopPadding = 6
+        $0.backgroundView = UIView().applying {
+            $0.backgroundColor = .systemBackground
+        }
     }
 
     /// Picker view that will give the user a choice of number of stages.
@@ -46,15 +49,6 @@ final class NewGameViewController: UIViewController, ReceiverPresenter {
         }
     }
 
-    init () {
-        super.init(nibName: nil, bundle: nil)
-        self.edgesForExtendedLayout = []
-    }
-    
-    required init(coder: NSCoder) {
-        fatalError("NSCoding not supported")
-    }
-    
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -93,7 +87,7 @@ final class NewGameViewController: UIViewController, ReceiverPresenter {
             view.trailingAnchor.constraint(equalTo: tableView.trailingAnchor),
             view.leadingAnchor.constraint(equalTo: pickerView.leadingAnchor),
             view.trailingAnchor.constraint(equalTo: pickerView.trailingAnchor),
-            view.topAnchor.constraint(equalTo: tableView.topAnchor),
+            view.safeAreaLayoutGuide.topAnchor.constraint(equalTo: tableView.topAnchor),
             tableView.bottomAnchor.constraint(equalTo: pickerView.topAnchor),
         ])
 

@@ -24,11 +24,7 @@ struct HelpViewControllerTests {
 
     @Test("viewIsAppearing: sets up navigation item, navigation controller's nav bar")
     func viewIsAppearing() throws {
-        let navigationController = UINavigationController(rootViewController: subject)
         subject.viewIsAppearing(false)
-        let navigationBar = navigationController.navigationBar
-        #expect(navigationBar.scrollEdgeAppearance == navigationBar.standardAppearance)
-        #expect(navigationBar.compactScrollEdgeAppearance == navigationBar.compactAppearance)
         let barButtonItem = try #require(subject.navigationItem.rightBarButtonItem as? MyBarButtonItem)
         #expect(barButtonItem.value(forKey: "systemItem") as? Int == 0)
         barButtonItem.actionHandler?(UIAction(title: "", handler: { _ in }))

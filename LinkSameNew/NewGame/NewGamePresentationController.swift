@@ -14,7 +14,7 @@ final class NewGamePresentationController: UIPresentationController {
     /// The presented view has rounded corners.
     override var presentedView: UIView? {
         if let presentedView = super.presentedView {
-            presentedView.layer.cornerRadius = 6
+            presentedView.layer.cornerRadius = 20
             presentedView.layer.masksToBounds = true
             return presentedView
         }

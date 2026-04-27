@@ -77,9 +77,6 @@ final class RootCoordinator: RootCoordinatorType {
 
         viewController.isModalInPresentation = true // must be before presentation to work
         let navigationController = UINavigationController(rootViewController: viewController)
-        let navigationBar = navigationController.navigationBar
-        navigationBar.scrollEdgeAppearance = navigationBar.standardAppearance
-        navigationBar.compactScrollEdgeAppearance = navigationBar.compactAppearance
         navigationController.modalPresentationStyle = .popover
         if onPhone {
             navigationController.transitioningDelegate = viewController

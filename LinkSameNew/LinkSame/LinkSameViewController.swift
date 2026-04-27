@@ -32,10 +32,8 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
     /// Reference to the processor, set by the coordinator at module creation time.
     weak var processor: (any Processor<LinkSameAction, LinkSameState, LinkSameEffect>)?
 
-    override var nibName : String {
-        get {
-            return onPhone ? "LinkSameViewControllerPhone" : "LinkSameViewController"
-        }
+    override var nibName: String? {
+        return onPhone ? "LinkSameViewControllerPhone" : "LinkSameViewController"
     }
 
     override func viewDidLoad() {
@@ -68,14 +66,6 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         }
     }
 
-    init() {
-        super.init(nibName: nil, bundle: nil)
-    }
-    
-    required init(coder: NSCoder) {
-        fatalError("NSCoding not supported")
-    }
-    
     private var didSetUpInitialLayout = false
     override func viewDidLayoutSubviews() {
         guard !self.didSetUpInitialLayout else { return }

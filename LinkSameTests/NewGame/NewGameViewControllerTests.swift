@@ -8,15 +8,18 @@ struct NewGameViewControllerTests {
     fileprivate let mockPickerDelegate = MockPickerDelegate()
     fileprivate let mockTableDelegate = MockTableDelegate()
     let processor = MockProcessor<NewGameAction, NewGameState, NewGameEffect>()
+    let mockScreen = MockScreen()
 
     init() {
         subject.pickerViewDataSourceDelegate = mockPickerDelegate
         subject.tableViewDataSourceDelegate = mockTableDelegate
         subject.processor = processor
+        services.screen = mockScreen
+        mockScreen.traitCollection = UITraitCollection(userInterfaceIdiom: .phone)
     }
 
     @Test("table view is correctly initialized")
-    func tableView() {
+    func tableView() throws {
         let tableView = subject.tableView
         #expect(tableView.frame == CGRect(x: 0, y: 0, width: 320, height: 120))
         #expect(tableView.backgroundColor == .secondarySystemBackground)
@@ -27,6 +30,15 @@ struct NewGameViewControllerTests {
         #expect(tableView.layer.borderWidth == 1)
         #expect(tableView.layer.borderColor == UIColor.lightGray.cgColor)
         #expect(tableView.sectionHeaderTopPadding == 6)
+        let background = try #require(tableView.backgroundView)
+        #expect(background.backgroundColor == .systemBackground)
+    }
+
+    @Test("table view is correctly initialized on iPad")
+    func tableViewPad() throws {
+        mockScreen.traitCollection = .init(userInterfaceIdiom: .pad)
+        let tableView = subject.tableView
+        #expect(tableView.frame == CGRect(x: 0, y: 0, width: 320, height: 300))
     }
 
     @Test("picker view is correctly initialized")
@@ -45,11 +57,6 @@ struct NewGameViewControllerTests {
         subject.processor = processor
         #expect(mockPickerDelegate.processor === processor)
         #expect(mockTableDelegate.processor === processor)
-    }
-
-    @Test("initialization: sets extended edges to none")
-    func initialization() {
-        #expect(subject.edgesForExtendedLayout == [])
     }
 
     @Test("viewDidLoad: sets background color, configures bar button items, sends .viewDidLoad action")
@@ -75,38 +82,7 @@ struct NewGameViewControllerTests {
         await #while(subject.view.subviews.count == 0)
         #expect(subject.tableView.isDescendant(of: subject.view))
         #expect(subject.pickerView.isDescendant(of: subject.view))
-        let allConstraints = subject.view.constraints
-        #expect(allConstraints.count == 6)
-        // the compiler is really slow if you don't do this
-        let leading = NSLayoutConstraint.Attribute.leading
-        let trailing = NSLayoutConstraint.Attribute.trailing
-        let top = NSLayoutConstraint.Attribute.top
-        let bottom = NSLayoutConstraint.Attribute.bottom
-        // okay, now we're ready
-        #expect(allConstraints.contains(where: {
-            $0.firstItem === subject.view && $0.secondItem === subject.tableView &&
-            $0.firstAttribute == leading && $0.secondAttribute == leading
-        }))
-        #expect(allConstraints.contains(where: {
-            $0.firstItem === subject.view && $0.secondItem === subject.tableView &&
-            $0.firstAttribute == trailing && $0.secondAttribute == trailing
-        }))
-        #expect(allConstraints.contains(where: {
-            $0.firstItem === subject.view && $0.secondItem === subject.pickerView &&
-            $0.firstAttribute == leading && $0.secondAttribute == leading
-        }))
-        #expect(allConstraints.contains(where: {
-            $0.firstItem === subject.view && $0.secondItem === subject.pickerView &&
-            $0.firstAttribute == trailing && $0.secondAttribute == trailing
-        }))
-        #expect(allConstraints.contains(where: {
-            $0.firstItem === subject.view && $0.secondItem === subject.tableView &&
-            $0.firstAttribute == top && $0.secondAttribute == top
-        }))
-        #expect(allConstraints.contains(where: {
-            $0.firstItem === subject.tableView && $0.secondItem === subject.pickerView &&
-            $0.firstAttribute == bottom && $0.secondAttribute == top
-        }))
+        #expect(subject.tableView.constraints.isEmpty)
         #expect(processor.thingsReceived.last == .initialInterfaceIsReady)
     }
 

@@ -11,7 +11,7 @@ final class Services {
     var cancelableTimer: any CancelableTimerType.Type = CancelableTimer.self
     var lifetime: any LifetimeType = Lifetime()
     var persistence: any PersistenceType = Persistence()
-    var screen: any ScreenType = UIScreen.main
+    var screen: any ScreenType = Screen()
     var transitionProviderMaker: TransitionProviderMaker = TransitionProviderMaker()
     var view: UIView.Type = UIView.self
 }

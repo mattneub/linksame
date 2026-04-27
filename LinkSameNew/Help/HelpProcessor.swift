@@ -23,8 +23,8 @@ final class HelpProcessor: Processor {
                 return
             }
             content = content
-                .replacingOccurrences(of: "FIXME2", with: onPhone ? "30" : "5") // margin
-                .replacingOccurrences(of: "FIXME", with: onPhone ? "8" : "12") // text size
+                .replacingOccurrences(of: "FIXME2", with: onPhone ? "30" : "20") // margin
+                .replacingOccurrences(of: "FIXME", with: onPhone ? "8" : "14") // text size
             state.content = content
             await presenter?.present(state)
         }

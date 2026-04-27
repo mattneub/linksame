@@ -10,6 +10,9 @@ struct LinkSameViewControllerTests {
 
     init() {
         services.screen = screen
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .phone
+        }
         services.application = MockApplication()
         services.transitionProviderMaker = transitionProviderMaker
         MockApplication.methodsCalled.removeAll()
@@ -19,7 +22,9 @@ struct LinkSameViewControllerTests {
 
     @Test("nib loaded to get view depends on phone/pad")
     func loadNibPhone() {
-        screen.traitCollection = .init(userInterfaceIdiom: .phone)
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .phone
+        }
         subject.loadViewIfNeeded()
         #expect(subject.hintButton == nil) // no need to check the others
         #expect(subject.hamburgerButton != nil)
@@ -31,7 +36,9 @@ struct LinkSameViewControllerTests {
 
     @Test("nib loaded to get view depends on phone/pad")
     func loadNibPad() {
-        screen.traitCollection = .init(userInterfaceIdiom: .pad)
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .pad
+        }
         subject.loadViewIfNeeded()
         #expect(subject.hintButton != nil) // no need to check the others
         #expect(subject.hamburgerButton == nil)
@@ -92,7 +99,9 @@ struct LinkSameViewControllerTests {
 
     @Test("viewDidLoad: sets hintLabel text and width")
     func viewDidLoadHintLabel() {
-        screen.traitCollection = .init(userInterfaceIdiom: .pad)
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .pad
+        }
         subject.loadViewIfNeeded()
         // #expect(subject.hintButton.possibleTitles == ["Show Hint", "Hide Hint"]) // not that it matters
         #expect(subject.hintButton?.title == "Show Hint")
@@ -125,7 +134,9 @@ struct LinkSameViewControllerTests {
 
     @Test("present: interfaceMode configures interface on iPad")
     func presentBoardViewInterfaceModePad() async {
-        screen.traitCollection = .init(userInterfaceIdiom: .pad)
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .pad
+        }
         subject.loadViewIfNeeded()
         await subject.present(LinkSameState(interfaceMode: .practice))
         #expect(subject.scoreLabel.isHidden == true)
@@ -184,7 +195,9 @@ struct LinkSameViewControllerTests {
 
     @Test("present: hintButtonTitle configures hint button")
     func presentHintButtonTitle() async {
-        screen.traitCollection = .init(userInterfaceIdiom: .pad)
+        screen.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceIdiom = .pad
+        }
         subject.loadViewIfNeeded()
         await subject.present(LinkSameState(hintButtonTitle: .show))
         #expect(subject.hintButton?.title == "Show Hint")
