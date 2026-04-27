@@ -17,6 +17,25 @@ struct NewGameProcessorTests {
         services.screen = screen
     }
 
+    @Test("receive initialInterfaceIsReady: sets the state's table sections based on the device type")
+    func initialInterfaceSections() async throws {
+        screen.traitCollection = .init(userInterfaceIdiom: .phone)
+        await subject.receive(.initialInterfaceIsReady)
+        var state = try #require(presenter.statesPresented.last)
+        #expect(state.tableViewSections.count == 1)
+        #expect(state.tableViewSections[0].title == "Style")
+        #expect(state.tableViewSections[0].rows == ["Animals", "Snacks"])
+        screen.traitCollection = .init(userInterfaceIdiom: .pad)
+        await subject.receive(.initialInterfaceIsReady)
+        state = try #require(presenter.statesPresented.last)
+        #expect(state.tableViewSections.count == 2)
+        #expect(state.tableViewSections[0].title == "Style")
+        #expect(state.tableViewSections[0].rows == ["Animals", "Snacks"])
+        #expect(state.tableViewSections[1].title == "Size")
+        #expect(state.tableViewSections[1].rows == ["Easy", "Normal", "Hard"])
+        screen.traitCollection = .init(userInterfaceIdiom: .phone)
+    }
+
     @Test("receive initialInterfaceIsReady: fetches last stage from persistence, sends .selectPickerRow")
     func initialInterfaceIsReady() async {
         persistence.values = [.lastStage: 5]
@@ -111,22 +130,4 @@ struct NewGameProcessorTests {
         #expect(state.tableViewSections[1].checkmarkedRow == 2)
     }
 
-    @Test("receive viewDidLoad: sets the state's table sections based on the device type")
-    func viewDidLoad() async throws {
-        screen.traitCollection = .init(userInterfaceIdiom: .phone)
-        await subject.receive(.viewDidLoad)
-        var state = try #require(presenter.statesPresented.last)
-        #expect(state.tableViewSections.count == 1)
-        #expect(state.tableViewSections[0].title == "Style")
-        #expect(state.tableViewSections[0].rows == ["Animals", "Snacks"])
-        screen.traitCollection = .init(userInterfaceIdiom: .pad)
-        await subject.receive(.viewDidLoad)
-        state = try #require(presenter.statesPresented.last)
-        #expect(state.tableViewSections.count == 2)
-        #expect(state.tableViewSections[0].title == "Style")
-        #expect(state.tableViewSections[0].rows == ["Animals", "Snacks"])
-        #expect(state.tableViewSections[1].title == "Size")
-        #expect(state.tableViewSections[1].rows == ["Easy", "Normal", "Hard"])
-        screen.traitCollection = .init(userInterfaceIdiom: .phone)
-    }
 }

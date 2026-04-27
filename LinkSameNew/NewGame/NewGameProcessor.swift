@@ -18,6 +18,7 @@ final class NewGameProcessor: Processor {
         case .cancelNewGame:
             await dismissalDelegate?.cancelNewGame()
         case .initialInterfaceIsReady:
+            await presentTableViewSections()
             let numberOfStages = services.persistence.loadInt(forKey: .lastStage)
             await presenter?.receive(.selectPickerRow(numberOfStages))
             await updateCheckmarks()
@@ -33,17 +34,20 @@ final class NewGameProcessor: Processor {
             }
             services.persistence.save(value, forKey: key)
             await updateCheckmarks()
-        case .viewDidLoad:
-            state.tableViewSections = [
-                .init(title: DefaultKey.style.rawValue, rows: Styles.stylesInOrder),
-            ]
-            if !onPhone {
-                state.tableViewSections.append(
-                    .init(title: DefaultKey.size.rawValue, rows: Sizes.sizesInOrder)
-                )
-            }
-            await presenter?.present(state)
         }
+    }
+
+    /// Utility called once by `.initialInterfaceIsReady`, presenting the state that gives
+    /// the table view its sections.
+    func presentTableViewSections() async {
+        var sections: [NewGameSection] = [
+            .init(title: DefaultKey.style.rawValue, rows: Styles.stylesInOrder)
+        ]
+        if !onPhone {
+            sections.append(.init(title: DefaultKey.size.rawValue, rows: Sizes.sizesInOrder))
+        }
+        state.tableViewSections = sections
+        await presenter?.present(state)
     }
 
     /// Utility that updates our presenter with regard to which row of each section of the table view

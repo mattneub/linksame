@@ -59,12 +59,10 @@ struct NewGameViewControllerTests {
         #expect(mockTableDelegate.processor === processor)
     }
 
-    @Test("viewDidLoad: sets background color, configures bar button items, sends .viewDidLoad action")
+    @Test("viewDidLoad: sets background color, configures bar button items")
     func viewDidLoad() throws {
         subject.loadViewIfNeeded()
         #expect(subject.view.backgroundColor == .systemBackground)
-        #expect(processor.thingsReceived.first == .viewDidLoad)
-        processor.thingsReceived = []
         let cancelItem = try #require(subject.navigationItem.rightBarButtonItem as? MyBarButtonItem)
         #expect(cancelItem.systemItem == .cancel)
         cancelItem.actionHandler?(UIAction { _ in })

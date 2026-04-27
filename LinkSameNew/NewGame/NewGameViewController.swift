@@ -67,17 +67,9 @@ final class NewGameViewController: UIViewController, ReceiverPresenter {
         }
         navigationItem.leftBarButtonItem = doneBarButtonItem
 
-        Task.immediate {
-            await processor?.receive(.viewDidLoad)
-        }
-        Task {
-            setUpInterface() // TODO: I don't like this double action-sending
-        }
-    }
+        // Set up interface; we do not yet know what height
+        // to give the table view, or our own preferred content height.
 
-    /// Set up our interface; called once by `viewDidLoad`. We do not yet know what height
-    /// to give the table view, or our own preferred content height.
-    func setUpInterface() {
         view.addSubview(tableView)
         view.addSubview(pickerView)
 
@@ -119,7 +111,7 @@ final class NewGameViewController: UIViewController, ReceiverPresenter {
 
     /// Determine our overall view height, based on the height of the table view and the
     /// height of the picker view. This applies only to the popover on iPad;
-    /// on the iPhone we are fullscreen.
+    /// on the iPhone we are fullscreen and size is determined by a presentation controller.
     override func viewDidLayoutSubviews() {
         let totalHeight = self.tableView.bounds.height + self.pickerView.bounds.height
         self.preferredContentSize = CGSize(width: 320, height: totalHeight)
