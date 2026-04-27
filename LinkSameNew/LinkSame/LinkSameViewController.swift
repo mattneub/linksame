@@ -61,6 +61,9 @@ final class LinkSameViewController: UIViewController, ReceiverPresenter {
         hamburgerButton?.addTarget(self, action: #selector(doHamburgerButton), for: .menuActionTriggered)
         hamburgerButton?.preferredMenuElementOrder = .fixed
 
+        let config = UIButton.Configuration.glass()
+        hamburgerButton?.configuration = config
+
         Task.immediate {
             await processor?.receive(.viewDidLoad)
         }

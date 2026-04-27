@@ -114,6 +114,7 @@ struct LinkSameViewControllerTests {
         subject.loadViewIfNeeded()
         #expect(subject.hamburgerButton?.actions(forTarget: subject, forControlEvent: .menuActionTriggered)?.first == "doHamburgerButton:")
         #expect(subject.hamburgerButton?.preferredMenuElementOrder == .fixed)
+        // I don't know how to test that it has a glass configuration
     }
 
     @Test("viewDidLoad: sends viewDidLoad")
